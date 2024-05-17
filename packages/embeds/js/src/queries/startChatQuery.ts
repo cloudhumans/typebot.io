@@ -76,7 +76,7 @@ export async function startChatQuery({
         .post(
           `${
             isNotEmpty(apiHost) ? apiHost : guessApiHost()
-          }/api/v1/eddies/${typebotId}/preview/startChat`,
+          }/api/v1/typebots/${typebotId}/preview/startChat`,
           {
             json: {
               isStreamEnabled: true,
@@ -103,7 +103,7 @@ export async function startChatQuery({
       .post(
         `${
           isNotEmpty(apiHost) ? apiHost : guessApiHost()
-        }/api/v1/eddies/${typebotId}/startChat`,
+        }/api/v1/typebots/${typebotId}/startChat`,
         {
           json: {
             isStreamEnabled: true,
