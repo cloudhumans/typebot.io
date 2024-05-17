@@ -17,7 +17,7 @@ test('Edges connection should work', async ({ page }) => {
       id: typebotId,
     },
   ])
-  await page.goto(`/eddies/${typebotId}/edit`)
+  await page.goto(`/typebots/${typebotId}/edit`)
   await expect(page.locator("text='Start'")).toBeVisible()
   await page.dragAndDrop('text=Button', '#editor-container', {
     targetPosition: { x: 1000, y: 400 },
@@ -71,7 +71,7 @@ test('Drag and drop blocks and items should work', async ({ page }) => {
   )
 
   // Blocks dnd
-  await page.goto(`/eddies/${typebotId}/edit`)
+  await page.goto(`/typebots/${typebotId}/edit`)
   await expect(page.locator('[data-testid="block"] >> nth=0')).toHaveText(
     'Hello!'
   )
@@ -126,7 +126,7 @@ test('Rename and icon change should work', async ({ page }) => {
     },
   ])
 
-  await page.goto(`/eddies/${typebotId}/edit`)
+  await page.goto(`/typebots/${typebotId}/edit`)
   await page.click('[data-testid="editable-icon"]')
   await page.getByRole('button', { name: 'Emoji' }).click()
   await expect(page.locator('text="My awesome typebot"')).toBeVisible()
@@ -149,7 +149,7 @@ test('Preview from group should work', async ({ page }) => {
     }
   )
 
-  await page.goto(`/eddies/${typebotId}/edit`)
+  await page.goto(`/typebots/${typebotId}/edit`)
   await page
     .getByTestId('group')
     .nth(0)
@@ -185,7 +185,7 @@ test('Published typebot menu should work', async ({ page }) => {
       version: '6',
     },
   ])
-  await page.goto(`/eddies/${typebotId}/edit`)
+  await page.goto(`/typebots/${typebotId}/edit`)
   await expect(page.locator("text='Start'")).toBeVisible()
   await expect(page.locator('button >> text="Published"')).toBeVisible()
   await page.click('[aria-label="Show published typebot menu"]')
