@@ -82,13 +82,13 @@ const nextConfig = {
               'https://app.posthog.com') + '/:path*',
         },
         {
-          source: '/healthz',
+          source: '/health',
           destination: '/api/health',
         },
       ]
       : [
         {
-          source: '/healthz',
+          source: '/health',
           destination: '/api/health',
         },
       ]

@@ -199,7 +199,7 @@ const nextConfig = {
               '/api/v1/typebots/:typebotId/blocks/:blockId/storage/upload-url',
           },
           {
-            source: '/healthz',
+            source: '/health',
             destination: '/api/health',
           },
         ])
