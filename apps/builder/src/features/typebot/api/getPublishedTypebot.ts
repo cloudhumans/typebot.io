@@ -204,6 +204,15 @@ export const getPublishedTypebotCached = authenticatedProcedure
           })
         }
 
+if (
+          !existingTypebot?.id ||
+          (await isReadTypebotForbidden(existingTypebot, user))
+        ) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Typebot not found',
+          })
+        }
         if (!existingTypebot.publishedTypebot) {
           return {
             publishedTypebot: null,
