@@ -204,7 +204,7 @@ export const getPublishedTypebotCached = authenticatedProcedure
           })
         }
 
-if (
+        if (
           !existingTypebot?.id ||
           (await isReadTypebotForbidden(existingTypebot, user))
         ) {
