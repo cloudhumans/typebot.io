@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
 type Block = {
+  id: string
   type: string
   outgoingEdgeId?: string | null
   options?: { typebotId?: string }
@@ -11,6 +12,16 @@ type Block = {
 type Group = {
   title: string
   blocks: Block[]
+}
+type Edge = {
+  id: string
+  to: {
+    blockId: string
+    groupId: string
+  }
+  from: {
+    blockId: string
+  }
 }
 
 const typebotValidationSchema = z.object({
@@ -27,6 +38,7 @@ const responseSchema = z.object({
       typebotName: z.string(),
     })
   ),
+  invalidTextBeforeClaudia: z.array(z.string()),
 })
 
 const isGroupArray = (groups: unknown): groups is Group[] =>
@@ -39,6 +51,12 @@ const isConditionBlock = (block: Block): boolean =>
 const isTypebotLinkBlock = (block: Block): boolean =>
   block.type.toLowerCase() === 'typebot link' &&
   block.options?.typebotId !== undefined
+
+const isClaudiaBlock = (block: Block): boolean =>
+  block.type.toLowerCase() === 'claudia'
+
+const isTextBlock = (block: Block): boolean =>
+  block.type.toLowerCase() === 'text'
 
 const validateOutgoingEdges = (groups: Group[]) => {
   const outgoingEdgeIds: (string | null)[] = []
@@ -94,6 +112,32 @@ const validateTypebotLinks = async (groups: Group[]) => {
   return brokenLinks
 }
 
+const validateTextBeforeClaudia = (groups: Group[]) => {
+  const invalidGroups: string[] = []
+
+  groups.forEach((group) => {
+    if (hasBlocks(group)) {
+      let foundTextBlock = false
+      let foundClaudiaBlock = false
+
+      for (const block of group.blocks) {
+        if (isClaudiaBlock(block)) {
+          foundClaudiaBlock = true
+        }
+        if (isTextBlock(block)) {
+          foundTextBlock = true
+        }
+      }
+
+      if (foundClaudiaBlock && !foundTextBlock) {
+        invalidGroups.push(group.title)
+      }
+    }
+  })
+
+  return invalidGroups
+}
+
 export const getTypebotValidation = publicProcedure
   .meta({
     openapi: {
@@ -113,6 +157,7 @@ export const getTypebotValidation = publicProcedure
       },
       select: {
         groups: true,
+        edges: true,
       },
     })
 
@@ -126,6 +171,7 @@ export const getTypebotValidation = publicProcedure
         outgoingEdgeIds: [],
         invalidGroups: [],
         brokenLinks: [],
+        invalidTextBeforeClaudia: [],
       }
     }
 
@@ -133,8 +179,18 @@ export const getTypebotValidation = publicProcedure
       typebot.groups
     )
     const brokenLinks = await validateTypebotLinks(typebot.groups)
+    const invalidTextBeforeClaudia = validateTextBeforeClaudia(typebot.groups)
 
-    const isValid = invalidGroups.length === 0 && brokenLinks.length === 0
+    const isValid =
+      invalidGroups.length === 0 &&
+      brokenLinks.length === 0 &&
+      invalidTextBeforeClaudia.length === 0
 
-    return { isValid, outgoingEdgeIds, invalidGroups, brokenLinks }
+    return {
+      isValid,
+      outgoingEdgeIds,
+      invalidGroups,
+      brokenLinks,
+      invalidTextBeforeClaudia,
+    }
   })
