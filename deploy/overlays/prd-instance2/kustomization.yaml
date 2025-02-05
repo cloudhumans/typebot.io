@@ -14,6 +14,3 @@ patchesStrategicMerge:
   - typebot-builder-ingress.yaml
   - typebot-viewer-configmap.yaml
   - typebot-viewer-ingress.yaml
-
-resources:
-  - namespace.yaml
