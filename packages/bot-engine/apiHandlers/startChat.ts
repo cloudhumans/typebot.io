@@ -3,6 +3,7 @@ import { filterPotentiallySensitiveLogs } from '../logs/filterPotentiallySensiti
 import { restartSession } from '../queries/restartSession'
 import { saveStateToDatabase } from '../saveStateToDatabase'
 import { startSession } from '../startSession'
+import { createStartChatLog } from './helpers/createStartChatLog'
 
 type Props = {
   origin: string | undefined
@@ -50,15 +51,21 @@ export const startChat = async ({
     message,
   })
 
+  if (logs && Array.isArray(logs)) {
+    logs.push(createStartChatLog(true, 'Fluxo passou por startChat'))
+  }
+
   let corsOrigin
 
   if (
     newSessionState.allowedOrigins &&
     newSessionState.allowedOrigins.length > 0
   ) {
-    if (origin && newSessionState.allowedOrigins.includes(origin))
+    if (origin && newSessionState.allowedOrigins.includes(origin)) {
       corsOrigin = origin
-    else corsOrigin = newSessionState.allowedOrigins[0]
+    } else {
+      corsOrigin = newSessionState.allowedOrigins[0]
+    }
   }
 
   const session = isOnlyRegistering

@@ -6,6 +6,7 @@ import { filterPotentiallySensitiveLogs } from '../logs/filterPotentiallySensiti
 import { parseDynamicTheme } from '../parseDynamicTheme'
 import { saveStateToDatabase } from '../saveStateToDatabase'
 import { computeCurrentProgress } from '../computeCurrentProgress'
+import { createContinueChatLog } from './helpers/createContinueChatLog'
 
 type Props = {
   origin: string | undefined
@@ -13,6 +14,7 @@ type Props = {
   sessionId: string
   textBubbleContentFormat: 'richText' | 'markdown'
 }
+
 export const continueChat = async ({
   origin,
   sessionId,
@@ -65,6 +67,10 @@ export const continueChat = async ({
     startTime: Date.now(),
     textBubbleContentFormat,
   })
+
+  if (logs && Array.isArray(logs)) {
+    logs.push(createContinueChatLog(true, 'Fluxo passou por continueChat'))
+  }
 
   if (newSessionState)
     await saveStateToDatabase({
