@@ -51,30 +51,13 @@ export type BotProps = {
   onChatStatePersisted?: (isEnabled: boolean) => void
 }
 
-export const Bot = (props: BotProps & { class?: string; userId?: string }) => {
+export const Bot = (props: BotProps & { class?: string }) => {
   const [initialChatReply, setInitialChatReply] = createSignal<
     InitialChatReply | undefined
   >()
   const [customCss, setCustomCss] = createSignal('')
   const [isInitialized, setIsInitialized] = createSignal(false)
   const [error, setError] = createSignal<Error | undefined>()
-
-  // const {
-  //   apiTokens,
-  //   isLoading,
-  //   error: apiError,
-  //   refetch,
-  // } = useApiTokens({
-  //   userId: props.userId,
-  //   onError: (err: Error) => setError(err),
-  // })
-
-  // createEffect(() => {
-  //   if (apiTokens()) {
-  //     console.log('API Tokens fetched:', apiTokens())
-  //     // Use apiTokens for bot authentication or API interactions
-  //   }
-  // })
 
   const initializeBot = async () => {
     if (props.font) injectFont(props.font)
@@ -85,6 +68,20 @@ export const Bot = (props: BotProps & { class?: string; userId?: string }) => {
     urlParams.forEach((value, key) => {
       prefilledVariables[key] = value
     })
+
+    // Getting the API token and setting it on the typebot object
+    if (props.userId) {
+      try {
+        const response = await fetch(`/api/users/${props.userId}/api-tokens`)
+        const { apiTokens } = await response.json()
+        if (apiTokens && apiTokens.length > 0) {
+          props.typebot.apiToken = apiTokens[0].token
+        }
+      } catch (error) {
+        console.error('Erro ao buscar API tokens:', error)
+      }
+    }
+
     const typebotIdFromProps =
       typeof props.typebot === 'string' ? props.typebot : undefined
     const isPreview =
@@ -231,6 +228,7 @@ export const Bot = (props: BotProps & { class?: string; userId?: string }) => {
                 typeof props.typebot !== 'string' || (props.isPreview ?? false),
               resultId: initialChatReply.resultId,
               sessionId: initialChatReply.sessionId,
+              apiToken: props.typebot.apiToken,
               typebot: initialChatReply.typebot,
               storage:
                 initialChatReply.typebot.settings.general?.rememberUser
@@ -284,6 +282,7 @@ const BotContent = (props: BotContentProps) => {
     if (!botContainer) return
     resizeObserver.observe(botContainer)
     setBotContainerHeight(`${botContainer.clientHeight}px`)
+    console.info('BotContent', props)
   })
 
   createEffect(() => {

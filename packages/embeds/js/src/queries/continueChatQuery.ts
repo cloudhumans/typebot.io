@@ -7,11 +7,15 @@ export const continueChatQuery = async ({
   apiHost,
   message,
   sessionId,
+  apiToken,
 }: {
   apiHost?: string
   message: string | undefined
   sessionId: string
+  apiToken?: string
 }) => {
+  const headers = apiToken ? { Authorization: `Bearer ${apiToken}` } : {}
+  console.log('continueChatQuery: ', apiToken)
   try {
     const data = await ky
       .post(
@@ -23,6 +27,7 @@ export const continueChatQuery = async ({
             message,
           },
           timeout: false,
+          headers,
         }
       )
       .json<ContinueChatResponse>()
