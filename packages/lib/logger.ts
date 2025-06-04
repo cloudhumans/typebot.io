@@ -33,19 +33,19 @@ if (
   })
 
   // Redireciona console para o logger
-  console.log = (...args) => logger.info(...args)
-  console.info = (...args) => logger.info(...args)
-  console.warn = (...args) => logger.warn(...args)
-  console.error = (...args) => logger.error(...args)
-  console.debug = (...args) => logger.debug(...args)
+  console.log = (...args: unknown[]) => logger.info(...args)
+  console.info = (...args: unknown[]) => logger.info(...args)
+  console.warn = (...args: unknown[]) => logger.warn(...args)
+  console.error = (...args: unknown[]) => logger.error(...args)
+  console.debug = (...args: unknown[]) => logger.debug(...args)
 } else {
   // No client, logger é um objeto fake
   logger = {
-    info: function () {},
-    error: function () {},
-    warn: function () {},
-    debug: function () {},
-    log: function () {},
+    info: (...args: unknown[]) => console.info(...args),
+    error: (...args: unknown[]) => console.error(...args),
+    warn: (...args: unknown[]) => console.warn(...args),
+    debug: (...args: unknown[]) => console.debug(...args),
+    log: (...args: unknown[]) => console.log(...args),
   }
 }
 

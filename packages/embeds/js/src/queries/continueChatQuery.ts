@@ -15,7 +15,6 @@ export const continueChatQuery = async ({
   apiToken?: string
 }) => {
   const headers = apiToken ? { Authorization: `Bearer ${apiToken}` } : {}
-  console.log('continueChatQuery: ', apiToken)
   try {
     const data = await ky
       .post(

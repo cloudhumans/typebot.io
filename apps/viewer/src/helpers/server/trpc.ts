@@ -37,7 +37,6 @@ const injectUser = t.middleware(({ next, ctx }) => {
 })
 
 const isAuthed = t.middleware(({ next, ctx }) => {
-  console.log('t.middleware', ctx)
   if (!ctx.user?.id) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
