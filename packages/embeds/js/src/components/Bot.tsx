@@ -29,6 +29,7 @@ import {
   defaultFontType,
   defaultProgressBarPosition,
 } from '@typebot.io/schemas/features/typebot/theme/constants'
+// import { useApiTokens } from '@/utils/apiTokens'
 
 export type BotProps = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,6 +42,7 @@ export type BotProps = {
   progressBarRef?: HTMLDivElement
   startFrom?: StartFrom
   sessionId?: string
+  userId?: string // Optional userId for API token fetching
   onNewInputBlock?: (inputBlock: InputBlock) => void
   onAnswer?: (answer: { message: string; blockId: string }) => void
   onInit?: () => void
@@ -49,13 +51,30 @@ export type BotProps = {
   onChatStatePersisted?: (isEnabled: boolean) => void
 }
 
-export const Bot = (props: BotProps & { class?: string }) => {
+export const Bot = (props: BotProps & { class?: string; userId?: string }) => {
   const [initialChatReply, setInitialChatReply] = createSignal<
     InitialChatReply | undefined
   >()
   const [customCss, setCustomCss] = createSignal('')
   const [isInitialized, setIsInitialized] = createSignal(false)
   const [error, setError] = createSignal<Error | undefined>()
+
+  // const {
+  //   apiTokens,
+  //   isLoading,
+  //   error: apiError,
+  //   refetch,
+  // } = useApiTokens({
+  //   userId: props.userId,
+  //   onError: (err: Error) => setError(err),
+  // })
+
+  // createEffect(() => {
+  //   if (apiTokens()) {
+  //     console.log('API Tokens fetched:', apiTokens())
+  //     // Use apiTokens for bot authentication or API interactions
+  //   }
+  // })
 
   const initializeBot = async () => {
     if (props.font) injectFont(props.font)

@@ -11,6 +11,7 @@ import {
   StartPreviewChatInput,
 } from '@typebot.io/schemas'
 import ky from 'ky'
+import { getLoggedUserToken } from '@/features/auth/helpers/getLoggedUserToken'
 
 type Props = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,6 +37,10 @@ export async function startChatQuery({
 }: Props) {
   if (isNotDefined(typebot))
     throw new Error('Typebot ID is required to get initial messages')
+
+  const token = await getLoggedUserToken()
+
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
   const paymentInProgressStateStr = getPaymentInProgressInStorage() ?? undefined
   const paymentInProgressState = paymentInProgressStateStr
@@ -91,6 +96,7 @@ export async function startChatQuery({
               'typebotId' | 'isOnlyRegistering' | 'textBubbleContentFormat'
             >,
             timeout: false,
+            headers,
           }
         )
         .json<InitialChatReply>()
@@ -118,6 +124,7 @@ export async function startChatQuery({
             'publicId' | 'textBubbleContentFormat'
           >,
           timeout: false,
+          headers,
         }
       )
       .json<InitialChatReply>()
