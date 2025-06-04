@@ -282,7 +282,6 @@ const BotContent = (props: BotContentProps) => {
     if (!botContainer) return
     resizeObserver.observe(botContainer)
     setBotContainerHeight(`${botContainer.clientHeight}px`)
-    console.info('BotContent', props)
   })
 
   createEffect(() => {

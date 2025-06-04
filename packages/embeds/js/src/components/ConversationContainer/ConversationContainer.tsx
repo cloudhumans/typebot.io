@@ -108,8 +108,6 @@ export const ConversationContainer = (props: Props) => {
       )
       await processClientSideActions(actionsBeforeFirstBubble)
     })()
-
-    console.info('ConversationContainer: ', props.context)
   })
 
   const streamMessage = ({ id, message }: { id: string; message: string }) => {
@@ -139,7 +137,6 @@ export const ConversationContainer = (props: Props) => {
   ) => {
     if (clientLogs) {
       props.onNewLogs?.(clientLogs)
-      console.info('saveClientLogsQuery: ', props.context.apiToken)
       await saveClientLogsQuery({
         apiHost: props.context.apiHost,
         sessionId: props.initialChatReply.sessionId,

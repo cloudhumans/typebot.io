@@ -37,7 +37,6 @@ export async function startChatQuery({
   if (isNotDefined(typebot))
     throw new Error('Typebot ID is required to get initial messages')
 
-  console.info('Starting chat with typebot', typebot)
   const headers = typebot?.apiToken
     ? { Authorization: `Bearer ${typebot?.apiToken}` }
     : {}
