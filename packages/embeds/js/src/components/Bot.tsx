@@ -29,7 +29,6 @@ import {
   defaultFontType,
   defaultProgressBarPosition,
 } from '@typebot.io/schemas/features/typebot/theme/constants'
-// import { useApiTokens } from '@/utils/apiTokens'
 
 export type BotProps = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,7 +77,7 @@ export const Bot = (props: BotProps & { class?: string }) => {
           props.typebot.apiToken = apiTokens[0].token
         }
       } catch (error) {
-        console.error('Erro ao buscar API tokens:', error)
+        console.error('Error fetching API tokens:', error)
       }
     }
 
