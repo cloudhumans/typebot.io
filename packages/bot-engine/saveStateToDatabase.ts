@@ -33,6 +33,7 @@ export const saveStateToDatabase = async ({
   initialSessionId,
 }: Props) => {
   logger.info('saveStateToDatabase called', {
+    sessionId: id || initialSessionId,
     hasExistingSessionId: !!id,
     existingSessionId: id,
     initialSessionId,
@@ -54,9 +55,10 @@ export const saveStateToDatabase = async ({
 
   const queries: Prisma.PrismaPromise<any>[] = []
 
-  const resultId = state.typebotsQueue[0].resultId
+  const resultId = state.typebotsQueue[0]?.resultId
 
   logger.info('saveStateToDatabase session handling', {
+    sessionId: id || initialSessionId,
     hasExistingSessionId: !!id,
     existingSessionId: id,
     initialSessionId,
@@ -65,6 +67,14 @@ export const saveStateToDatabase = async ({
     willDeleteSession: !!(id && isCompleted && resultId),
     willUpdateSession: !!(id && !(isCompleted && resultId)),
     willCreateSession: !id,
+    // Additional debugging info for completion logic
+    hasInput: !!input,
+    inputId: input?.id,
+    containsSetVariableClientSideAction,
+    hasCustomEmbedBubble,
+    currentTypebotId: state.typebotsQueue[0]?.typebot?.id,
+    typebotsQueueLength: state.typebotsQueue?.length,
+    answersCount: state.typebotsQueue[0]?.answers?.length || 0,
   })
 
   if (id) {
@@ -89,16 +99,16 @@ export const saveStateToDatabase = async ({
     return session
   }
 
-  const answers = state.typebotsQueue[0].answers
+  const answers = state.typebotsQueue[0]?.answers
 
   queries.push(
     upsertResult({
       resultId,
-      typebot: state.typebotsQueue[0].typebot,
+      typebot: state.typebotsQueue[0]?.typebot,
       isCompleted: Boolean(
-        !input && !containsSetVariableClientSideAction && answers.length > 0
+        !input && !containsSetVariableClientSideAction && answers && answers.length > 0
       ),
-      hasStarted: answers.length > 0,
+      hasStarted: answers ? answers.length > 0 : false,
       lastChatSessionId: session.id,
       logs,
       visitedEdges,
@@ -113,9 +123,9 @@ export const saveStateToDatabase = async ({
     resultId,
     typebotId: state.typebotsQueue[0]?.typebot?.id,
     isCompleted: Boolean(
-      !input && !containsSetVariableClientSideAction && answers.length > 0
+      !input && !containsSetVariableClientSideAction && answers && answers.length > 0
     ),
-    hasStarted: answers.length > 0,
+    hasStarted: answers ? answers.length > 0 : false,
     queriesExecuted: queries.length,
   })
 
