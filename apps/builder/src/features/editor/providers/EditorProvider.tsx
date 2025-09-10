@@ -10,6 +10,7 @@ import {
 import { ValidationError, useValidation } from '../hooks/useValidation'
 import { useTypebot } from './TypebotProvider'
 import { Typebot } from '@typebot.io/schemas'
+import { env } from '@typebot.io/env'
 
 export enum RightPanel {
   PREVIEW,
@@ -51,7 +52,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   } = useValidation()
 
   useEffect(() => {
-    // typebot && validateTypebot(typebot)
+    if (!env.NEXT_PUBLIC_DISABLE_VALIDATION && typebot) {
+      validateTypebot(typebot)
+    }
   }, [typebot, validateTypebot])
 
   return (
