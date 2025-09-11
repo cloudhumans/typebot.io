@@ -12,6 +12,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { isDefined, omit } from '@typebot.io/lib'
@@ -31,6 +32,7 @@ import { convertPublicTypebotToTypebot } from '@/features/publish/helpers/conver
 import { trpc } from '@/lib/trpc'
 import { EventsActions, eventsActions } from './typebotActions/events'
 import { useGroupsStore } from '@/features/graph/hooks/useGroupsStore'
+import { useUser } from '@/features/account/hooks/useUser'
 
 const autoSaveTimeout = 10000
 
@@ -48,6 +50,9 @@ type UpdateTypebotPayload = Partial<
     | 'isClosed'
     | 'whatsAppCredentialsId'
     | 'riskLevel'
+    | 'isBeingEdited'
+    | 'editingUserEmail'
+    | 'editingStartedAt'
   >
 >
 
@@ -92,6 +97,7 @@ export const TypebotProvider = ({
   typebotId?: string
 }) => {
   const { showToast } = useToast()
+  const { user } = useUser()
   const [is404, setIs404] = useState(false)
   const setGroupsCoordinates = useGroupsStore(
     (state) => state.setGroupsCoordinates
@@ -172,6 +178,92 @@ export const TypebotProvider = ({
     typebotData &&
     ['read', 'guest'].includes(typebotData?.currentUserMode ?? 'guest')
 
+  const typebotRef = useRef(typebot)
+  typebotRef.current = typebot
+
+  // Hook para controlar status de edição via autosave
+  const claimEditingStatus = useCallback(async () => {
+    if (!typebot || !user?.email || isReadOnly) return
+
+    try {
+      await updateTypebot({
+        typebotId: typebot.id,
+        typebot: {
+          isBeingEdited: true,
+          editingUserEmail: user.email,
+          editingStartedAt: new Date(),
+        },
+      })
+    } catch (error) {
+      console.error('Failed to claim editing status:', error)
+    }
+  }, [typebot, user?.email, isReadOnly, updateTypebot])
+
+  const releaseEditingStatus = useCallback(async () => {
+    if (!typebot || !user?.email) return
+
+    try {
+      await updateTypebot({
+        typebotId: typebot.id,
+        typebot: {
+          isBeingEdited: false,
+          editingUserEmail: null,
+          editingStartedAt: null,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to release editing status:', error)
+    }
+  }, [typebot, user?.email, updateTypebot])
+
+  // Claim editing status quando o typebot é carregado
+  useEffect(() => {
+    if (typebot && user?.email && !isReadOnly && !isFetchingTypebot) {
+      const timer = setTimeout(() => {
+        claimEditingStatus()
+      }, 500) // Debounce para evitar calls múltiplas
+
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typebot?.id, user?.email, isReadOnly, isFetchingTypebot])
+
+  // Release editing status quando sai da página
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const latestTypebot = typebotRef.current
+      if (
+        latestTypebot?.isBeingEdited &&
+        latestTypebot?.editingUserEmail === user?.email
+      ) {
+        // Use sendBeacon para envio assíncrono na saída
+        const payload = JSON.stringify({
+          typebotId: latestTypebot.id,
+          typebot: {
+            isBeingEdited: false,
+            editingUserEmail: null,
+            editingStartedAt: null,
+          },
+        })
+        navigator.sendBeacon?.('/api/trpc/typebot.updateTypebot', payload)
+      }
+    }
+
+    const handleRouteChange = () => {
+      releaseEditingStatus()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    Router.events.on('routeChangeStart', handleRouteChange)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      Router.events.off('routeChangeStart', handleRouteChange)
+      releaseEditingStatus()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email])
+
   const [
     localTypebot,
     {
@@ -221,10 +313,22 @@ export const TypebotProvider = ({
   const saveTypebot = useCallback(
     async (updates?: Partial<TypebotV6>) => {
       if (!localTypebot || !typebot || isReadOnly) return
+
+      // Adiciona campos de edição automaticamente a cada save
+      const editingUpdates = user?.email
+        ? {
+            isBeingEdited: true,
+            editingUserEmail: user.email,
+            editingStartedAt: new Date(),
+          }
+        : {}
+
       const typebotToSave = {
         ...localTypebot,
+        ...editingUpdates,
         ...updates,
       }
+
       if (dequal(omit(typebot, 'updatedAt'), omit(typebotToSave, 'updatedAt')))
         return
       const newParsedTypebot = typebotV6Schema.parse({ ...typebotToSave })
@@ -250,6 +354,7 @@ export const TypebotProvider = ({
       setUpdateDate,
       typebot,
       updateTypebot,
+      user?.email,
     ]
   )
 

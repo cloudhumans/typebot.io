@@ -58,6 +58,9 @@ export const typebotV5Schema = z.preprocess(
     isClosed: z.boolean(),
     whatsAppCredentialsId: z.string().nullable(),
     riskLevel: z.number().nullable(),
+    isBeingEdited: z.boolean(),
+    editingUserEmail: z.string().nullable(),
+    editingStartedAt: z.coerce.date().nullable(),
   }) satisfies z.ZodType<TypebotPrisma, z.ZodTypeDef, unknown>
 )
 
