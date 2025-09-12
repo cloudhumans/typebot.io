@@ -107,7 +107,6 @@ export const TypebotProvider = ({
   const [is404, setIs404] = useState(false)
   const [canEditNow, setCanEditNow] = useState(false)
   const [wasInReadonlyMode, setWasInReadonlyMode] = useState(false)
-  const [shouldPoll, setShouldPoll] = useState(false)
   const setGroupsCoordinates = useGroupsStore(
     (state) => state.setGroupsCoordinates
   )
@@ -213,36 +212,18 @@ export const TypebotProvider = ({
     typebotData?.currentUserMode,
   ])
 
-  // Configurar polling quando em modo readonly
+  // Polling quando em modo readonly para verificar se pode editar novamente
   useEffect(() => {
-    if (!isReadOnlyDueToEditing) {
-      setShouldPoll(false)
-      return
-    }
+    if (!isReadOnlyDueToEditing) return
 
-    setShouldPoll(true)
     const interval = setInterval(() => {
       refetchTypebot()
     }, 3000)
 
     return () => {
       clearInterval(interval)
-      setShouldPoll(false)
     }
   }, [isReadOnlyDueToEditing, refetchTypebot])
-
-  // Polling para verificar se pode editar novamente
-  useEffect(() => {
-    if (!shouldPoll) return
-
-    const interval = setInterval(() => {
-      refetchTypebot()
-    }, 3000) // Poll a cada 3 segundos
-
-    return () => {
-      clearInterval(interval)
-    }
-  }, [shouldPoll, refetchTypebot])
 
   const typebotRef = useRef(typebot)
   typebotRef.current = typebot
@@ -321,30 +302,10 @@ export const TypebotProvider = ({
       }
     })
   }, [typebot, user?.email, releaseEditingStatus])
-
   const dismissEditNotification = useCallback(() => {
     setCanEditNow(false)
     setWasInReadonlyMode(false)
   }, [])
-
-  // Função de teste para debug manual
-  const testReleaseEditing = useCallback(async () => {
-    await releaseEditingStatus()
-
-    // Aguardar um pouco e fazer refetch para verificar
-    setTimeout(() => {
-      refetchTypebot()
-    }, 1000)
-  }, [typebot, user?.email, releaseEditingStatus, refetchTypebot])
-
-  // Expor função de teste no window para debug
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      ;(
-        window as unknown as { testReleaseEditing: () => void }
-      ).testReleaseEditing = testReleaseEditing
-    }
-  }, [testReleaseEditing])
 
   // Claim editing status quando o typebot é carregado
   useEffect(() => {
