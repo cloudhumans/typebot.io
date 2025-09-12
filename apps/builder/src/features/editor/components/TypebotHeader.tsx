@@ -68,12 +68,10 @@ export const TypebotHeader = () => {
       {isOpen && <SupportBubble autoShowDelay={0} />}
       <LeftElements pos="absolute" left="1rem" />
 
-      {/* Notificação de que pode editar agora */}
       {canEditNow && (
         <CanEditNowNotification onDismiss={dismissEditNotification} />
       )}
 
-      {/* Indicador de edição quando outro usuário está editando */}
       {isReadOnlyDueToEditing && (
         <EditingIndicator
           editingUserEmail={editingUserEmail}
@@ -153,7 +151,7 @@ const LeftElements = ({ ...props }: StackProps) => {
         {router.query.embedded !== 'true' && (
           <IconButton
             as={Link}
-            aria-label="Navigate back"
+            aria-label={t('editor.header.navigateBack.ariaLabel')}
             icon={<ChevronLeftIcon fontSize={25} />}
             href={{
               pathname: router.query.parentId
@@ -313,7 +311,7 @@ const RightElements = ({
           isLoading={isNotDefined(typebot)}
           size="sm"
         >
-          Duplicate
+          {t('duplicate')}
         </Button>
       )}
       {currentUserMode === 'write' && <PublishButton size="sm" />}
@@ -412,7 +410,7 @@ const EditingIndicator = ({
       workspaceId: typebot.workspaceId,
       typebot: {
         ...typebot,
-        name: `${typebot.name} (Cópia)`,
+        name: `${typebot.name} ${t('editor.header.user.duplicateSuffix')}`,
       },
     })
   }
@@ -443,7 +441,6 @@ const EditingIndicator = ({
       alignItems="center"
       gap={2}
     >
-      {/* Avatar do usuário editando */}
       <Tooltip
         label={`${editingUserName} ${t('editor.header.user.editing')}`}
         hasArrow
@@ -467,7 +464,6 @@ const EditingIndicator = ({
         />
       </Tooltip>
 
-      {/* Badge de somente leitura */}
       <Tooltip label={t('editor.header.user.readonly.tooltip')} hasArrow>
         <Badge
           colorScheme="orange"
@@ -477,11 +473,10 @@ const EditingIndicator = ({
           py={1}
           borderRadius="full"
         >
-          🔒 Somente Leitura
+          {t('editor.header.user.readonly.badge.label')}
         </Badge>
       </Tooltip>
 
-      {/* Botão de duplicar */}
       <Tooltip label={t('editor.header.user.duplicate.tooltip')} hasArrow>
         <Button
           size="sm"
@@ -490,12 +485,12 @@ const EditingIndicator = ({
           leftIcon={<CopyIcon />}
           onClick={handleDuplicate}
           isLoading={isDuplicating}
-          loadingText="Duplicando..."
+          loadingText={t('editor.header.user.duplicating.loadingText')}
           fontSize="xs"
           px={3}
           py={1}
         >
-          Duplicar
+          {t('editor.header.user.duplicateButton.label')}
         </Button>
       </Tooltip>
     </Box>
