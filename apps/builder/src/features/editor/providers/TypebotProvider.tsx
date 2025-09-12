@@ -120,7 +120,6 @@ export const TypebotProvider = ({
     {
       enabled: isDefined(typebotId),
       retry: 0,
-      // Polling será configurado via useEffect após detectar readonly
       onError: (error) => {
         if (error.data?.httpStatus === 404) {
           setIs404(true)
@@ -187,7 +186,6 @@ export const TypebotProvider = ({
     typebotData &&
     ['read', 'guest'].includes(typebotData?.currentUserMode ?? 'guest')
 
-  // Verificar se está em modo readonly devido à edição por outro usuário
   const isReadOnlyDueToEditing = Boolean(
     typebot?.isBeingEdited &&
       typebot?.editingUserEmail &&
@@ -195,13 +193,11 @@ export const TypebotProvider = ({
       typebotData?.currentUserMode === 'read'
   )
 
-  // Detectar quando sai do modo readonly para mostrar notificação
   useEffect(() => {
     if (isReadOnlyDueToEditing) {
       setWasInReadonlyMode(true)
       setCanEditNow(false)
     } else if (wasInReadonlyMode && !isReadOnlyDueToEditing) {
-      // Saiu do modo readonly, pode editar agora
       setCanEditNow(true)
     }
   }, [
@@ -212,7 +208,6 @@ export const TypebotProvider = ({
     typebotData?.currentUserMode,
   ])
 
-  // Polling quando em modo readonly para verificar se pode editar novamente
   useEffect(() => {
     if (!isReadOnlyDueToEditing) return
 
@@ -228,7 +223,6 @@ export const TypebotProvider = ({
   const typebotRef = useRef(typebot)
   typebotRef.current = typebot
 
-  // Hook para controlar status de edição via autosave
   const claimEditingStatus = useCallback(async () => {
     if (!typebot || !user?.email || isReadOnly) return
 
@@ -265,18 +259,14 @@ export const TypebotProvider = ({
     }
   }, [typebot, user?.email, updateTypebot])
 
-  // Função para release síncrono usando sendBeacon
   const releaseEditingStatusSync = useCallback(() => {
     if (!typebot || !user?.email) return
 
-    // Primeiro tentar a função async normal (mais confiável)
     releaseEditingStatus().catch((error) => {
       console.error('❌ Async release failed, trying sync methods:', error)
 
-      // URL da API HTTP para sendBeacon
       const apiUrl = `/api/typebots/${typebot.id}/release-editing`
 
-      // Tentar sendBeacon
       if (navigator.sendBeacon) {
         const success = navigator.sendBeacon(
           apiUrl,
@@ -285,7 +275,6 @@ export const TypebotProvider = ({
         if (success) return
       }
 
-      // Fallback para fetch síncrono
       try {
         fetch(apiUrl, {
           method: 'POST',
@@ -307,19 +296,17 @@ export const TypebotProvider = ({
     setWasInReadonlyMode(false)
   }, [])
 
-  // Claim editing status quando o typebot é carregado
   useEffect(() => {
     if (typebot && user?.email && !isReadOnly && !isFetchingTypebot) {
       const timer = setTimeout(() => {
         claimEditingStatus()
-      }, 500) // Debounce para evitar calls múltiplas
+      }, 500)
 
       return () => clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typebot?.id, user?.email, isReadOnly, isFetchingTypebot])
 
-  // Release editing status quando sai da página
   useEffect(() => {
     const handleBeforeUnload = () => {
       const latestTypebot = typebotRef.current
@@ -327,7 +314,6 @@ export const TypebotProvider = ({
         latestTypebot?.isBeingEdited &&
         latestTypebot?.editingUserEmail === user?.email
       ) {
-        // Usar função síncrona para garantir execução durante unload
         releaseEditingStatusSync()
       }
     }
@@ -358,7 +344,6 @@ export const TypebotProvider = ({
       window.removeEventListener('pagehide', handleBeforeUnload)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       Router.events.off('routeChangeStart', handleRouteChange)
-      // Release final ao desmontar componente
       releaseEditingStatusSync()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -414,7 +399,6 @@ export const TypebotProvider = ({
     async (updates?: Partial<TypebotV6>) => {
       if (!localTypebot || !typebot || isReadOnly) return
 
-      // Adiciona campos de edição automaticamente a cada save
       const editingUpdates = user?.email
         ? {
             isBeingEdited: true,
