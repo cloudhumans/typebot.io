@@ -280,6 +280,7 @@
   "editor.header.user.canEditNow.dismissButton": "¡Entendido!",
   "editor.header.user.duplicate.tooltip": "Crear una copia para editar mientras otro usuario está editando",
   "editor.header.user.editing": "está editando este Eddie",
+  "editor.header.user.readonly.dismissButton.ariaLabel": "Cerrar notificación",
   "editor.header.user.readonly.tooltip": "Modo de solo lectura – Otro usuario está editando",
   "editor.sidebarBlock.abTest.label": "Prueba A/B",
   "editor.sidebarBlock.analytics.label": "Análisis",
