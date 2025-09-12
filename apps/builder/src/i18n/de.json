@@ -158,6 +158,7 @@
   "editor.header.savingSpinner.label": "Speichern...",
   "editor.header.settingsButton.label": "Einstellungen",
   "editor.header.themeButton.label": "Design",
+  "editor.header.user.readonly.dismissButton.ariaLabel": "Cerrar notificación",
   "editor.sidebarBlock.abTest.label": "AB-Test",
   "editor.sidebarBlock.analytics.label": "Analytics",
   "editor.sidebarBlock.audio.label": "Audio",

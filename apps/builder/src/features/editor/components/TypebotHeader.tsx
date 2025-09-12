@@ -390,6 +390,7 @@ const EditingIndicator = ({
   editingUserEmail?: string | null
   editingUserName?: string | null
 }) => {
+  const { t } = useTranslate()
   const router = useRouter()
   const { typebot } = useTypebot()
   const { mutate: duplicateTypebot, isLoading: isDuplicating } =
@@ -437,7 +438,10 @@ const EditingIndicator = ({
       gap={2}
     >
       {/* Avatar do usuário editando */}
-      <Tooltip label={`${editingUserName} está editando este Eddie`} hasArrow>
+      <Tooltip
+        label={`${editingUserName} ${t('editor.header.user.editing')}`}
+        hasArrow
+      >
         <Avatar
           size="sm"
           name={editingUserName || editingUserEmail || ''}
@@ -458,10 +462,7 @@ const EditingIndicator = ({
       </Tooltip>
 
       {/* Badge de somente leitura */}
-      <Tooltip
-        label="Modo somente leitura - Outro usuário está editando"
-        hasArrow
-      >
+      <Tooltip label={t('editor.header.user.readonly.tooltip')} hasArrow>
         <Badge
           colorScheme="orange"
           variant="solid"
@@ -475,10 +476,7 @@ const EditingIndicator = ({
       </Tooltip>
 
       {/* Botão de duplicar */}
-      <Tooltip
-        label="Criar uma cópia para editar enquanto outro usuário está editando"
-        hasArrow
-      >
+      <Tooltip label={t('editor.header.user.duplicate.tooltip')} hasArrow>
         <Button
           size="sm"
           colorScheme="blue"
@@ -499,6 +497,7 @@ const EditingIndicator = ({
 }
 
 const CanEditNowNotification = ({ onDismiss }: { onDismiss: () => void }) => {
+  const { t } = useTranslate()
   return (
     <Box
       pos="absolute"
@@ -517,7 +516,7 @@ const CanEditNowNotification = ({ onDismiss }: { onDismiss: () => void }) => {
       animation="slideIn 0.3s ease-out"
     >
       <Text fontSize="sm" fontWeight="medium">
-        ✅ Agora você pode editar!
+        ✅ {t('editor.header.user.canEditNow')}
       </Text>
       <Button
         size="sm"
@@ -526,10 +525,10 @@ const CanEditNowNotification = ({ onDismiss }: { onDismiss: () => void }) => {
         onClick={onDismiss}
         fontSize="xs"
       >
-        Entendido!
+        {t('editor.header.user.canEditNow.dismissButton')}
       </Button>
       <IconButton
-        aria-label="Fechar notificação"
+        aria-label={t('editor.header.user.readonly.dismissButton.ariaLabel')}
         icon={<Text fontSize="sm">×</Text>}
         size="xs"
         variant="ghost"
