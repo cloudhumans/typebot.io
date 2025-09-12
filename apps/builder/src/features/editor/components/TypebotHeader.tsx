@@ -45,6 +45,9 @@ export const TypebotHeader = () => {
     currentUserMode,
     canEditNow,
     dismissEditNotification,
+    editingUserEmail,
+    editingUserName,
+    isReadOnlyDueToEditing,
   } = useTypebot()
   const { isOpen } = useDisclosure()
   const headerBgColor = useColorModeValue('white', 'gray.900')
@@ -71,16 +74,12 @@ export const TypebotHeader = () => {
       )}
 
       {/* Indicador de edição quando outro usuário está editando */}
-      {typebot?.isBeingEdited &&
-        typebot?.editingUserEmail &&
-        typebot?.editingStartedAt &&
-        currentUserMode === 'read' &&
-        !canEditNow && (
-          <EditingIndicator
-            editingUserEmail={typebot.editingUserEmail}
-            editingUserName={typebot.editingUserName}
-          />
-        )}
+      {isReadOnlyDueToEditing && (
+        <EditingIndicator
+          editingUserEmail={editingUserEmail}
+          editingUserName={editingUserName}
+        />
+      )}
       <TypebotNav
         display={{ base: 'none', xl: 'flex' }}
         pos={{ base: 'absolute' }}

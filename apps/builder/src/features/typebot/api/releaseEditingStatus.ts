@@ -24,13 +24,6 @@ export const releaseEditingStatus = authenticatedProcedure
     })
   )
   .mutation(async ({ input: { typebotId }, ctx: { user } }) => {
-    console.log(
-      '🔓 API: Releasing editing status for typebot:',
-      typebotId,
-      'user:',
-      user.email
-    )
-
     const typebot = await prisma.typebot.findFirst({
       where: {
         id: typebotId,
@@ -56,10 +49,6 @@ export const releaseEditingStatus = authenticatedProcedure
         },
       })
 
-      console.log(
-        '✅ API: Editing status released successfully for typebot:',
-        typebotId
-      )
       return { success: true }
     } catch (error) {
       console.error('❌ API: Failed to release editing status:', error)
