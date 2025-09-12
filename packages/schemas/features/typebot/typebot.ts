@@ -60,6 +60,7 @@ export const typebotV5Schema = z.preprocess(
     riskLevel: z.number().nullable(),
     isBeingEdited: z.boolean(),
     editingUserEmail: z.string().nullable(),
+    editingUserName: z.string().nullable(),
     editingStartedAt: z.coerce.date().nullable(),
   }) satisfies z.ZodType<TypebotPrisma, z.ZodTypeDef, unknown>
 )

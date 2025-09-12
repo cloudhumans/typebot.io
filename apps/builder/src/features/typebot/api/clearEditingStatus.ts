@@ -42,6 +42,8 @@ export const clearEditingStatus = authenticatedProcedure
         id: true,
         isBeingEdited: true,
         editingUserEmail: true,
+        editingUserName: true,
+        editingStartedAt: true,
         collaborators: {
           select: {
             userId: true,
@@ -89,6 +91,7 @@ export const clearEditingStatus = authenticatedProcedure
       data: {
         isBeingEdited: false,
         editingUserEmail: null,
+        editingUserName: null,
       },
     })
 

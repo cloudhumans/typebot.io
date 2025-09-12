@@ -41,6 +41,7 @@ const typebotUpdateSchemaPick = {
   updatedAt: true,
   isBeingEdited: true,
   editingUserEmail: true,
+  editingUserName: true,
   editingStartedAt: true,
 } as const
 
@@ -91,6 +92,7 @@ export const updateTypebot = authenticatedProcedure
         publicId: true,
         isBeingEdited: true,
         editingUserEmail: true,
+        editingUserName: true,
         editingStartedAt: true,
         collaborators: {
           select: {
@@ -149,11 +151,10 @@ export const updateTypebot = authenticatedProcedure
           existingTypebot.isBeingEdited &&
           existingTypebot.editingUserEmail !== user.email
         ) {
-          const thirtySecondsAgo = new Date(Date.now() - 30000)
+          const fifteenSecondsAgo = new Date(Date.now() - 15000)
           const editingStartedAt = existingTypebot.editingStartedAt
 
-          // Se passou mais de 30 segundos, forçar liberação
-          if (editingStartedAt && editingStartedAt < thirtySecondsAgo) {
+          if (editingStartedAt && editingStartedAt < fifteenSecondsAgo) {
             console.warn(
               `Auto-releasing editing status from ${existingTypebot.editingUserEmail} due to timeout`
             )
@@ -260,6 +261,7 @@ export const updateTypebot = authenticatedProcedure
         whatsAppCredentialsId: typebot.whatsAppCredentialsId ?? undefined,
         isBeingEdited: typebot.isBeingEdited,
         editingUserEmail: typebot.editingUserEmail,
+        editingUserName: typebot.editingUserName,
         editingStartedAt: typebot.editingStartedAt,
       },
     })

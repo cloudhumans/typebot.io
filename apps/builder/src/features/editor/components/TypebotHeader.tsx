@@ -10,6 +10,9 @@ import {
   useDisclosure,
   StackProps,
   chakra,
+  Badge,
+  Avatar,
+  Box,
 } from '@chakra-ui/react'
 import {
   ChevronLeftIcon,
@@ -33,9 +36,16 @@ import { SupportBubble } from '@/components/SupportBubble'
 import { useTranslate } from '@tolgee/react'
 import { GuestTypebotHeader } from './UnauthenticatedTypebotHeader'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { trpc } from '@/lib/trpc'
 
 export const TypebotHeader = () => {
-  const { typebot, publishedTypebot, currentUserMode } = useTypebot()
+  const {
+    typebot,
+    publishedTypebot,
+    currentUserMode,
+    canEditNow,
+    dismissEditNotification,
+  } = useTypebot()
   const { isOpen } = useDisclosure()
   const headerBgColor = useColorModeValue('white', 'gray.900')
 
@@ -54,6 +64,23 @@ export const TypebotHeader = () => {
     >
       {isOpen && <SupportBubble autoShowDelay={0} />}
       <LeftElements pos="absolute" left="1rem" />
+
+      {/* Notificação de que pode editar agora */}
+      {canEditNow && (
+        <CanEditNowNotification onDismiss={dismissEditNotification} />
+      )}
+
+      {/* Indicador de edição quando outro usuário está editando */}
+      {typebot?.isBeingEdited &&
+        typebot?.editingUserEmail &&
+        typebot?.editingStartedAt &&
+        currentUserMode === 'read' &&
+        !canEditNow && (
+          <EditingIndicator
+            editingUserEmail={typebot.editingUserEmail}
+            editingUserName={typebot.editingUserName}
+          />
+        )}
       <TypebotNav
         display={{ base: 'none', xl: 'flex' }}
         pos={{ base: 'absolute' }}
@@ -354,5 +381,162 @@ const TypebotNav = ({
         </Button>
       )}
     </HStack>
+  )
+}
+
+const EditingIndicator = ({
+  editingUserEmail,
+  editingUserName,
+}: {
+  editingUserEmail?: string | null
+  editingUserName?: string | null
+}) => {
+  const router = useRouter()
+  const { typebot } = useTypebot()
+  const { mutate: duplicateTypebot, isLoading: isDuplicating } =
+    trpc.typebot.importTypebot.useMutation({
+      onSuccess: (data) => {
+        router.push(`/typebots/${data.typebot.id}/edit`)
+      },
+    })
+
+  const handleDuplicate = () => {
+    if (!typebot?.workspaceId || !typebot) return
+    duplicateTypebot({
+      workspaceId: typebot.workspaceId,
+      typebot: {
+        ...typebot,
+        name: `${typebot.name} (Cópia)`,
+      },
+    })
+  }
+
+  const getAvatarColor = (email: string) => {
+    const colors = [
+      'red',
+      'orange',
+      'yellow',
+      'green',
+      'teal',
+      'blue',
+      'cyan',
+      'purple',
+      'pink',
+    ]
+    const index = email.length % colors.length
+    return colors[index]
+  }
+
+  return (
+    <Box
+      pos="absolute"
+      top="12px"
+      right="120px"
+      zIndex={1000}
+      display={{ base: 'none', md: 'flex' }}
+      alignItems="center"
+      gap={2}
+    >
+      {/* Avatar do usuário editando */}
+      <Tooltip label={`${editingUserName} está editando este Eddie`} hasArrow>
+        <Avatar
+          size="sm"
+          name={editingUserName || editingUserEmail || ''}
+          bg={
+            editingUserEmail
+              ? `${getAvatarColor(editingUserEmail)}.500`
+              : 'gray.500'
+          }
+          color="white"
+          fontSize="xs"
+          border="2px solid"
+          borderColor="orange.400"
+          _hover={{
+            transform: 'scale(1.1)',
+            transition: 'transform 0.2s',
+          }}
+        />
+      </Tooltip>
+
+      {/* Badge de somente leitura */}
+      <Tooltip
+        label="Modo somente leitura - Outro usuário está editando"
+        hasArrow
+      >
+        <Badge
+          colorScheme="orange"
+          variant="solid"
+          fontSize="xs"
+          px={3}
+          py={1}
+          borderRadius="full"
+        >
+          🔒 Somente Leitura
+        </Badge>
+      </Tooltip>
+
+      {/* Botão de duplicar */}
+      <Tooltip
+        label="Criar uma cópia para editar enquanto outro usuário está editando"
+        hasArrow
+      >
+        <Button
+          size="sm"
+          colorScheme="blue"
+          variant="solid"
+          leftIcon={<CopyIcon />}
+          onClick={handleDuplicate}
+          isLoading={isDuplicating}
+          loadingText="Duplicando..."
+          fontSize="xs"
+          px={3}
+          py={1}
+        >
+          Duplicar
+        </Button>
+      </Tooltip>
+    </Box>
+  )
+}
+
+const CanEditNowNotification = ({ onDismiss }: { onDismiss: () => void }) => {
+  return (
+    <Box
+      pos="absolute"
+      top="12px"
+      right="120px"
+      zIndex={1000}
+      display={{ base: 'none', md: 'flex' }}
+      alignItems="center"
+      gap={3}
+      bg="green.500"
+      color="white"
+      px={4}
+      py={2}
+      borderRadius="md"
+      boxShadow="lg"
+      animation="slideIn 0.3s ease-out"
+    >
+      <Text fontSize="sm" fontWeight="medium">
+        ✅ Agora você pode editar!
+      </Text>
+      <Button
+        size="sm"
+        colorScheme="whiteAlpha"
+        variant="solid"
+        onClick={onDismiss}
+        fontSize="xs"
+      >
+        Entendido!
+      </Button>
+      <IconButton
+        aria-label="Fechar notificação"
+        icon={<Text fontSize="sm">×</Text>}
+        size="xs"
+        variant="ghost"
+        colorScheme="whiteAlpha"
+        onClick={onDismiss}
+      />
+    </Box>
   )
 }

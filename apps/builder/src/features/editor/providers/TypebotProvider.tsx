@@ -52,6 +52,7 @@ type UpdateTypebotPayload = Partial<
     | 'riskLevel'
     | 'isBeingEdited'
     | 'editingUserEmail'
+    | 'editingUserName'
     | 'editingStartedAt'
   >
 >
@@ -69,6 +70,11 @@ const typebotContext = createContext<
     is404: boolean
     isPublished: boolean
     isSavingLoading: boolean
+    isReadOnlyDueToEditing: boolean
+    editingUserEmail?: string | null
+    editingUserName?: string | null
+    canEditNow: boolean
+    dismissEditNotification: () => void
     save: () => Promise<void>
     undo: () => void
     redo: () => void
@@ -99,6 +105,9 @@ export const TypebotProvider = ({
   const { showToast } = useToast()
   const { user } = useUser()
   const [is404, setIs404] = useState(false)
+  const [canEditNow, setCanEditNow] = useState(false)
+  const [wasInReadonlyMode, setWasInReadonlyMode] = useState(false)
+  const [shouldPoll, setShouldPoll] = useState(false)
   const setGroupsCoordinates = useGroupsStore(
     (state) => state.setGroupsCoordinates
   )
@@ -112,6 +121,7 @@ export const TypebotProvider = ({
     {
       enabled: isDefined(typebotId),
       retry: 0,
+      // Polling será configurado via useEffect após detectar readonly
       onError: (error) => {
         if (error.data?.httpStatus === 404) {
           setIs404(true)
@@ -178,6 +188,62 @@ export const TypebotProvider = ({
     typebotData &&
     ['read', 'guest'].includes(typebotData?.currentUserMode ?? 'guest')
 
+  // Verificar se está em modo readonly devido à edição por outro usuário
+  const isReadOnlyDueToEditing = Boolean(
+    typebot?.isBeingEdited &&
+      typebot?.editingUserEmail &&
+      typebot?.editingUserEmail !== user?.email &&
+      typebotData?.currentUserMode === 'read'
+  )
+
+  // Detectar quando sai do modo readonly para mostrar notificação
+  useEffect(() => {
+    if (isReadOnlyDueToEditing) {
+      setWasInReadonlyMode(true)
+      setCanEditNow(false)
+    } else if (wasInReadonlyMode && !isReadOnlyDueToEditing) {
+      // Saiu do modo readonly, pode editar agora
+      setCanEditNow(true)
+    }
+  }, [
+    isReadOnlyDueToEditing,
+    wasInReadonlyMode,
+    canEditNow,
+    typebot?.editingUserEmail,
+    typebotData?.currentUserMode,
+  ])
+
+  // Configurar polling quando em modo readonly
+  useEffect(() => {
+    if (!isReadOnlyDueToEditing) {
+      setShouldPoll(false)
+      return
+    }
+
+    setShouldPoll(true)
+    const interval = setInterval(() => {
+      refetchTypebot()
+    }, 3000)
+
+    return () => {
+      clearInterval(interval)
+      setShouldPoll(false)
+    }
+  }, [isReadOnlyDueToEditing, refetchTypebot])
+
+  // Polling para verificar se pode editar novamente
+  useEffect(() => {
+    if (!shouldPoll) return
+
+    const interval = setInterval(() => {
+      refetchTypebot()
+    }, 3000) // Poll a cada 3 segundos
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [shouldPoll, refetchTypebot])
+
   const typebotRef = useRef(typebot)
   typebotRef.current = typebot
 
@@ -191,13 +257,14 @@ export const TypebotProvider = ({
         typebot: {
           isBeingEdited: true,
           editingUserEmail: user.email,
+          editingUserName: user.name,
           editingStartedAt: new Date(),
         },
       })
     } catch (error) {
       console.error('Failed to claim editing status:', error)
     }
-  }, [typebot, user?.email, isReadOnly, updateTypebot])
+  }, [typebot, user, isReadOnly, updateTypebot])
 
   const releaseEditingStatus = useCallback(async () => {
     if (!typebot || !user?.email) return
@@ -208,13 +275,76 @@ export const TypebotProvider = ({
         typebot: {
           isBeingEdited: false,
           editingUserEmail: null,
+          editingUserName: null,
           editingStartedAt: null,
         },
       })
     } catch (error) {
-      console.error('Failed to release editing status:', error)
+      console.error('❌ Failed to release editing status:', error)
     }
   }, [typebot, user?.email, updateTypebot])
+
+  // Função para release síncrono usando sendBeacon
+  const releaseEditingStatusSync = useCallback(() => {
+    if (!typebot || !user?.email) return
+
+    // Primeiro tentar a função async normal (mais confiável)
+    releaseEditingStatus().catch((error) => {
+      console.error('❌ Async release failed, trying sync methods:', error)
+
+      // URL da API HTTP para sendBeacon
+      const apiUrl = `/api/typebots/${typebot.id}/release-editing`
+
+      // Tentar sendBeacon
+      if (navigator.sendBeacon) {
+        const success = navigator.sendBeacon(
+          apiUrl,
+          new Blob([''], { type: 'text/plain' })
+        )
+        if (success) return
+      }
+
+      // Fallback para fetch síncrono
+      try {
+        fetch(apiUrl, {
+          method: 'POST',
+          keepalive: true,
+        })
+          .then((response) => {
+            console.log('📡 Sync fetch response:', response.status)
+          })
+          .catch((err) => {
+            console.error('❌ Sync fetch error:', err)
+          })
+      } catch (error) {
+        console.error('❌ All sync methods failed:', error)
+      }
+    })
+  }, [typebot, user?.email, releaseEditingStatus])
+
+  const dismissEditNotification = useCallback(() => {
+    setCanEditNow(false)
+    setWasInReadonlyMode(false)
+  }, [])
+
+  // Função de teste para debug manual
+  const testReleaseEditing = useCallback(async () => {
+    await releaseEditingStatus()
+
+    // Aguardar um pouco e fazer refetch para verificar
+    setTimeout(() => {
+      refetchTypebot()
+    }, 1000)
+  }, [typebot, user?.email, releaseEditingStatus, refetchTypebot])
+
+  // Expor função de teste no window para debug
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      ;(
+        window as unknown as { testReleaseEditing: () => void }
+      ).testReleaseEditing = testReleaseEditing
+    }
+  }, [testReleaseEditing])
 
   // Claim editing status quando o typebot é carregado
   useEffect(() => {
@@ -236,30 +366,39 @@ export const TypebotProvider = ({
         latestTypebot?.isBeingEdited &&
         latestTypebot?.editingUserEmail === user?.email
       ) {
-        // Use sendBeacon para envio assíncrono na saída
-        const payload = JSON.stringify({
-          typebotId: latestTypebot.id,
-          typebot: {
-            isBeingEdited: false,
-            editingUserEmail: null,
-            editingStartedAt: null,
-          },
-        })
-        navigator.sendBeacon?.('/api/trpc/typebot.updateTypebot', payload)
+        // Usar função síncrona para garantir execução durante unload
+        releaseEditingStatusSync()
       }
     }
 
     const handleRouteChange = () => {
-      releaseEditingStatus()
+      releaseEditingStatusSync()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        const latestTypebot = typebotRef.current
+        if (
+          latestTypebot?.isBeingEdited &&
+          latestTypebot?.editingUserEmail === user?.email
+        ) {
+          releaseEditingStatusSync()
+        }
+      }
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload) // iOS Safari
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     Router.events.on('routeChangeStart', handleRouteChange)
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       Router.events.off('routeChangeStart', handleRouteChange)
-      releaseEditingStatus()
+      // Release final ao desmontar componente
+      releaseEditingStatusSync()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
@@ -319,6 +458,7 @@ export const TypebotProvider = ({
         ? {
             isBeingEdited: true,
             editingUserEmail: user.email,
+            editingUserName: user.name,
             editingStartedAt: new Date(),
           }
         : {}
@@ -355,6 +495,7 @@ export const TypebotProvider = ({
       typebot,
       updateTypebot,
       user?.email,
+      user?.name,
     ]
   )
 
@@ -427,6 +568,11 @@ export const TypebotProvider = ({
         currentUserMode: typebotData?.currentUserMode ?? 'guest',
         isSavingLoading: isSaving,
         is404,
+        isReadOnlyDueToEditing,
+        editingUserEmail: typebot?.editingUserEmail,
+        editingUserName: typebot?.editingUserName,
+        canEditNow,
+        dismissEditNotification,
         save: saveTypebot,
         undo,
         redo,
