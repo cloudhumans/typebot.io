@@ -13,7 +13,7 @@ export const OnlineUsersIndicator = () => {
     users: Array<{ id: string; name?: string; email?: string }>
   } | null>(null)
 
-  trpc.onlineUsers.useSubscription(
+  trpc.onlineUsers.subscribe.useSubscription(
     {
       typebotId: typebot?.id ?? '',
       user: {
