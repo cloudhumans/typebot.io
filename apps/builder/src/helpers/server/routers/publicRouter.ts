@@ -6,12 +6,13 @@ import { resultsRouter } from '@/features/results/api/router'
 import { themeRouter } from '@/features/theme/api/router'
 import { typebotRouter } from '@/features/typebot/api/router'
 import { workspaceRouter } from '@/features/workspace/api/router'
-import { router } from '../trpc'
+import { publicProcedure, router } from '../trpc'
 import { analyticsRouter } from '@/features/analytics/api/router'
 import { collaboratorsRouter } from '@/features/collaboration/api/router'
 import { customDomainsRouter } from '@/features/customDomains/api/router'
 import { publicWhatsAppRouter } from '@/features/whatsapp/router'
 import { folderRouter } from '@/features/folders/api/router'
+import { observable } from '@trpc/server/observable'
 
 export const publicRouter = router({
   getLinkedTypebots,
@@ -27,6 +28,16 @@ export const publicRouter = router({
   customDomains: customDomainsRouter,
   whatsApp: publicWhatsAppRouter,
   folders: folderRouter,
+  randomNumber: publicProcedure.subscription(() => {
+    return observable<number>((emit) => {
+      const int = setInterval(() => {
+        emit.next(Math.random())
+      }, 500)
+      return () => {
+        clearInterval(int)
+      }
+    })
+  }),
 })
 
 export type PublicRouter = typeof publicRouter

@@ -20,6 +20,8 @@ import { SuspectedTypebotBanner } from './SuspectedTypebotBanner'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { VariablesDrawer } from '@/features/preview/components/VariablesDrawer'
 import { ValidationErrorsDrawer } from '@/features/preview/components/ValidationErrorsDrawer'
+import { useState } from 'react'
+import { trpc } from '@/lib/trpc'
 
 export const EditorPage = () => {
   const { typebot, currentUserMode, is404 } = useTypebot()
@@ -31,6 +33,17 @@ export const EditorPage = () => {
   const bgColor = useColorModeValue('#f4f5f8', 'gray.850')
 
   const isSuspicious = typebot?.riskLevel === 100 && !workspace?.isVerified
+
+  const [, setNumber] = useState<number>()
+  trpc.randomNumber.useSubscription(undefined, {
+    onData(n) {
+      console.log('Random number from subscription:', n)
+      setNumber(n)
+    },
+    onError(err) {
+      console.error('Subscription error:', err)
+    },
+  })
 
   if (is404) return <TypebotNotFoundPage />
   return (

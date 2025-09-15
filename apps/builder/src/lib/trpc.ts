@@ -1,4 +1,11 @@
-import { createTRPCProxyClient, httpBatchLink, loggerLink } from '@trpc/client'
+import {
+  createTRPCProxyClient,
+  httpBatchLink,
+  loggerLink,
+  wsLink,
+  createWSClient,
+  splitLink,
+} from '@trpc/client'
 import { createTRPCNext } from '@trpc/next'
 import superjson from 'superjson'
 import { env } from '@typebot.io/env'
@@ -6,8 +13,13 @@ import type { AppRouter } from '@/helpers/server/routers/appRouter'
 
 const getBaseUrl = () => (typeof window !== 'undefined' ? '' : env.NEXTAUTH_URL)
 
+const getWsUrl = () => 'ws://localhost:3004/api/trpc'
+
 export const trpc = createTRPCNext<AppRouter>({
   config() {
+    const wsClient =
+      typeof window !== 'undefined' ? createWSClient({ url: getWsUrl() }) : null
+
     return {
       links: [
         loggerLink({
@@ -15,8 +27,14 @@ export const trpc = createTRPCNext<AppRouter>({
             process.env.NODE_ENV === 'development' ||
             (opts.direction === 'down' && opts.result instanceof Error),
         }),
-        httpBatchLink({
-          url: `${getBaseUrl()}/api/trpc`,
+        splitLink({
+          condition(op) {
+            return op.type === 'subscription'
+          },
+          true: wsClient
+            ? wsLink<AppRouter>({ client: wsClient })
+            : httpBatchLink({ url: `${getBaseUrl()}/api/trpc` }),
+          false: httpBatchLink({ url: `${getBaseUrl()}/api/trpc` }),
         }),
       ],
       transformer: superjson,
@@ -24,6 +42,20 @@ export const trpc = createTRPCNext<AppRouter>({
   },
   ssr: false,
 })
+
+// function getEndingLink(): TRPCLink<AppRouter> {
+//   if (typeof window === 'undefined') {
+//     return httpBatchLink({
+//       url: `${getBaseUrl()}/api/trpc`,
+//     })
+//   }
+
+//   return wsLink({
+//     client: createWSClient({
+//       url: getWsUrl(),
+//     }),
+//   })
+// }
 
 export const trpcVanilla = createTRPCProxyClient<AppRouter>({
   links: [
