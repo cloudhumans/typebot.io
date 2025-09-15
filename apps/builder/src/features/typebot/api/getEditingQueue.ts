@@ -6,22 +6,19 @@ export const getEditingQueue = authenticatedProcedure
   .input(z.object({ typebotId: z.string() }))
   .output(
     z.object({
-      editorEmail: z.string().nullable(), // derivado da posição 1
       isEditor: z.boolean(),
       position: z.number().nullable(), // posição do caller (1=editor)
       queue: z.array(
         z.object({
           userId: z.string(),
           position: z.number(), // 1=editor, >=2 esperando
-          userEmail: z.string().nullable(),
-          userName: z.string().nullable(),
           lastHeartbeatAt: z.date().nullable(),
         })
       ),
     })
   )
   .query(async ({ input: { typebotId }, ctx: { user } }) => {
-    return await prisma.$transaction(async (tx: typeof prisma) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Carrega fila completa
       const raw = await tx.typebotEditQueue.findMany({
         where: { typebotId },
@@ -90,19 +87,16 @@ export const getEditingQueue = authenticatedProcedure
       const editorEntry =
         queueFull.find((e: (typeof queueFull)[number]) => e.position === 1) ||
         null
-      const editorEmail = editorEntry?.user?.email ?? null
 
       return {
-        editorEmail,
         isEditor,
         position: myEntry?.position ?? null,
         queue: queueFull.map((e: (typeof queueFull)[number]) => ({
           userId: e.userId,
           position: e.position,
-          userEmail: e.userEmail ?? e.user?.email ?? null,
-          userName: e.userName ?? e.user?.name ?? null,
           lastHeartbeatAt: e.lastHeartbeatAt ?? null,
         })),
       }
     })
+    return result
   })

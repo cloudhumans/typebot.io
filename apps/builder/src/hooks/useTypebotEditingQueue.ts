@@ -6,13 +6,10 @@ import { trpc } from '@/lib/trpc'
 type QueueUser = {
   userId: string
   position: number // 1 = editor
-  userEmail: string | null
-  userName: string | null
 }
 
 type UseTypebotEditQueueArgs = {
   typebotId?: string
-  userEmail?: string | null
   currentUserMode: 'guest' | 'read' | 'write'
 }
 
@@ -46,10 +43,9 @@ type UseTypebotEditQueueReturn = {
  */
 export function useTypebotEditQueue({
   typebotId,
-  userEmail,
   currentUserMode,
 }: UseTypebotEditQueueArgs): UseTypebotEditQueueReturn {
-  console.log('useTypebotEditQueue', { typebotId, userEmail, currentUserMode })
+  console.log('useTypebotEditQueue', { typebotId, currentUserMode })
   const [wasInReadonlyMode, setWasInReadonlyMode] = useState(false)
   const [canEditNow, setCanEditNow] = useState(false)
 
@@ -78,16 +74,12 @@ export function useTypebotEditQueue({
     queueData?.queue.map((q) => ({
       userId: q.userId,
       position: q.position,
-      userEmail: q.userEmail ?? null,
-      userName: q.userName ?? null,
     })) ?? []
-  const someoneEditingNow = !!queueData?.editorEmail
   // Se backend ainda não retornou minha posição (join pendente) mas existe editor, força readonly.
   // Caso eu esteja na fila (position>1) backend enviará position>1 e !isEditor.
-  const isReadOnlyDueToEditing = !isEditor && someoneEditingNow
+  const isReadOnlyDueToEditing = !isEditor
   if (process.env.NODE_ENV !== 'production') {
     console.log('[edit-queue] derived state', {
-      editorEmail: queueData?.editorEmail,
       queuePosition,
       isEditor,
       isReadOnlyDueToEditing,
@@ -113,8 +105,7 @@ export function useTypebotEditQueue({
   const [joinedRef, setJoinedRef] = useState(false)
   const claimedRef = useRef(false)
   useEffect(() => {
-    if (!typebotId || !userEmail) return
-    console.log('someoneEditingNow', someoneEditingNow)
+    if (!typebotId) return
     console.log('isEditor', isEditor)
     console.log('queuePosition', queuePosition)
 
@@ -140,7 +131,6 @@ export function useTypebotEditQueue({
       !isEditor &&
       queuePosition == null &&
       !claimedRef.current &&
-      !someoneEditingNow &&
       !shouldJoin // evita duplicar tentativa na mesma render
     ) {
       claimedRef.current = true
@@ -156,8 +146,6 @@ export function useTypebotEditQueue({
     }
   }, [
     typebotId,
-    userEmail,
-    someoneEditingNow,
     isEditor,
     queuePosition,
     currentUserMode,
@@ -168,7 +156,7 @@ export function useTypebotEditQueue({
 
   // heartbeat & tentativa de claim quando estou na cabeça da fila (pos 1 aguardando liberação)
   useEffect(() => {
-    if (!typebotId || !userEmail) return
+    if (!typebotId) return
     const interval = setInterval(async () => {
       try {
         if (isEditor) {
@@ -190,7 +178,6 @@ export function useTypebotEditQueue({
     return () => clearInterval(interval)
   }, [
     typebotId,
-    userEmail,
     isEditor,
     queuePosition,
     isReadOnlyDueToEditing,
@@ -202,12 +189,12 @@ export function useTypebotEditQueue({
   // sair da fila no unmount
   useEffect(() => {
     return () => {
-      if (typebotId && userEmail) {
+      if (typebotId) {
         _leaveQueue({ typebotId }).catch(() => {})
         setJoinedRef(false)
       }
     }
-  }, [typebotId, userEmail, _leaveQueue])
+  }, [typebotId, _leaveQueue])
 
   // release helpers
   const releaseEditing = useCallback(
@@ -243,7 +230,7 @@ export function useTypebotEditQueue({
 
   // integrar com lifecycle da página/rota
   useEffect(() => {
-    if (!typebotId || !userEmail) return
+    if (!typebotId) return
 
     const onUnload = () => releaseEditingSync(typebotId)
     const onRoute = () => releaseEditingSync(typebotId)
@@ -263,7 +250,7 @@ export function useTypebotEditQueue({
       Router.events.off('routeChangeStart', onRoute)
       releaseEditingSync(typebotId)
     }
-  }, [typebotId, userEmail, releaseEditingSync])
+  }, [typebotId, releaseEditingSync])
 
   // wrappers públicos simples
   const claimEditing = useCallback(

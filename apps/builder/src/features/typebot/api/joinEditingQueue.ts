@@ -13,13 +13,10 @@ export const joinEditingQueue = authenticatedProcedure
     z.object({
       position: z.number(), // 1 = editor
       isEditor: z.boolean(),
-      editorEmail: z.string().nullable(),
       queue: z.array(
         z.object({
           userId: z.string(),
           position: z.number(),
-          userEmail: z.string().nullable(),
-          userName: z.string().nullable(),
         })
       ),
     })
@@ -47,8 +44,6 @@ export const joinEditingQueue = authenticatedProcedure
           typebotId,
           userId: user.id,
           position,
-          userEmail: user.email,
-          userName: user.name,
         },
       })
     }
@@ -74,8 +69,6 @@ export const joinEditingQueue = authenticatedProcedure
     const queue = rawQueue.map((q: (typeof rawQueue)[number]) => ({
       userId: q.userId,
       position: q.position,
-      userEmail: q.userEmail ?? q.user?.email ?? null,
-      userName: q.userName ?? q.user?.name ?? null,
     }))
 
     const my = queue.find((q: (typeof queue)[number]) => q.userId === user.id)!
@@ -85,7 +78,6 @@ export const joinEditingQueue = authenticatedProcedure
     return {
       position: my.position,
       isEditor,
-      editorEmail: editorEntry?.userEmail ?? null,
       queue,
     }
   })

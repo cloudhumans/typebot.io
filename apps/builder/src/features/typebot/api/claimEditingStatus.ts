@@ -30,11 +30,10 @@ export const claimEditingStatus = authenticatedProcedure
       alreadyOwned: z.boolean().optional(),
       isEditor: z.boolean().optional(),
       position: z.number().optional(), // posição após operação (1 se editor)
-      editorEmail: z.string().nullable().optional(),
     })
   )
   .mutation(async ({ input: { typebotId }, ctx: { user } }) => {
-    return await prisma.$transaction(async (tx: typeof prisma) => {
+    return await prisma.$transaction(async (tx) => {
       const existingTypebot = await tx.typebot.findFirst({
         where: { id: typebotId },
         select: {
@@ -91,9 +90,6 @@ export const claimEditingStatus = authenticatedProcedure
           alreadyOwned: true,
           isEditor: true,
           position: 1,
-          editorEmail:
-            queue.find((q: (typeof queue)[number]) => q.position === 1)?.user
-              ?.email ?? null,
         }
       }
 
@@ -118,15 +114,12 @@ export const claimEditingStatus = authenticatedProcedure
               typebotId,
               userId: user.id,
               position: 1,
-              userEmail: user.email,
-              userName: user.name,
             },
           })
           return {
             success: true,
             isEditor: true,
             position: 1,
-            editorEmail: user.email ?? null,
           }
         } else {
           // Usuário já está na fila esperando; promove a posição 1
@@ -150,7 +143,6 @@ export const claimEditingStatus = authenticatedProcedure
             success: true,
             isEditor: true,
             position: 1,
-            editorEmail: user.email ?? null,
           }
         }
       }

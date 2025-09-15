@@ -11,11 +11,10 @@ export const editingHeartbeat = authenticatedProcedure
       promoted: z.boolean().optional(),
       isEditor: z.boolean(),
       position: z.number().nullable(), // 1=editor, >=2 aguardando
-      editorEmail: z.string().nullable(),
     })
   )
   .mutation(async ({ input: { typebotId }, ctx: { user } }) => {
-    return await prisma.$transaction(async (tx: typeof prisma) => {
+    return await prisma.$transaction(async (tx) => {
       const typebotExists = await tx.typebot.findUnique({
         where: { id: typebotId },
         select: { id: true },
@@ -98,8 +97,6 @@ export const editingHeartbeat = authenticatedProcedure
               typebotId,
               userId: user.id,
               position: 1,
-              userEmail: user.email,
-              userName: user.name,
               lastHeartbeatAt: now,
             },
           })
@@ -142,7 +139,6 @@ export const editingHeartbeat = authenticatedProcedure
         promoted,
         isEditor: finalMe?.position === 1,
         position: finalMe?.position ?? null,
-        editorEmail: finalEditor?.userEmail ?? null,
       }
     })
   })

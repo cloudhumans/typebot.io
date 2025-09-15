@@ -194,7 +194,6 @@ export const TypebotProvider = ({
     refetchQueue, // <-- pegue do hook
   } = useTypebotEditQueue({
     typebotId,
-    userEmail: user?.email ?? null,
     currentUserMode: typebotData?.currentUserMode ?? 'guest',
   })
 
