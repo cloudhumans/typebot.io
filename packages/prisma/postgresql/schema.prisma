@@ -58,6 +58,7 @@ model User {
   sessions                    Session[]
   bannedIps                   BannedIp[]
   displayedInAppNotifications Json?
+  typebotEditQueueEntries     TypebotEditQueue[]
 }
 
 model ApiToken {
@@ -192,6 +193,7 @@ model Typebot {
   whatsAppCredentialsId   String?
   riskLevel               Int?
   bannedIps               BannedIp[]
+  editQueueEntries        TypebotEditQueue[]
 
   @@index([workspaceId])
   @@index([isArchived, createdAt(sort: Desc)])
@@ -374,6 +376,22 @@ model BannedIp {
   responsibleTypebotId String
   user                 User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   userId               String
+}
+
+model TypebotEditQueue {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  typebotId       String
+  userId          String
+  position        Int
+  lastHeartbeatAt DateTime @default(now())
+
+  typebot Typebot @relation(fields: [typebotId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([typebotId, userId])
+  @@index([typebotId, position])
 }
 
 enum WorkspaceRole {

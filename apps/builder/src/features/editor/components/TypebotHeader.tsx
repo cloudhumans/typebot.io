@@ -1,16 +1,4 @@
-import {
-  Flex,
-  HStack,
-  Button,
-  IconButton,
-  Tooltip,
-  Spinner,
-  Text,
-  useColorModeValue,
-  useDisclosure,
-  StackProps,
-  chakra,
-} from '@chakra-ui/react'
+import { EditableEmojiOrImageIcon } from '@/components/EditableEmojiOrImageIcon'
 import {
   ChevronLeftIcon,
   CopyIcon,
@@ -18,24 +6,55 @@ import {
   RedoIcon,
   UndoIcon,
 } from '@/components/icons'
-import { useRouter } from 'next/router'
-import React, { useState } from 'react'
-import { isDefined, isNotDefined } from '@typebot.io/lib'
-import { EditableTypebotName } from './EditableTypebotName'
-import Link from 'next/link'
-import { EditableEmojiOrImageIcon } from '@/components/EditableEmojiOrImageIcon'
-import { useDebouncedCallback } from 'use-debounce'
+import { SupportBubble } from '@/components/SupportBubble'
 import { PublishButton } from '@/features/publish/components/PublishButton'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { trpc } from '@/lib/trpc'
+import {
+  Avatar,
+  Badge,
+  Box,
+  Button,
+  Flex,
+  HStack,
+  IconButton,
+  Spinner,
+  StackProps,
+  Text,
+  Tooltip,
+  chakra,
+  useColorModeValue,
+  useDisclosure,
+} from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
+import { isDefined, isNotDefined } from '@typebot.io/lib'
+import Link from 'next/link'
+import { useRouter } from 'next/router'
+import { useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
 import { headerHeight } from '../constants'
 import { RightPanel, useEditor } from '../providers/EditorProvider'
 import { useTypebot } from '../providers/TypebotProvider'
-import { SupportBubble } from '@/components/SupportBubble'
-import { useTranslate } from '@tolgee/react'
+import { EditableTypebotName } from './EditableTypebotName'
 import { GuestTypebotHeader } from './UnauthenticatedTypebotHeader'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 export const TypebotHeader = () => {
-  const { typebot, publishedTypebot, currentUserMode } = useTypebot()
+  const {
+    typebot,
+    publishedTypebot,
+    currentUserMode,
+    isReadOnlyDueToEditing,
+    queuePosition,
+    editingQueue,
+  } = useTypebot()
+  const { data: queueData } = trpc.typebot.getEditingQueue.useQuery(
+    { typebotId: typebot?.id as string },
+    { enabled: Boolean(typebot?.id) }
+  )
+
+  console.log('queueData', queueData)
+  // user 1 ta editando, fila => user2 e user3
+
   const { isOpen } = useDisclosure()
   const headerBgColor = useColorModeValue('white', 'gray.900')
 
@@ -54,6 +73,15 @@ export const TypebotHeader = () => {
     >
       {isOpen && <SupportBubble autoShowDelay={0} />}
       <LeftElements pos="absolute" left="1rem" />
+
+      {isReadOnlyDueToEditing && (
+        <EditingIndicator
+          queuePosition={queuePosition}
+          editingQueue={editingQueue}
+          editingUserEmail={'editingUserEmail'}
+          editingUserName={'editingUserName'}
+        />
+      )}
       <TypebotNav
         display={{ base: 'none', xl: 'flex' }}
         pos={{ base: 'absolute' }}
@@ -82,6 +110,7 @@ const LeftElements = ({ ...props }: StackProps) => {
     redo,
     currentUserMode,
     isSavingLoading,
+    releaseEditing,
   } = useTypebot()
 
   const [isRedoShortcutTooltipOpen, setRedoShortcutTooltipOpen] =
@@ -145,6 +174,9 @@ const LeftElements = ({ ...props }: StackProps) => {
                   : router.query.parentId ?? [],
               },
             }}
+            onClick={async () =>
+              typebot?.id && (await releaseEditing({ typebotId: typebot.id }))
+            }
             size="sm"
           />
         )}
@@ -360,5 +392,144 @@ const TypebotNav = ({
         </Button>
       )}
     </HStack>
+  )
+}
+
+const EditingIndicator = ({
+  editingUserEmail,
+  editingUserName,
+  editingQueue,
+}: {
+  editingUserEmail?: string | null
+  editingUserName?: string | null
+  queuePosition: number | null
+  editingQueue: {
+    userId: string
+    position: number
+    userEmail?: string | null
+    userName?: string | null
+  }[]
+}) => {
+  const { t } = useTranslate()
+  const router = useRouter()
+  const { typebot } = useTypebot()
+  const { mutate: duplicateTypebot, isLoading: isDuplicating } =
+    trpc.typebot.importTypebot.useMutation({
+      onSuccess: (data) => {
+        router.push(`/typebots/${data.typebot.id}/edit`)
+      },
+    })
+
+  const handleDuplicate = () => {
+    if (!typebot?.workspaceId || !typebot) return
+    duplicateTypebot({
+      workspaceId: typebot.workspaceId,
+      typebot: {
+        ...typebot,
+        name: `${typebot.name} ${t('editor.header.user.duplicateSuffix')}`,
+      },
+    })
+  }
+
+  const getAvatarColor = (email: string) => {
+    const colors = [
+      'red',
+      'orange',
+      'yellow',
+      'green',
+      'teal',
+      'blue',
+      'cyan',
+      'purple',
+      'pink',
+    ]
+    const index = email.length % colors.length
+    return colors[index]
+  }
+
+  return (
+    <Box
+      pos="absolute"
+      top="12px"
+      right="120px"
+      zIndex={1000}
+      display={{ base: 'none', md: 'flex' }}
+      alignItems="center"
+      gap={2}
+    >
+      <Tooltip
+        label={`${editingUserName} ${t('editor.header.user.editing')}`}
+        hasArrow
+      >
+        <Avatar
+          size="sm"
+          name={editingUserName || editingUserEmail || ''}
+          bg={
+            editingUserEmail
+              ? `${getAvatarColor(editingUserEmail)}.500`
+              : 'gray.500'
+          }
+          color="white"
+          fontSize="xs"
+          border="2px solid"
+          borderColor="orange.400"
+          _hover={{
+            transform: 'scale(1.1)',
+            transition: 'transform 0.2s',
+          }}
+        />
+      </Tooltip>
+      {editingQueue.length > 0 && (
+        <HStack spacing={1} ml={2}>
+          {editingQueue.map((entry) => (
+            <Tooltip
+              key={entry.userId}
+              label={`#${entry.position} - ${entry.userId} (na fila)`}
+              hasArrow
+            >
+              <Avatar
+                size="xs"
+                name={entry.userId}
+                bg={`${getAvatarColor(entry.userId)}.400`}
+                color="white"
+                fontSize="2xs"
+                border="1px solid"
+                borderColor="purple.300"
+              />
+            </Tooltip>
+          ))}
+        </HStack>
+      )}
+
+      <Tooltip label={t('editor.header.user.readonly.tooltip')} hasArrow>
+        <Badge
+          colorScheme="orange"
+          variant="solid"
+          fontSize="xs"
+          px={3}
+          py={1}
+          borderRadius="full"
+        >
+          {t('editor.header.user.readonly.badge.label')}
+        </Badge>
+      </Tooltip>
+
+      <Tooltip label={t('editor.header.user.duplicate.tooltip')} hasArrow>
+        <Button
+          size="sm"
+          colorScheme="blue"
+          variant="solid"
+          leftIcon={<CopyIcon />}
+          onClick={handleDuplicate}
+          isLoading={isDuplicating}
+          loadingText={t('editor.header.user.duplicating.loadingText')}
+          fontSize="xs"
+          px={3}
+          py={1}
+        >
+          {t('duplicate')}
+        </Button>
+      </Tooltip>
+    </Box>
   )
 }

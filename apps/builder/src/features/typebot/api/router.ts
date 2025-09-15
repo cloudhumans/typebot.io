@@ -17,6 +17,12 @@ import {
   getTypebotValidation,
   postTypebotValidation,
 } from './typebotValidation'
+import { claimEditingStatus } from './claimEditingStatus'
+import { releaseEditingStatus } from './releaseEditingStatus'
+import { joinEditingQueue } from './joinEditingQueue'
+import { leaveEditingQueue } from './leaveEditingQueue'
+import { editingHeartbeat } from './editingHeartbeat'
+import { getEditingQueue } from './getEditingQueue'
 
 export const typebotRouter = router({
   listTypebotsClaudia,
@@ -32,4 +38,10 @@ export const typebotRouter = router({
   importTypebot,
   getTypebotValidation,
   postTypebotValidation,
+  claimEditingStatus,
+  releaseEditingStatus,
+  joinEditingQueue,
+  leaveEditingQueue,
+  editingHeartbeat,
+  getEditingQueue,
 })

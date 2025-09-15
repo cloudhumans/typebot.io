@@ -7,3 +7,9 @@ export {
   GraphNavigation,
   CollaborationType,
 } from '@prisma/client'
+
+// Explicit model payload export (some build setups miss it on star export)
+export type { CollaboratorsOnTypebots } from '@prisma/client'
+export type { MemberInWorkspace } from '@prisma/client'
+export type { User } from '@prisma/client'
+export type { Workspace } from '@prisma/client'

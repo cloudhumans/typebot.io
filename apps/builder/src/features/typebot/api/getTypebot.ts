@@ -8,6 +8,8 @@ import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 import { CollaborationType } from '@typebot.io/prisma'
 import { env } from '@typebot.io/env'
 
+// Added: editor timeout & queue promotion now also evaluated on simple getTypebot
+
 export const getTypebot = publicProcedure
   .meta({
     openapi: {
@@ -78,9 +80,27 @@ export const getTypebot = publicProcedure
           ? await migrateTypebot(typebotSchema.parse(existingTypebot))
           : typebotSchema.parse(existingTypebot)
 
+        // Queue enforcement: if user is in editing queue and not position 1, force guest mode
+        let queuePosition: number | null = null
+        if (user?.id) {
+          try {
+            const queueEntry = await prisma.typebotEditQueue.findUnique({
+              where: { typebotId_userId: { typebotId, userId: user.id } },
+              select: { position: true },
+            })
+            queuePosition = queueEntry?.position ?? null
+          } catch {
+            // Silently ignore (table might not exist yet on older self-host instances)
+          }
+        }
+
         return {
           typebot: parsedTypebot,
-          currentUserMode: getCurrentUserMode(user, existingTypebot),
+          currentUserMode: getCurrentUserMode(
+            user,
+            existingTypebot,
+            queuePosition
+          ),
         }
       } catch (err) {
         throw new TRPCError({
@@ -96,8 +116,11 @@ const getCurrentUserMode = (
   user: { email: string | null; id: string } | undefined,
   typebot: { collaborators: { userId: string; type: CollaborationType }[] } & {
     workspace: { members: { userId: string }[] }
-  }
+  },
+  queuePosition?: number | null
 ) => {
+  // If user is in the queue and not the active editor (position 1), force guest
+  if (queuePosition != null && queuePosition !== 1) return 'guest'
   const collaborator = typebot.collaborators.find((c) => c.userId === user?.id)
   const isMemberOfWorkspace = typebot.workspace.members.some(
     (m) => m.userId === user?.id

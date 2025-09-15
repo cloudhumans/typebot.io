@@ -17,7 +17,6 @@ import {
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 import { isCloudProdInstance } from '@/helpers/isCloudProdInstance'
-import { Prisma } from '@typebot.io/prisma'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 
 const typebotUpdateSchemaPick = {
@@ -189,10 +188,7 @@ export const updateTypebot = authenticatedProcedure
               })
             : undefined,
         edges: typebot.edges,
-        resultsTablePreferences:
-          typebot.resultsTablePreferences === null
-            ? Prisma.DbNull
-            : typebot.resultsTablePreferences,
+        resultsTablePreferences: typebot.resultsTablePreferences ?? undefined,
         publicId:
           typebot.publicId === null
             ? null
