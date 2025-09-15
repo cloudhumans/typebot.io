@@ -33,6 +33,7 @@ import { SupportBubble } from '@/components/SupportBubble'
 import { useTranslate } from '@tolgee/react'
 import { GuestTypebotHeader } from './UnauthenticatedTypebotHeader'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { OnlineUsersIndicator } from './OnlineUsersIndicator'
 
 export const TypebotHeader = () => {
   const { typebot, publishedTypebot, currentUserMode } = useTypebot()
@@ -54,6 +55,7 @@ export const TypebotHeader = () => {
     >
       {isOpen && <SupportBubble autoShowDelay={0} />}
       <LeftElements pos="absolute" left="1rem" />
+      <OnlineUsersIndicator />
       <TypebotNav
         display={{ base: 'none', xl: 'flex' }}
         pos={{ base: 'absolute' }}
