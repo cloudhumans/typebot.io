@@ -28,7 +28,7 @@ export const useEditQueue = (typebotId?: string) => {
       {
         enabled: Boolean(typebotId),
         onError: (error) => {
-          console.error('Erro ao buscar fila de edição:', error)
+          console.error('Error fetching edit queue:', error)
         },
       }
     )
