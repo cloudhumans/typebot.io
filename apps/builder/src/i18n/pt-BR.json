@@ -288,7 +288,7 @@
   "editor.header.user.readonly.badge.label": "🔒 Somente Leitura",
   "editor.header.user.readonly.dismissButton.ariaLabel": "Fechar notificação",
   "editor.header.user.readonly.tooltip": "Modo somente leitura - Outro usuário está editando",
-  "editor.header.user.readonly.tooltip.onePersonViewing": "Pessoas acessando",
+  "editor.header.user.readonly.tooltip.onePersonViewing": "Pessoa acessando",
   "editor.header.user.readonly.tooltip.manyPeopleViewing": "Pessoas acessando",
   "editor.header.user.readonly.tooltip.thisFlow": "este fluxo:",
   "editor.header.user.readonly.tooltip.editor": "(EDITOR)",
