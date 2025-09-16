@@ -66,7 +66,7 @@ export const useEditQueue = (typebotId?: string) => {
   const updateActivityMutation =
     trpc.typebotEditQueue.updateActivity.useMutation({
       onError: (error) => {
-        console.error('Erro ao atualizar atividade:', error)
+        console.error('Erro while updating user's LastActivity on edit queue:', error)
       },
     })
 
