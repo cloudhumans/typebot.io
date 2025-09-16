@@ -73,6 +73,8 @@ const typebotContext = createContext<
       updates: UpdateTypebotPayload
       save?: boolean
     }) => Promise<TypebotV6 | undefined>
+    isSocketEditor: boolean
+    setIsSocketEditor: (value: boolean) => void
     restorePublishedTypebot: () => void
   } & GroupsActions &
     BlocksActions &
@@ -127,6 +129,12 @@ export const TypebotProvider = ({
     }
   )
 
+  const [isSocketEditor, setIsSocketEditor] = useState(false)
+
+  const isReadOnly =
+    typebotData &&
+    ['read', 'guest'].includes(typebotData?.currentUserMode ?? 'guest')
+
   const { data: publishedTypebotData } =
     trpc.typebot.getPublishedTypebot.useQuery(
       { typebotId: typebotId as string, migrateToLatestVersion: true },
@@ -168,9 +176,6 @@ export const TypebotProvider = ({
   const typebot = typebotData?.typebot as TypebotV6
   const publishedTypebot = (publishedTypebotData?.publishedTypebot ??
     undefined) as PublicTypebotV6 | undefined
-  const isReadOnly =
-    typebotData &&
-    ['read', 'guest'].includes(typebotData?.currentUserMode ?? 'guest')
 
   const [
     localTypebot,
@@ -198,7 +203,9 @@ export const TypebotProvider = ({
       setLocalTypebot(undefined)
       setGroupsCoordinates(undefined)
     }
-    if (isFetchingTypebot || !typebot) return
+    if (isFetchingTypebot || !typebot) {
+      return
+    }
     if (
       typebot.id !== localTypebot?.id ||
       new Date(typebot.updatedAt).getTime() >
@@ -220,7 +227,7 @@ export const TypebotProvider = ({
 
   const saveTypebot = useCallback(
     async (updates?: Partial<TypebotV6>) => {
-      if (!localTypebot || !typebot || isReadOnly) return
+      if (!localTypebot || !typebot || isReadOnly || !isSocketEditor) return
       const typebotToSave = {
         ...localTypebot,
         ...updates,
@@ -250,6 +257,7 @@ export const TypebotProvider = ({
       setUpdateDate,
       typebot,
       updateTypebot,
+      isSocketEditor,
     ]
   )
 
@@ -282,7 +290,7 @@ export const TypebotProvider = ({
   )
 
   useEffect(() => {
-    if (!localTypebot || !typebot || isReadOnly) return
+    if (!localTypebot || !typebot || isReadOnly || !isSocketEditor) return
     if (!areTypebotsEqual(localTypebot, typebot)) {
       window.addEventListener('beforeunload', preventUserFromRefreshing)
     }
@@ -290,7 +298,7 @@ export const TypebotProvider = ({
     return () => {
       window.removeEventListener('beforeunload', preventUserFromRefreshing)
     }
-  }, [localTypebot, typebot, isReadOnly])
+  }, [localTypebot, typebot, isReadOnly, isSocketEditor])
 
   const updateLocalTypebot = async ({
     updates,
@@ -299,7 +307,7 @@ export const TypebotProvider = ({
     updates: UpdateTypebotPayload
     save?: boolean
   }) => {
-    if (!localTypebot || isReadOnly) return
+    if (!localTypebot || isReadOnly || !isSocketEditor) return
     const newTypebot = { ...localTypebot, ...updates }
     setLocalTypebot(newTypebot)
     if (save) await saveTypebot(newTypebot)
@@ -329,6 +337,8 @@ export const TypebotProvider = ({
         canRedo,
         isPublished,
         updateTypebot: updateLocalTypebot,
+        isSocketEditor,
+        setIsSocketEditor,
         restorePublishedTypebot,
         ...groupsActions(setLocalTypebot as SetTypebot),
         ...blocksAction(setLocalTypebot as SetTypebot),
