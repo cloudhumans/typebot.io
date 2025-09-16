@@ -6,7 +6,6 @@
   "i18n-ally.sortKeys": true,
   "eslint.run": "onSave",
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
     "source.fixAll.eslint": true
   },
   "eslint.validate": ["javascript", "typescript", "typescriptreact"],
