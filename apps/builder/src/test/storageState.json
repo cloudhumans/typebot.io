@@ -2,7 +2,7 @@
   "cookies": [],
   "origins": [
     {
-      "origin": "http://localhost:3000",
+      "origin": "http://localhost:3002",
       "localStorage": [
         {
           "name": "typebot-20-modal",
