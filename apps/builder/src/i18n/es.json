@@ -284,7 +284,7 @@
   "editor.header.user.duplicating.loadingText": "Duplicando...",
   "editor.header.user.duplicateButton.label": "Duplicar",
   "editor.header.user.duplicateSuffix": "(Copia)",
-  "editor.header.user.editing": "está editando este Eddie",
+  "editor.header.user.editing": "está editando este flujo",
   "editor.header.user.readonly.badge.label": "🔒 Solo Lectura",
   "editor.header.user.readonly.dismissButton.ariaLabel": "Cerrar notificación",
   "editor.header.user.readonly.tooltip": "Modo de solo lectura – Otro usuario está editando",
