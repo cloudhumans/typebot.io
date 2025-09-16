@@ -13,7 +13,6 @@ import type { AppRouter } from '@/helpers/server/routers/appRouter'
 
 const getBaseUrl = () => (typeof window !== 'undefined' ? '' : env.NEXTAUTH_URL)
 
-// Dynamic WS URL resolving to current host (supports HTTPS -> WSS). Server-side rarely needed but kept for symmetry.
 const getWsUrl = () => {
   if (typeof window !== 'undefined') {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -24,7 +23,7 @@ const getWsUrl = () => {
   }
   return 'ws://localhost:3004/api/trpc'
 }
-console.log('WebSocket URL:', getWsUrl())
+
 export const trpc = createTRPCNext<AppRouter>({
   config() {
     const wsClient =
@@ -52,20 +51,6 @@ export const trpc = createTRPCNext<AppRouter>({
   },
   ssr: false,
 })
-
-// function getEndingLink(): TRPCLink<AppRouter> {
-//   if (typeof window === 'undefined') {
-//     return httpBatchLink({
-//       url: `${getBaseUrl()}/api/trpc`,
-//     })
-//   }
-
-//   return wsLink({
-//     client: createWSClient({
-//       url: getWsUrl(),
-//     }),
-//   })
-// }
 
 export const trpcVanilla = createTRPCProxyClient<AppRouter>({
   links: [
