@@ -7,6 +7,8 @@ const onlineUsers = new Map<
   Set<{ id: string; sessionId: string; name?: string; email?: string }>
 >()
 
+const BROADCAST_INTERVAL_MS = 5000
+
 export const onlineUsersRouter = router({
   subscribe: publicProcedure
     .input(
@@ -57,7 +59,7 @@ export const onlineUsersRouter = router({
 
         broadcastUpdate()
 
-        const interval = setInterval(broadcastUpdate, 5000)
+        const interval = setInterval(broadcastUpdate, BROADCAST_INTERVAL_MS)
 
         return () => {
           const users = onlineUsers.get(typebotId)

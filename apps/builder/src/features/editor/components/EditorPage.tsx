@@ -10,6 +10,7 @@ import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { useToast } from '@/hooks/useToast'
 import { Flex, Spinner, useColorModeValue } from '@chakra-ui/react'
 import { PublicTypebotV6, TypebotV6 } from '@typebot.io/schemas'
+import { useTranslate } from '@tolgee/react'
 import { useEffect, useState } from 'react'
 import {
   EditorProvider,
@@ -95,6 +96,7 @@ const GraphProviderWithEditor = ({
 }) => {
   const { showToast } = useToast()
   const { isUserEditing } = useEditor()
+  const { t } = useTranslate()
   const selectedUserMode = isUserEditing ? currentUserMode : 'guest'
 
   const [, setPreviousIsUserEditing] = useState<boolean>(isUserEditing)
@@ -103,7 +105,7 @@ const GraphProviderWithEditor = ({
     setPreviousIsUserEditing((prev) => {
       if (isUserEditing && !prev) {
         showToast({
-          title: 'Agora você está editando este fluxo',
+          title: t('editor.user.editingNowToast'),
           status: 'info',
         })
       }
