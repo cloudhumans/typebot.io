@@ -78,7 +78,7 @@ export const useEditQueue = (typebotId?: string) => {
         }
       },
       onError: (error) => {
-        console.error('Erro ao limpar usuários inativos:', error)
+        console.error('Error while cleaning up inactive editQueue users:', error)
       },
     })
 
