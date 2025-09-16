@@ -269,7 +269,7 @@ const RightElements = ({
   const { mutate: duplicateTypebot, isLoading: isDuplicating } =
     trpc.typebot.importTypebot.useMutation({
       onSuccess: (data) => {
-        router.push(`/typebots/${data.typebot.id}/edit`)
+        window.location.href = `/typebots/${data.typebot.id}/edit`
       },
     })
 

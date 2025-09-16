@@ -192,7 +192,7 @@ export const typebotEditQueueRouter = router({
           where: {
             id: existingQueueItem.id,
           },
-          data: {},
+          data: { lastActivityAt: new Date() },
         })
 
         return {

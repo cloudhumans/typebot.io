@@ -66,7 +66,10 @@ export const useEditQueue = (typebotId?: string) => {
   const updateActivityMutation =
     trpc.typebotEditQueue.updateActivity.useMutation({
       onError: (error) => {
-        console.error('Erro while updating user's LastActivity on edit queue:', error)
+        console.error(
+          "Erro while updating user's LastActivity on edit queue:",
+          error
+        )
       },
     })
 
@@ -78,7 +81,10 @@ export const useEditQueue = (typebotId?: string) => {
         }
       },
       onError: (error) => {
-        console.error('Error while cleaning up inactive editQueue users:', error)
+        console.error(
+          'Error while cleaning up inactive editQueue users:',
+          error
+        )
       },
     })
 
@@ -197,30 +203,6 @@ export const useEditQueue = (typebotId?: string) => {
     [leaveQueueMutation, typebotId, isInQueue]
   )
 
-  const leaveQueueSync = useCallback(
-    (userId: string) => {
-      if (!typebotId || !isInQueue(userId)) return
-
-      const endpoint = `/api/trpc/typebotEditQueue.leave`
-      const payload = JSON.stringify({
-        json: { typebotId },
-        meta: { values: { typebotId: ['undefined'] } },
-      })
-
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(endpoint, payload)
-      } else {
-        fetch(endpoint, {
-          method: 'POST',
-          body: payload,
-          headers: { 'Content-Type': 'application/json' },
-          keepalive: true,
-        }).catch(console.error)
-      }
-    },
-    [typebotId, isInQueue]
-  )
-
   return {
     queueItems,
     isLoading,
@@ -233,6 +215,5 @@ export const useEditQueue = (typebotId?: string) => {
     isInQueue,
     getPositionInQueue,
     getFirstInQueue,
-    leaveQueueSync,
   }
 }
