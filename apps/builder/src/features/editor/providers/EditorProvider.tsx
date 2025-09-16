@@ -15,7 +15,7 @@ import { useValidation, ValidationError } from '../hooks/useValidation'
 import { useTypebot } from './TypebotProvider'
 
 import { useUser } from '@/features/account/hooks/useUser'
-import { useEditQueue } from '../hooks/useEditQueue'
+import { TypebotEditQueueItem, useEditQueue } from '../hooks/useEditQueue'
 
 type MinimalTypebot = Pick<Typebot, 'groups' | 'edges'>
 
@@ -29,11 +29,6 @@ export type SocketUser = {
   id: string
   name?: string
   email?: string
-}
-
-export type SocketOnlineData = {
-  count: number
-  users: Array<SocketUser>
 }
 
 const editorContext = createContext<{
@@ -51,52 +46,45 @@ const editorContext = createContext<{
   isSidebarExtended: boolean
   setIsSidebarExtended: Dispatch<SetStateAction<boolean>>
   isUserEditing: boolean
-  onlineData: SocketOnlineData | null
+  queueItems: TypebotEditQueueItem[] | undefined
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   //@ts-ignore
 }>({})
 
 export const EditorProvider = ({ children }: { children: ReactNode }) => {
-  const { typebot, setIsSocketEditor } = useTypebot()
+  const { typebot, setIsFlowEditor } = useTypebot()
   const [rightPanel, setRightPanel] = useState<RightPanel>()
   const [startPreviewAtGroup, setStartPreviewAtGroup] = useState<string>()
   const [startPreviewAtEvent, setStartPreviewAtEvent] = useState<string>()
   const [isSidebarExtended, setIsSidebarExtended] = useState(true)
 
-  const [onlineData] = useState<SocketOnlineData | null>(null)
-
   const { user: currentUser } = useUser()
 
-  const {
-    isLoading,
-    joinQueue,
-    updateActivity,
-    getPositionInQueue,
-    getFirstInQueue,
-  } = useEditQueue(typebot?.id)
-
-  // trpc.onlineUsers.subscribe.useSubscription(
-  //   {
-  //     typebotId: typebot?.id ?? '',
-  //     user: {
-  //       id: currentUser?.id ?? '',
-  //       name: currentUser?.name ?? undefined,
-  //       email: currentUser?.email ?? undefined,
-  //     },
-  //   },
-  //   {
-  //     enabled: !!typebot?.id,
-  //     onData: (data) => {
-  //       setOnlineData(data)
-  //     },
-  //     onError: (error) => {
-  //       console.error('Error in online users subscription:', error)
-  //     },
-  //   }
-  // )
+  const { queueItems, isLoading, joinQueue, getFirstInQueue, leaveQueue } =
+    useEditQueue(typebot?.id)
 
   const userWithEditingRights = getFirstInQueue()
   const isUserEditing = userWithEditingRights?.userId === currentUser?.id
+
+  useEffect(() => {
+    setIsFlowEditor(isUserEditing)
+  }, [isUserEditing, setIsFlowEditor])
+
+  useEffect(() => {
+    if (!typebot?.id || !currentUser?.id) return
+
+    const handleBeforeUnload = () => {
+      leaveQueue(currentUser.id)
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+    }
+  }, [typebot?.id, currentUser?.id, leaveQueue])
 
   const {
     validationErrors,
@@ -135,32 +123,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!typebot?.id || isLoading) return
 
     joinQueue(currentUser?.id ?? '')
-
-    // Se já está, inicia polling a cada 5s
-    const intervalId = setInterval(() => {
-      updateActivity()
-    }, 5000)
-
-    // Cleanup ao desmontar ou mudar o typebotId
-    return () => {
-      clearInterval(intervalId)
-      console.log('------CAINDO AQUI')
-    }
-  }, [typebot?.id, currentUser?.id])
-
-  useEffect(() => {
-    const position = getPositionInQueue(currentUser?.id ?? '')
-
-    console.log('getPositionInQueue', position)
-
-    if (position === 1) {
-      setIsSocketEditor(true)
-      console.log('---getPositionInQueue---SOCKET EDITOR')
-    } else {
-      setIsSocketEditor(false)
-      console.log('---getPositionInQueue---NAO SOCKET EDITOR')
-    }
-  }, [isUserEditing, setIsSocketEditor, currentUser?.id])
+  }, [typebot?.id, currentUser?.id, isLoading, joinQueue])
 
   useEffect(() => {
     if (
@@ -209,7 +172,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         isSidebarExtended,
         setIsSidebarExtended,
         isUserEditing,
-        onlineData,
+        queueItems,
       }}
     >
       {children}

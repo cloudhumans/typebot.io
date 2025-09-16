@@ -20,6 +20,14 @@ export const typebotEditQueueRouter = router({
           orderBy: {
             joinedAt: 'asc',
           },
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
         })
 
         return queueItems
@@ -188,7 +196,7 @@ export const typebotEditQueueRouter = router({
           where: {
             id: existingQueueItem.id,
           },
-          data: {}, // @updatedAt automaticamente atualiza lastActivityAt
+          data: {},
         })
 
         return {

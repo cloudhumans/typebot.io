@@ -1,42 +1,35 @@
 import { UsersIcon } from '@/components/icons'
 import { Badge, Box, HStack, Text, Tooltip, VStack } from '@chakra-ui/react'
 import { useTranslate } from '@tolgee/react'
-import {
-  SocketOnlineData,
-  SocketUser,
-  useEditor,
-} from '../providers/EditorProvider'
+import { useEditor } from '../providers/EditorProvider'
 import { useTypebot } from '../providers/TypebotProvider'
+import { TypebotEditQueueItem } from '../hooks/useEditQueue'
 
 export const OnlineUsersIndicator = () => {
   const { t } = useTranslate()
   const { typebot } = useTypebot()
-  const { onlineData, isUserEditing } = useEditor()
+  const { queueItems, isUserEditing } = useEditor()
 
-  if (!typebot?.id || !onlineData || onlineData.count <= 1) {
+  if (!typebot?.id || !queueItems || queueItems.length <= 1) {
     return null
   }
 
-  const getUserDisplayName = (user: SocketUser) => {
-    return `${user.name} (${user.email})`
-  }
-
-  function getTooltipLabel(onlineData: SocketOnlineData) {
+  function getTooltipLabel(queueItems: TypebotEditQueueItem[]) {
     return (
       <VStack align="start" spacing={1}>
         <Text fontSize="sm" fontWeight="semibold">
-          {onlineData.count === 1
+          {queueItems.length === 1
             ? t('editor.header.user.readonly.tooltip.onePersonViewing')
             : t('editor.header.user.readonly.tooltip.manyPeopleViewing')}{' '}
           {t('editor.header.user.readonly.tooltip.thisFlow')}
         </Text>
 
-        {onlineData.users.map((user: SocketUser, index: number) => {
-          const displayName = getUserDisplayName(user)
+        {queueItems.map(({ userId, user }, index: number) => {
+          const displayName = `${user.name} (${user.email})`
           const isEditor = index === 0
 
           return (
-            <Text key={user.id} fontSize="xs" color="black">
+            <Text key={userId} fontSize="xs" color="black">
               •{' '}
               {isEditor ? (
                 <Text as="span" fontWeight="bold">
@@ -53,7 +46,7 @@ export const OnlineUsersIndicator = () => {
     )
   }
   return (
-    <Box alignItems="center" display="flex" gap={3}>
+    <Box alignItems="center" display="flex" gap={3} marginRight={2}>
       {!isUserEditing && (
         <Badge
           colorScheme="orange"
@@ -67,9 +60,9 @@ export const OnlineUsersIndicator = () => {
         </Badge>
       )}
       <Tooltip
-        label={getTooltipLabel(onlineData)}
-        hasArrow
-        placement="bottom-start"
+        label={getTooltipLabel(queueItems)}
+        placement="bottom-end"
+        marginTop={2}
       >
         <HStack spacing={1}>
           <UsersIcon color="green.500" boxSize={4} />
@@ -78,9 +71,14 @@ export const OnlineUsersIndicator = () => {
             variant="subtle"
             size="sm"
             borderRadius="full"
+            width={4}
+            height={4}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
           >
             <Text fontSize="xs" fontWeight="semibold">
-              {onlineData.count}
+              {queueItems.length}
             </Text>
           </Badge>
         </HStack>

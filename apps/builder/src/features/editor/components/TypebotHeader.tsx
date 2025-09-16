@@ -35,6 +35,8 @@ import { useTypebot } from '../providers/TypebotProvider'
 import { EditableTypebotName } from './EditableTypebotName'
 import { GuestTypebotHeader } from './UnauthenticatedTypebotHeader'
 import { OnlineUsersIndicator } from './OnlineUsersIndicator'
+import { useEditQueue } from '../hooks/useEditQueue'
+import { useUser } from '@/features/account/hooks/useUser'
 
 export const TypebotHeader = () => {
   const { typebot, publishedTypebot, currentUserMode } = useTypebot()
@@ -86,6 +88,8 @@ const LeftElements = ({ ...props }: StackProps) => {
     currentUserMode,
     isSavingLoading,
   } = useTypebot()
+  const { leaveQueue } = useEditQueue(typebot?.id)
+  const { user } = useUser()
 
   const [isRedoShortcutTooltipOpen, setRedoShortcutTooltipOpen] =
     useState(false)
@@ -149,6 +153,7 @@ const LeftElements = ({ ...props }: StackProps) => {
               },
             }}
             size="sm"
+            onClick={() => user && leaveQueue(user.id)}
           />
         )}
         <HStack spacing={1}>

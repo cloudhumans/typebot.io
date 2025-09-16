@@ -10,30 +10,30 @@ export interface TypebotEditQueueItem {
   userId: string
   typebotId: string
   joinedAt: Date
-  lastActivityAt: Date // Usando updatedAt ao invés de lastActivityAt para compatibilidade com o Prisma
+  lastActivityAt: Date
+  user: {
+    name: string | null
+    email: string | null
+  }
 }
 
 export const useEditQueue = (typebotId?: string) => {
-  const [queueItems, setQueueItems] = useState<TypebotEditQueueItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [joinQueuePending, setJoinQueuePending] = useState(false)
   const { showToast } = useToast()
 
   const utils = trpc.useContext()
 
-  // Busca os itens da fila para um typebot específico
-  const getQueueItems = trpc.typebotEditQueue.listByTypebotId.useQuery(
-    { typebotId: typebotId ?? '' },
-    {
-      enabled: Boolean(typebotId),
-      onSuccess: (data) => {
-        setQueueItems(data)
-      },
-      onError: (error) => {
-        console.error('Erro ao buscar fila de edição:', error)
-      },
-    }
-  )
+  const { data: queueItems, refetch: refetchQueueItems } =
+    trpc.typebotEditQueue.listByTypebotId.useQuery(
+      { typebotId: typebotId ?? '' },
+      {
+        enabled: Boolean(typebotId),
+        onError: (error) => {
+          console.error('Erro ao buscar fila de edição:', error)
+        },
+      }
+    )
 
   // Busca o primeiro usuário na fila
   const getFirstInQueueQuery = trpc.typebotEditQueue.getFirstInQueue.useQuery(
@@ -80,7 +80,6 @@ export const useEditQueue = (typebotId?: string) => {
     },
   })
 
-  // Atualiza o timestamp de última atividade
   const updateActivityMutation =
     trpc.typebotEditQueue.updateActivity.useMutation({
       onError: (error) => {
@@ -110,7 +109,6 @@ export const useEditQueue = (typebotId?: string) => {
     [queueItems]
   )
 
-  // Métodos expostos pelo hook
   const joinQueue = useCallback(
     async (userId: string) => {
       if (!typebotId || joinQueuePending) return false
@@ -130,20 +128,6 @@ export const useEditQueue = (typebotId?: string) => {
     },
     [joinQueueMutation, typebotId, isInQueue, joinQueuePending]
   )
-
-  const leaveQueue = useCallback(async () => {
-    if (!typebotId) return false
-
-    setIsLoading(true)
-    try {
-      await leaveQueueMutation.mutateAsync({ typebotId })
-      return true
-    } catch (error) {
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-  }, [leaveQueueMutation, typebotId])
 
   const updateActivity = useCallback(async () => {
     if (!typebotId) return false
@@ -182,18 +166,15 @@ export const useEditQueue = (typebotId?: string) => {
     [queueItems]
   )
 
-  // Verificar a posição do usuário na fila baseado na data de entrada (joinedAt)
   const getPositionInQueue = useCallback(
     (userId: string): number | null => {
       if (!queueItems || queueItems.length === 0) return null
 
-      // Ordenar a fila baseado no joinedAt (mais antigo primeiro)
       const sortedQueue = [...queueItems].sort(
         (a, b) =>
           new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
       )
 
-      // Encontrar a posição do usuário na fila ordenada
       const userIndex = sortedQueue.findIndex((item) => item.userId === userId)
       return userIndex !== -1 ? userIndex + 1 : null
     },
@@ -205,17 +186,16 @@ export const useEditQueue = (typebotId?: string) => {
     return getFirstInQueueQuery.data || null
   }, [getFirstInQueueQuery.data])
 
-  // Configuração de heartbeat para manter a atividade do usuário
   useEffect(() => {
     if (!typebotId) return
 
-    // Envia heartbeat a cada 5 segundos
     const heartbeatInterval = setInterval(() => {
+      console.log('Heartbeat - atualizando atividade na fila')
       updateActivity().catch(console.error)
-    }, 5000)
+    }, 10000)
 
-    // Limpa usuários inativos a cada 2 minutos
     const cleanupInterval = setInterval(() => {
+      console.log('Limpando usuários inativos da fila')
       cleanupInactiveUsers(10).catch(console.error)
     }, 120000)
 
@@ -225,10 +205,49 @@ export const useEditQueue = (typebotId?: string) => {
     }
   }, [typebotId, cleanupInactiveUsers, updateActivity])
 
+  const leaveQueue = useCallback(
+    async (userId: string) => {
+      if (!typebotId) return false
+      if (!isInQueue(userId)) return true
+
+      try {
+        await leaveQueueMutation.mutateAsync({ typebotId })
+        return true
+      } catch (error) {
+        return false
+      }
+    },
+    [leaveQueueMutation, typebotId, isInQueue]
+  )
+
+  const leaveQueueSync = useCallback(
+    (userId: string) => {
+      if (!typebotId || !isInQueue(userId)) return
+
+      const endpoint = `/api/trpc/typebotEditQueue.leave`
+      const payload = JSON.stringify({
+        json: { typebotId },
+        meta: { values: { typebotId: ['undefined'] } },
+      })
+
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(endpoint, payload)
+      } else {
+        fetch(endpoint, {
+          method: 'POST',
+          body: payload,
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
+        }).catch(console.error)
+      }
+    },
+    [typebotId, isInQueue]
+  )
+
   return {
     queueItems,
     isLoading,
-    refreshQueue: getQueueItems.refetch,
+    refreshQueue: refetchQueueItems,
     joinQueue,
     leaveQueue,
     updateActivity,
@@ -237,5 +256,6 @@ export const useEditQueue = (typebotId?: string) => {
     isInQueue,
     getPositionInQueue,
     getFirstInQueue,
+    leaveQueueSync,
   }
 }
