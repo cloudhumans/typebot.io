@@ -265,12 +265,10 @@ const RightElements = ({
   const { isUserEditing } = useEditor()
 
   const selectedUserMode = isUserEditing ? currentUserMode : 'guest'
-  console.log('getPositionInQueue selectedUserMode', selectedUserMode)
 
   const { mutate: duplicateTypebot, isLoading: isDuplicating } =
     trpc.typebot.importTypebot.useMutation({
       onSuccess: (data) => {
-        console.log('id', data.typebot.id)
         router.push(`/typebots/${data.typebot.id}/edit`)
       },
     })

@@ -7,7 +7,9 @@ import {
 import { Router } from 'next/router'
 import {
   createContext,
+  Dispatch,
   ReactNode,
+  SetStateAction,
   useCallback,
   useContext,
   useEffect,
@@ -74,7 +76,7 @@ const typebotContext = createContext<
       save?: boolean
     }) => Promise<TypebotV6 | undefined>
     isFlowEditor: boolean
-    setIsFlowEditor: (value: boolean) => void
+    setIsFlowEditor: Dispatch<SetStateAction<boolean>>
     restorePublishedTypebot: () => void
   } & GroupsActions &
     BlocksActions &

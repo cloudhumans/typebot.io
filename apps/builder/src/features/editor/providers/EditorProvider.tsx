@@ -16,6 +16,8 @@ import { useTypebot } from './TypebotProvider'
 
 import { useUser } from '@/features/account/hooks/useUser'
 import { TypebotEditQueueItem, useEditQueue } from '../hooks/useEditQueue'
+import { useToast } from '@/hooks/useToast'
+import { useTranslate } from '@tolgee/react'
 
 type MinimalTypebot = Pick<Typebot, 'groups' | 'edges'>
 
@@ -57,6 +59,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [startPreviewAtGroup, setStartPreviewAtGroup] = useState<string>()
   const [startPreviewAtEvent, setStartPreviewAtEvent] = useState<string>()
   const [isSidebarExtended, setIsSidebarExtended] = useState(true)
+  const { showToast } = useToast()
+  const { t } = useTranslate()
 
   const { user: currentUser } = useUser()
 
@@ -67,8 +71,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const isUserEditing = userWithEditingRights?.userId === currentUser?.id
 
   useEffect(() => {
-    setIsFlowEditor(isUserEditing)
-  }, [isUserEditing, setIsFlowEditor])
+    setIsFlowEditor((prev) => {
+      if (isUserEditing && !prev) {
+        showToast({
+          title: t('editor.header.user.canEditNow.toast'),
+          status: 'info',
+        })
+      }
+      return isUserEditing
+    })
+  }, [isUserEditing, setIsFlowEditor, showToast, t])
 
   useEffect(() => {
     if (!typebot?.id || !currentUser?.id) return
@@ -123,6 +135,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!typebot?.id || isLoading) return
 
     joinQueue(currentUser?.id ?? '')
+    //eslint-disable-next-line
   }, [typebot?.id, currentUser?.id, isLoading])
 
   useEffect(() => {

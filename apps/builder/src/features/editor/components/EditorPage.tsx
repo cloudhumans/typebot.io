@@ -7,11 +7,8 @@ import { PreviewDrawer } from '@/features/preview/components/PreviewDrawer'
 import { ValidationErrorsDrawer } from '@/features/preview/components/ValidationErrorsDrawer'
 import { VariablesDrawer } from '@/features/preview/components/VariablesDrawer'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
-import { useToast } from '@/hooks/useToast'
 import { Flex, Spinner, useColorModeValue } from '@chakra-ui/react'
 import { PublicTypebotV6, TypebotV6 } from '@typebot.io/schemas'
-import { useTranslate } from '@tolgee/react'
-import { useEffect, useState } from 'react'
 import {
   EditorProvider,
   RightPanel as RightPanelEnum,
@@ -94,26 +91,8 @@ const GraphProviderWithEditor = ({
   currentUserMode: string
   isSuspicious: boolean
 }) => {
-  const { showToast } = useToast()
   const { isUserEditing } = useEditor()
-  const { t } = useTranslate()
   const selectedUserMode = isUserEditing ? currentUserMode : 'guest'
-
-  const [, setPreviousIsUserEditing] = useState<boolean>(isUserEditing)
-
-  useEffect(() => {
-    console.log(isUserEditing)
-
-    setPreviousIsUserEditing((prev) => {
-      if (isUserEditing && !prev) {
-        showToast({
-          title: t('editor.header.user.canEditNow.toast'),
-          status: 'info',
-        })
-      }
-      return isUserEditing
-    })
-  }, [isUserEditing, showToast, t])
 
   return (
     <GraphDndProvider>

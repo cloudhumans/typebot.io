@@ -1,7 +1,6 @@
 import { ValidationError } from '../../typebot/constants/errorTypes'
 import { useState, useCallback, useEffect } from 'react'
 import { trpc } from '@/lib/trpc'
-import { useToast } from '@/hooks/useToast'
 
 export type { ValidationError }
 
@@ -20,7 +19,6 @@ export interface TypebotEditQueueItem {
 export const useEditQueue = (typebotId?: string) => {
   const [isLoading, setIsLoading] = useState(false)
   const [joinQueuePending, setJoinQueuePending] = useState(false)
-  const { showToast } = useToast()
 
   const utils = trpc.useContext()
 
@@ -52,13 +50,8 @@ export const useEditQueue = (typebotId?: string) => {
       }
       setJoinQueuePending(false)
     },
-    onError: (error) => {
+    onError: () => {
       setJoinQueuePending(false)
-      showToast({
-        title: 'Erro ao entrar na fila de edição',
-        description: error.message,
-        status: 'error',
-      })
     },
   })
 
@@ -67,13 +60,6 @@ export const useEditQueue = (typebotId?: string) => {
       if (typebotId) {
         utils.typebotEditQueue.listByTypebotId.invalidate({ typebotId })
       }
-    },
-    onError: (error) => {
-      showToast({
-        title: 'Erro ao sair da fila de edição',
-        description: error.message,
-        status: 'error',
-      })
     },
   })
 
@@ -183,12 +169,10 @@ export const useEditQueue = (typebotId?: string) => {
     if (!typebotId) return
 
     const heartbeatInterval = setInterval(() => {
-      console.log('Heartbeat - atualizando atividade na fila')
       updateActivity().catch(console.error)
     }, 10000)
 
     const cleanupInterval = setInterval(() => {
-      console.log('Limpando usuários inativos da fila')
       cleanupInactiveUsers(10).catch(console.error)
     }, 120000)
 
