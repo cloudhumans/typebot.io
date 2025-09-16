@@ -17,6 +17,14 @@ const handle = app.getRequestHandler()
 void app.prepare().then(() => {
   const server = createServer(async (req, res) => {
     if (!req.url) return
+
+    if (req.url === '/health') {
+      res.statusCode = 200
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify({ status: 'ok' }))
+      return
+    }
+
     const parsedUrl = parse(req.url, true)
     await handle(req, res, parsedUrl)
   })
@@ -43,7 +51,7 @@ void app.prepare().then(() => {
   server.listen(port)
 
   console.log(
-    `> Server listening at http://localhost:${port} as ${
+    `> Server listening (HTTP+WS) on :${port} env=${
       dev ? 'development' : process.env.NODE_ENV
     }`
   )

@@ -6,7 +6,7 @@
     "dev": "dotenv -e ./.env -e ../../.env -- next dev -p 3002",
     "wss": "dotenv -e ./.env -e ../../.env -- tsx src/helpers/server/wssDevServer.ts",
     "build": "dotenv -e ./.env -e ../../.env -- next build",
-    "build:wss": "tsc --project tsconfig.json --outDir dist-wss --pretty false --skipLibCheck && cp src/helpers/server/prodServer.ts dist-wss/. 2>/dev/null || true",
+    "build:wss": "tsc --project tsconfig.json --outDir dist-wss --pretty false --skipLibCheck && if [ -f src/helpers/server/prodServer.ts ]; then cp src/helpers/server/prodServer.ts dist-wss/; else echo 'Error: prodServer.ts not found' >&2; exit 1; fi",
     "postbuild": "pnpm run build:wss",
     "start": "dotenv -e ./.env -e ../../.env -- next start",
     "lint": "dotenv -e ./.env -e ../../.env -- next lint",

@@ -29,10 +29,6 @@ export const onlineUsersRouter = router({
         const { typebotId, user } = input
         const sessionId = Math.random().toString(36).substring(2, 15) // Gerar ID único para sessão
 
-        console.log(
-          `User ${user.name} (${user.id}) connected to typebot ${typebotId} with session ${sessionId}`
-        )
-
         if (!onlineUsers.has(typebotId)) {
           onlineUsers.set(typebotId, new Set())
         }
