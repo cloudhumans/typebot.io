@@ -35,7 +35,6 @@ export const useEditQueue = (typebotId?: string) => {
       }
     )
 
-  // Busca o primeiro usuário na fila
   const getFirstInQueueQuery = trpc.typebotEditQueue.getFirstInQueue.useQuery(
     { typebotId: typebotId ?? '' },
     {
@@ -46,7 +45,6 @@ export const useEditQueue = (typebotId?: string) => {
     }
   )
 
-  // Adiciona o usuário atual à fila de edição
   const joinQueueMutation = trpc.typebotEditQueue.join.useMutation({
     onSuccess: () => {
       if (typebotId) {
@@ -64,7 +62,6 @@ export const useEditQueue = (typebotId?: string) => {
     },
   })
 
-  // Remove o usuário atual da fila de edição
   const leaveQueueMutation = trpc.typebotEditQueue.leave.useMutation({
     onSuccess: () => {
       if (typebotId) {
@@ -87,7 +84,6 @@ export const useEditQueue = (typebotId?: string) => {
       },
     })
 
-  // Limpa usuários inativos
   const cleanupInactiveUsersMutation =
     trpc.typebotEditQueue.cleanupInactiveUsers.useMutation({
       onSuccess: (data) => {
@@ -100,7 +96,6 @@ export const useEditQueue = (typebotId?: string) => {
       },
     })
 
-  // Verificar se o usuário atual está na fila
   const isInQueue = useCallback(
     (userId: string): boolean => {
       if (!queueItems || queueItems.length === 0) return false
@@ -157,7 +152,6 @@ export const useEditQueue = (typebotId?: string) => {
     [cleanupInactiveUsersMutation, typebotId]
   )
 
-  // Verificar se o usuário atual é o primeiro na fila
   const isFirstInQueue = useCallback(
     (userId: string): boolean => {
       if (!queueItems || queueItems.length === 0) return false
@@ -181,7 +175,6 @@ export const useEditQueue = (typebotId?: string) => {
     [queueItems]
   )
 
-  // Método que retorna o primeiro usuário na fila
   const getFirstInQueue = useCallback(() => {
     return getFirstInQueueQuery.data || null
   }, [getFirstInQueueQuery.data])

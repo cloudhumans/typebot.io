@@ -82,7 +82,6 @@ export const typebotEditQueueRouter = router({
       }
 
       try {
-        // Verificar se o usuário já está na fila
         const existingQueueItem = await prisma.typebotEditQueue.findFirst({
           where: {
             userId: user.id,
@@ -91,12 +90,11 @@ export const typebotEditQueueRouter = router({
         })
 
         if (existingQueueItem) {
-          // Apenas atualizamos o timestamp pelo @updatedAt
           await prisma.typebotEditQueue.update({
             where: {
               id: existingQueueItem.id,
             },
-            data: {}, // Não precisamos definir explicitamente lastActivityAt por causa do @updatedAt
+            data: {},
           })
 
           return {
@@ -105,7 +103,6 @@ export const typebotEditQueueRouter = router({
           }
         }
 
-        // Inserir o usuário na fila
         await prisma.typebotEditQueue.create({
           data: {
             userId: user.id,
@@ -142,7 +139,6 @@ export const typebotEditQueueRouter = router({
       }
 
       try {
-        // Remover o usuário da fila
         await prisma.typebotEditQueue.deleteMany({
           where: {
             userId: user.id,
@@ -225,20 +221,16 @@ export const typebotEditQueueRouter = router({
           Date.now() - inactivityThresholdMinutes * 60 * 1000
         )
 
-        // Recuperar todos os itens da fila para este typebot
         const queueItems = await prisma.typebotEditQueue.findMany({
           where: {
             typebotId,
           },
         })
 
-        // Encontrar IDs de usuários inativos
-        // Verifica o campo updatedAt que é usado como indicador de atividade
         const inactiveUserIds = queueItems
           .filter((user) => user.lastActivityAt < thresholdDate)
           .map((user) => user.id)
 
-        // Remover usuários inativos
         let removedCount = 0
         if (inactiveUserIds.length > 0) {
           const result = await prisma.typebotEditQueue.deleteMany({

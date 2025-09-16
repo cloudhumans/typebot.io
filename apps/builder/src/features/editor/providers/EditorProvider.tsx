@@ -123,7 +123,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     if (!typebot?.id || isLoading) return
 
     joinQueue(currentUser?.id ?? '')
-  }, [typebot?.id, currentUser?.id, isLoading, joinQueue])
+  }, [typebot?.id, currentUser?.id, isLoading])
 
   useEffect(() => {
     if (
