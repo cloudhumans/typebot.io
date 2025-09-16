@@ -38,7 +38,7 @@ export const useEditQueue = (typebotId?: string) => {
     {
       enabled: Boolean(typebotId),
       onError: (error) => {
-        console.error('Erro ao buscar primeiro usuário na fila:', error)
+        console.error('Error fetching first user in the queue:', error)
       },
     }
   )
