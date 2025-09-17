@@ -347,9 +347,6 @@ export const TypebotProvider = ({
           typebot: newParsedTypebot,
         })
         setUpdateDate(updatedAt)
-        await updateTypebotHistory({
-          typebotId: newParsedTypebot.id,
-        })
       } catch {
         setLocalTypebot({
           ...localTypebot,

@@ -220,7 +220,7 @@ model TypebotHistory {
   version        String?
   authorId       String?
   authorName     String?
-  publishedAt    DateTime?
+  publishedAt    DateTime?            @default(now()) @updatedAt
   origin         TypebotHistoryOrigin
   isRestored     Boolean              @default(false)
   restoredFromId String?

@@ -1,25 +1,15 @@
 import { CopyIcon, HistoryIcon } from '@/components/icons'
 import {
-  Button,
   CloseButton,
   Fade,
   Flex,
   Heading,
   HStack,
   IconButton,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
   Spinner,
   Stack,
   Text,
-  Tooltip,
   useColorModeValue,
-  useDisclosure,
 } from '@chakra-ui/react'
 import { useDrag } from '@use-gesture/react'
 import { useCallback, useEffect, useState } from 'react'
@@ -74,23 +64,21 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
   const { showToast } = useToast()
 
   const { typebot, getTypebotHistory, rollbackTypebot } = useTypebot()
-  const { isOpen, onOpen, onClose: onModalClose } = useDisclosure()
   const [selectedSnapshot, setSelectedSnapshot] =
     useState<TypebotHistoryItem | null>(null)
 
   const [width, setWidth] = useState(500)
   const [isResizeHandleVisible, setIsResizeHandleVisible] = useState(false)
-  const [isRollingBack, setIsRollingBack] = useState(false)
+  const [, setIsRollingBack] = useState(false)
   const [rollingBackItemId, setRollingBackItemId] = useState<string | null>(
     null
   )
 
-  const { mutate: duplicateTypebot, isLoading: isDuplicating } =
-    trpc.typebot.importTypebot.useMutation({
-      onSuccess: (data) => {
-        window.location.href = `/typebots/${data.typebot.id}/edit`
-      },
-    })
+  const { mutate: duplicateTypebot } = trpc.typebot.importTypebot.useMutation({
+    onSuccess: (data) => {
+      window.location.href = `/typebots/${data.typebot.id}/edit`
+    },
+  })
 
   const useResizeHandleDrag = useDrag(
     (state) => {
@@ -119,26 +107,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }
   }, [getTypebotHistory])
 
-  const handleViewDetails = async (historyId: string) => {
-    try {
-      setIsLoading(true)
-      const result = await getTypebotHistory({
-        historyId,
-        excludeContent: false,
-      })
-
-      if (result.history.length > 0) {
-        const item = result.history[0]
-        setSelectedSnapshot(item)
-        onOpen()
-      }
-    } catch (error) {
-      console.error('Failed to fetch snapshot details:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleRollback = async () => {
     if (!selectedSnapshot || rollingBackItemId) return
 
@@ -154,7 +122,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
         status: 'success',
       })
 
-      onModalClose()
       await fetchHistory()
     } catch (error) {
       console.error('Failed to rollback:', error)
@@ -169,7 +136,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     } finally {
       setIsRollingBack(false)
       setRollingBackItemId(null)
-      setRollingBackItemId(null)
     }
   }
 
@@ -178,7 +144,11 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
 
     try {
       duplicateTypebot({
-        typebot: typebot,
+        typebot: {
+          //ta errado tem que ser o do snapshot
+          ...typebot,
+          name: `${selectedSnapshot.content.name} (cópia)`,
+        },
         workspaceId: typebot.workspaceId,
         // duplicateName: `${selectedSnapshot.content.name} (cópia)`,
         // customTypebot: selectedSnapshot.content,
@@ -216,91 +186,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
       zIndex={10}
       style={{ width: `${width}px` }}
     >
-      <Modal isOpen={isOpen} onClose={onModalClose} size="xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            {t('preview.flowHistory.snapshotDetails.title')}
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {selectedSnapshot && (
-              <Stack spacing={4}>
-                <HStack justify="space-between">
-                  <Text fontWeight="bold">
-                    {t('preview.flowHistory.snapshotDetails.author')}:
-                  </Text>
-                  <Text>
-                    {selectedSnapshot.authorName ||
-                      t('preview.flowHistory.snapshotDetails.unknown')}
-                  </Text>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text fontWeight="bold">
-                    {t('preview.flowHistory.snapshotDetails.date')}:
-                  </Text>
-                  <Text>
-                    {new Date(selectedSnapshot.createdAt).toLocaleString()}
-                  </Text>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text fontWeight="bold">
-                    {t('preview.flowHistory.snapshotDetails.version')}:
-                  </Text>
-                  <Text>{selectedSnapshot.version}</Text>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text fontWeight="bold">
-                    {t('preview.flowHistory.snapshotDetails.origin')}:
-                  </Text>
-                  <Text>{selectedSnapshot.origin}</Text>
-                </HStack>
-                {selectedSnapshot.content && (
-                  <Stack spacing={2}>
-                    <Text fontWeight="bold">
-                      {t('preview.flowHistory.snapshotDetails.content')}:
-                    </Text>
-                    <Text fontSize="sm" noOfLines={5} overflow="auto">
-                      {selectedSnapshot.content.name}
-                    </Text>
-                    {selectedSnapshot.content.groups && (
-                      <Text fontSize="sm">
-                        {selectedSnapshot.content.groups.length}{' '}
-                        {t('preview.flowHistory.snapshotDetails.groups')}
-                      </Text>
-                    )}
-                  </Stack>
-                )}
-              </Stack>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onModalClose}>
-              {t('close')}
-            </Button>
-            <Tooltip label={t('preview.flowHistory.actions.restore')}>
-              <IconButton
-                aria-label={t('preview.flowHistory.actions.restore')}
-                icon={<HistoryIcon />}
-                colorScheme="blue"
-                mr={2}
-                isLoading={isRollingBack}
-                onClick={handleRollback}
-              />
-            </Tooltip>
-            <Tooltip label={t('preview.flowHistory.actions.duplicate')}>
-              <IconButton
-                aria-label={t('preview.flowHistory.actions.duplicate')}
-                icon={<CopyIcon />}
-                colorScheme="gray"
-                isLoading={isDuplicating}
-                onClick={handleDuplicate}
-              />
-            </Tooltip>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
       <Flex
         pos="absolute"
         right="0"
@@ -368,6 +253,17 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
                       {t('preview.flowHistory.item.origin')}: {item.origin}
                     </Text>
                   </HStack>
+
+                  {item.content && (
+                    <Stack spacing={2}>
+                      {item.content.groups && (
+                        <Text fontSize="sm">
+                          {item.content.groups.length}{' '}
+                          {t('preview.flowHistory.snapshotDetails.groups')}
+                        </Text>
+                      )}
+                    </Stack>
+                  )}
                   <HStack>
                     <Text fontSize="xs">
                       {item.authorName ||
@@ -385,51 +281,13 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
                     )}
                   </HStack>
                   <HStack mt={2} justifyContent="flex-end" spacing={2}>
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      onClick={() => handleViewDetails(item.id)}
-                    >
-                      {t('preview.flowHistory.actions.details')}
-                    </Button>
                     <IconButton
                       aria-label={t('preview.flowHistory.actions.restore')}
                       icon={<HistoryIcon />}
                       size="xs"
                       colorScheme="blue"
                       variant="ghost"
-                      onClick={async () => {
-                        try {
-                          setIsRollingBack(true)
-                          setRollingBackItemId(item.id)
-                          await rollbackTypebot(item.id)
-                          showToast({
-                            title: t(
-                              'preview.flowHistory.toast.rollbackComplete'
-                            ),
-                            description: t(
-                              'preview.flowHistory.toast.flowRestored'
-                            ),
-                            status: 'success',
-                          })
-                          fetchHistory()
-                        } catch (error) {
-                          console.error('Failed to rollback:', error)
-                          showToast({
-                            title: t(
-                              'preview.flowHistory.toast.rollbackFailed'
-                            ),
-                            description:
-                              error instanceof Error
-                                ? error.message
-                                : t('preview.flowHistory.toast.unknownError'),
-                            status: 'error',
-                          })
-                        } finally {
-                          setIsRollingBack(false)
-                          setRollingBackItemId(null)
-                        }
-                      }}
+                      onClick={async () => handleRollback()}
                       isLoading={rollingBackItemId === item.id}
                     />
                     <IconButton

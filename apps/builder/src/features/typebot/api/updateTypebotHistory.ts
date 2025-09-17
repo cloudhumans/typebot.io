@@ -1,10 +1,11 @@
-import { Prisma } from '@typebot.io/prisma'
-import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
+import prisma from '@typebot.io/lib/prisma'
+import { Prisma } from '@typebot.io/prisma'
+import crypto from 'crypto'
+import { canonicalize } from 'json-canonicalize'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
-import crypto from 'crypto'
 
 export const updateTypebotHistory = authenticatedProcedure
   .meta({
@@ -118,10 +119,7 @@ export const updateTypebotHistory = authenticatedProcedure
         whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
       }
 
-      const snapshotString = JSON.stringify(
-        typebotSnapshot,
-        Object.keys(typebotSnapshot).sort()
-      )
+      const snapshotString = canonicalize(typebotSnapshot)
       const snapshotChecksum = crypto
         .createHash('sha256')
         .update(snapshotString)

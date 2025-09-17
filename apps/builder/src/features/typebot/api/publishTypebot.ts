@@ -1,22 +1,25 @@
-import prisma from '@typebot.io/lib/prisma'
+import { canonicalize } from 'json-canonicalize'
+import { parseTypebotPublishEvents } from '@/features/telemetry/helpers/parseTypebotPublishEvents'
+
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
+import { env } from '@typebot.io/env'
+import prisma from '@typebot.io/lib/prisma'
+import { Plan, Prisma } from '@typebot.io/prisma'
+import { computeRiskLevel } from '@typebot.io/radar'
 import {
   edgeSchema,
+  parseGroups,
   settingsSchema,
+  startEventSchema,
   themeSchema,
   variableSchema,
-  parseGroups,
-  startEventSchema,
 } from '@typebot.io/schemas'
+import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
+import { trackEvents } from '@typebot.io/telemetry/trackEvents'
+import crypto from 'crypto'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
-import { Plan } from '@typebot.io/prisma'
-import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
-import { computeRiskLevel } from '@typebot.io/radar'
-import { env } from '@typebot.io/env'
-import { trackEvents } from '@typebot.io/telemetry/trackEvents'
-import { parseTypebotPublishEvents } from '@/features/telemetry/helpers/parseTypebotPublishEvents'
 
 export const publishTypebot = authenticatedProcedure
   .meta({
@@ -182,6 +185,70 @@ export const publishTypebot = authenticatedProcedure
           theme: themeSchema.parse(existingTypebot.theme),
         },
       })
+
+    const typebotSnapshot = {
+      name: existingTypebot.name,
+      icon: existingTypebot.icon,
+      folderId: existingTypebot.folderId,
+      groups: existingTypebot.groups,
+      events: existingTypebot.events,
+      variables: existingTypebot.variables,
+      edges: existingTypebot.edges,
+      theme: existingTypebot.theme,
+      selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
+      settings: existingTypebot.settings,
+      resultsTablePreferences: existingTypebot.resultsTablePreferences,
+      publicId: existingTypebot.publicId,
+      customDomain: existingTypebot.customDomain,
+      isArchived: existingTypebot.isArchived,
+      isClosed: existingTypebot.isClosed,
+      riskLevel: existingTypebot.riskLevel,
+      whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
+    }
+
+    const snapshotString = canonicalize(typebotSnapshot)
+    const snapshotChecksum = crypto
+      .createHash('sha256')
+      .update(snapshotString)
+      .digest('hex')
+
+    const origin = 'PUBLISH'
+    const authorName = user.name
+
+    await prisma.typebotHistory.create({
+      data: {
+        typebotId: existingTypebot.id,
+        version: existingTypebot.version,
+        authorId: user?.id,
+        authorName: authorName || user?.name || undefined,
+        origin,
+        publishedAt: new Date(),
+        isRestored: false,
+        restoredFromId: undefined,
+        name: existingTypebot.name,
+        icon: existingTypebot.icon,
+        folderId: existingTypebot.folderId,
+        groups: existingTypebot.groups || Prisma.JsonNull,
+        events: existingTypebot.events || Prisma.JsonNull,
+        variables: existingTypebot.variables || Prisma.JsonNull,
+        edges: existingTypebot.edges || Prisma.JsonNull,
+        theme: existingTypebot.theme || Prisma.JsonNull,
+        selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
+        settings: existingTypebot.settings || Prisma.JsonNull,
+        resultsTablePreferences: existingTypebot.resultsTablePreferences
+          ? existingTypebot.resultsTablePreferences
+          : Prisma.JsonNull,
+        publicId: existingTypebot.publicId,
+        customDomain: existingTypebot.customDomain,
+        workspaceId: existingTypebot.workspaceId,
+        isArchived: existingTypebot.isArchived,
+        isClosed: existingTypebot.isClosed,
+        riskLevel: existingTypebot.riskLevel,
+        whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
+
+        snapshotChecksum,
+      },
+    })
 
     await trackEvents([
       ...publishEvents,
