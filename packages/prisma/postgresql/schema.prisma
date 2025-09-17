@@ -59,6 +59,7 @@ model User {
   bannedIps                   BannedIp[]
   displayedInAppNotifications Json?
   TypebotEditQueue            TypebotEditQueue[]
+  TypebotHistory              TypebotHistory[]
 }
 
 model ApiToken {
@@ -219,7 +220,6 @@ model TypebotHistory {
   typebotId      String
   version        String?
   authorId       String?
-  authorName     String?
   publishedAt    DateTime?            @default(now()) @updatedAt
   origin         TypebotHistoryOrigin
   isRestored     Boolean              @default(false)
@@ -247,6 +247,7 @@ model TypebotHistory {
   snapshotChecksum String @db.VarChar(64)
 
   typebot Typebot @relation(fields: [typebotId], references: [id], onDelete: Cascade)
+  author  User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   restoredFrom TypebotHistory?  @relation("RestoreLink", fields: [restoredFromId], references: [id])
   restores     TypebotHistory[] @relation("RestoreLink")

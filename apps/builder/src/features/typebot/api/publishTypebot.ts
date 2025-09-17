@@ -213,14 +213,12 @@ export const publishTypebot = authenticatedProcedure
       .digest('hex')
 
     const origin = 'PUBLISH'
-    const authorName = user.name
 
     await prisma.typebotHistory.create({
       data: {
         typebotId: existingTypebot.id,
         version: existingTypebot.version,
         authorId: user?.id,
-        authorName: authorName || user?.name || undefined,
         origin,
         publishedAt: new Date(),
         isRestored: false,

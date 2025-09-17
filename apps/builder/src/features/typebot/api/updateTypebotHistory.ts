@@ -27,7 +27,6 @@ export const updateTypebotHistory = authenticatedProcedure
       origin: z
         .enum(['PUBLISH', 'DUPLICATION', 'MANUAL', 'IMPORT', 'RESTORE'])
         .default('MANUAL'),
-      authorName: z.string().optional(),
       restoredFromId: z.string().optional(),
       publishedAt: z.date().optional(),
     })
@@ -39,7 +38,7 @@ export const updateTypebotHistory = authenticatedProcedure
   )
   .mutation(
     async ({
-      input: { typebotId, origin, authorName, restoredFromId, publishedAt },
+      input: { typebotId, origin, restoredFromId, publishedAt },
       ctx: { user },
     }) => {
       const existingTypebot = await prisma.typebot.findFirst({
@@ -144,7 +143,6 @@ export const updateTypebotHistory = authenticatedProcedure
           typebotId: existingTypebot.id,
           version: existingTypebot.version,
           authorId: user?.id,
-          authorName: authorName || user?.name || undefined,
           origin,
           publishedAt,
           isRestored: !!restoredFromId,

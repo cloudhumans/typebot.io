@@ -69,7 +69,12 @@ export interface TypebotHistoryResponse {
     createdAt: Date
     version: string
     origin: TypebotHistoryOrigin
-    authorName: string | null
+    author: {
+      id: string
+      name: string | null
+      email: string | null
+      image: string | null
+    }
     restoredFromId: string | null
     publishedAt: Date | null
     isRestored: boolean

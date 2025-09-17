@@ -34,12 +34,19 @@ export const getTypebotHistory = authenticatedProcedure
         z.object({
           id: z.string(),
           createdAt: z.date(),
-          authorName: z.string().nullable(),
           origin: z.nativeEnum(TypebotHistoryOrigin),
           version: z.string(),
           isRestored: z.boolean(),
           restoredFromId: z.string().nullable(),
           publishedAt: z.date().nullable(),
+          author: z
+            .object({
+              id: z.string(),
+              name: z.string().nullable(),
+              email: z.string().nullable(),
+              image: z.string().nullable(),
+            })
+            .nullable(),
           content: z
             .object({
               name: z.string(),
@@ -112,12 +119,14 @@ export const getTypebotHistory = authenticatedProcedure
         select: {
           id: true,
           createdAt: true,
-          authorName: true,
           origin: true,
           version: true,
           isRestored: true,
           restoredFromId: true,
           publishedAt: true,
+          author: {
+            select: { id: true, name: true, email: true, image: true },
+          },
           ...(!excludeContent
             ? {
                 name: true,
@@ -143,12 +152,12 @@ export const getTypebotHistory = authenticatedProcedure
         history: history.map((item) => ({
           id: item.id,
           createdAt: item.createdAt,
-          authorName: item.authorName,
           origin: item.origin as TypebotHistoryOrigin,
           version: item.version ?? '',
           isRestored: item.isRestored ?? false,
           restoredFromId: item.restoredFromId,
           publishedAt: item.publishedAt,
+          author: item.author,
           ...(!excludeContent && 'name' in item
             ? {
                 content: {

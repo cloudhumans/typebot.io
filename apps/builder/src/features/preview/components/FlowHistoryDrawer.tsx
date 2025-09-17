@@ -1,5 +1,6 @@
 import { CopyIcon, HistoryIcon } from '@/components/icons'
 import {
+  Avatar,
   CloseButton,
   Fade,
   Flex,
@@ -33,7 +34,12 @@ import { parseTypebotHistory } from '@/helpers/typebotHistoryMapper'
 export interface TypebotHistoryItem {
   id: string
   createdAt: Date
-  authorName: string | null
+  author: {
+    id: string
+    name: string | null
+    email: string | null
+    image: string | null
+  }
   version: string
   origin: TypebotHistoryOrigin
   restoredFromId: string | null
@@ -226,7 +232,7 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
                   borderRadius="md"
                   flexDir="column"
                 >
-                  <HStack justifyContent="space-between" mb={1}>
+                  <HStack justifyContent="space-between" mb={2}>
                     <Text fontWeight="medium">
                       {new Date(item.createdAt).toLocaleString()}
                     </Text>
@@ -236,78 +242,85 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
                   </HStack>
 
                   {item.content && (
-                    <Stack spacing={2}>
+                    <HStack spacing={2} marginBottom={3}>
                       {item.content.groups && (
                         <Text fontSize="sm">
                           {item.content.groups.length}{' '}
                           {t('preview.flowHistory.snapshotDetails.groups')}
                         </Text>
                       )}
-                    </Stack>
+                      {item.publishedAt && (
+                        <Text fontSize="xs" color="green.500">
+                          • {t('preview.flowHistory.item.published')}
+                        </Text>
+                      )}
+                      {item.isRestored && (
+                        <Text fontSize="xs" color="blue.500">
+                          • {t('preview.flowHistory.item.restored')}
+                        </Text>
+                      )}
+                    </HStack>
                   )}
-                  <HStack>
-                    <Text fontSize="xs">
-                      {item.authorName ||
-                        t('preview.flowHistory.item.unknownUser')}
-                    </Text>
-                    {item.publishedAt && (
-                      <Text fontSize="xs" color="green.500">
-                        • {t('preview.flowHistory.item.published')}
+                  <HStack mt={2} justifyContent="space-between" spacing={2}>
+                    <HStack>
+                      <Avatar
+                        name={item.author.name ?? undefined}
+                        src={item.author.image ?? undefined}
+                        boxSize="20px"
+                      />
+                      <Text fontSize="xs">
+                        {item.author.name ||
+                          t('preview.flowHistory.item.unknownUser')}
                       </Text>
-                    )}
-                    {item.isRestored && (
-                      <Text fontSize="xs" color="blue.500">
-                        • {t('preview.flowHistory.item.restored')}
-                      </Text>
-                    )}
-                  </HStack>
-                  <HStack mt={2} justifyContent="flex-end" spacing={2}>
-                    <IconButton
-                      aria-label={t('preview.flowHistory.actions.restore')}
-                      icon={<HistoryIcon />}
-                      size="xs"
-                      colorScheme="blue"
-                      variant="ghost"
-                      onClick={async () => {
-                        try {
-                          await handleRollback(item)
-                        } catch (error) {
-                          console.error('Failed to rollback:', error)
-                        }
-                      }}
-                      isLoading={rollingBackItemId === item.id}
-                    />
-                    <IconButton
-                      aria-label={t('preview.flowHistory.actions.duplicate')}
-                      icon={<CopyIcon />}
-                      size="xs"
-                      colorScheme="gray"
-                      variant="ghost"
-                      onClick={async () => {
-                        try {
-                          const result = await getTypebotHistory({
-                            historyId: item.id,
-                            excludeContent: false,
-                          })
-                          console.log(
-                            'Fetched snapshot for duplication:',
-                            result
-                          )
-                          if (result.history.length > 0) {
-                            console.log(
-                              'Setting selected snapshot:',
-                              result.history[0]
-                            )
-                            await handleDuplicate(result.history[0])
+                    </HStack>
+                    <HStack>
+                      <IconButton
+                        aria-label={t('preview.flowHistory.actions.restore')}
+                        icon={<HistoryIcon />}
+                        size="xs"
+                        colorScheme="blue"
+                        variant="ghost"
+                        onClick={async () => {
+                          try {
+                            await handleRollback(item)
+                          } catch (error) {
+                            console.error('Failed to rollback:', error)
                           }
-                        } catch (error) {
-                          console.error(
-                            'Failed to get snapshot details for duplication:',
-                            error
-                          )
-                        }
-                      }}
-                    />
+                        }}
+                        isLoading={rollingBackItemId === item.id}
+                      />
+                      <IconButton
+                        aria-label={t('preview.flowHistory.actions.duplicate')}
+                        icon={<CopyIcon />}
+                        size="xs"
+                        colorScheme="blue"
+                        variant="ghost"
+                        onClick={async () => {
+                          try {
+                            const result = await getTypebotHistory({
+                              historyId: item.id,
+                              excludeContent: false,
+                            })
+                            console.log(
+                              'Fetched snapshot for duplication:',
+                              result
+                            )
+                            if (result.history.length > 0) {
+                              console.log(
+                                'Setting selected snapshot:',
+                                result.history[0]
+                              )
+                              await handleDuplicate(result.history[0])
+                            }
+                          } catch (error) {
+                            console.error(
+                              'Failed to get snapshot details for duplication:',
+                              error
+                            )
+                          }
+                        }}
+                      />
+                    </HStack>
                   </HStack>
                 </Flex>
               ))}
