@@ -42,7 +42,28 @@ import { EventsActions, eventsActions } from './typebotActions/events'
 import { useGroupsStore } from '@/features/graph/hooks/useGroupsStore'
 import { TypebotHistoryOrigin } from '@typebot.io/prisma'
 
-interface TypebotHistoryResponse {
+export interface TypebotHistoryContent {
+  name: string
+  icon: string | null
+  groups: GroupV6[] | null
+  events: z.infer<typeof startEventSchema>[] | null
+  variables: Variable[] | null
+  edges: Edge[] | null
+  theme: Theme | null
+  settings: z.infer<typeof settingsSchema> | null
+  folderId: string | null
+  selectedThemeTemplateId: string | null
+  resultsTablePreferences: z.infer<typeof settingsSchema> | null
+  publicId: string | null
+  customDomain: string | null
+  workspaceId: string
+  isArchived: boolean
+  isClosed: boolean
+  riskLevel: number | null
+  whatsAppCredentialsId: string | null
+}
+
+export interface TypebotHistoryResponse {
   history: {
     id: string
     createdAt: Date
@@ -52,18 +73,7 @@ interface TypebotHistoryResponse {
     restoredFromId: string | null
     publishedAt: Date | null
     isRestored: boolean
-    content?:
-      | {
-          name: string
-          icon: string | null
-          groups: GroupV6[] | null
-          events: z.infer<typeof startEventSchema>[] | null
-          variables: Variable[] | null
-          edges: Edge[] | null
-          theme: Theme | null
-          settings: z.infer<typeof settingsSchema> | null
-        }
-      | undefined
+    content?: TypebotHistoryContent | undefined
   }[]
   nextCursor: string | null
 }

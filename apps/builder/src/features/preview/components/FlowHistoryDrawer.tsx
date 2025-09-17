@@ -14,7 +14,10 @@ import {
 import { useDrag } from '@use-gesture/react'
 import { useCallback, useEffect, useState } from 'react'
 import { headerHeight } from '../../editor/constants'
-import { useTypebot } from '../../editor/providers/TypebotProvider'
+import {
+  TypebotHistoryContent,
+  useTypebot,
+} from '../../editor/providers/TypebotProvider'
 import { ResizeHandle } from './ResizeHandle'
 
 import { useToast } from '@/hooks/useToast'
@@ -25,29 +28,9 @@ import { TypebotHistoryOrigin } from '@typebot.io/prisma'
 type Props = {
   onClose: () => void
 }
+import { parseTypebotHistory } from '@/helpers/typebotHistoryMapper'
 
-import {
-  Edge,
-  GroupV6,
-  settingsSchema,
-  startEventSchema,
-  Theme,
-  Variable,
-} from '@typebot.io/schemas'
-import { z } from 'zod'
-
-interface TypebotHistoryContent {
-  name: string
-  icon: string | null
-  groups: GroupV6[] | null
-  events: z.infer<typeof startEventSchema>[] | null
-  variables: Variable[] | null
-  edges: Edge[] | null
-  theme: Theme | null
-  settings: z.infer<typeof settingsSchema> | null
-}
-
-interface TypebotHistoryItem {
+export interface TypebotHistoryItem {
   id: string
   createdAt: Date
   authorName: string | null
@@ -56,7 +39,7 @@ interface TypebotHistoryItem {
   restoredFromId: string | null
   publishedAt: Date | null
   isRestored: boolean
-  content?: TypebotHistoryContent
+  content?: TypebotHistoryContent | undefined
 }
 
 export const FlowHistoryDrawer = ({ onClose }: Props) => {
@@ -64,8 +47,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
   const { showToast } = useToast()
 
   const { typebot, getTypebotHistory, rollbackTypebot } = useTypebot()
-  const [selectedSnapshot, setSelectedSnapshot] =
-    useState<TypebotHistoryItem | null>(null)
 
   const [width, setWidth] = useState(500)
   const [isResizeHandleVisible, setIsResizeHandleVisible] = useState(false)
@@ -107,14 +88,14 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }
   }, [getTypebotHistory])
 
-  const handleRollback = async () => {
-    if (!selectedSnapshot || rollingBackItemId) return
+  const handleRollback = async (snapshot: TypebotHistoryItem) => {
+    if (!snapshot || rollingBackItemId) return
 
     try {
       setIsRollingBack(true)
-      setRollingBackItemId(selectedSnapshot.id)
+      setRollingBackItemId(snapshot.id)
 
-      await rollbackTypebot(selectedSnapshot.id)
+      await rollbackTypebot(snapshot.id)
 
       showToast({
         title: t('preview.flowHistory.toast.rollbackComplete'),
@@ -139,19 +120,19 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }
   }
 
-  const handleDuplicate = async () => {
-    if (!typebot || !selectedSnapshot || !selectedSnapshot.content) return
+  const handleDuplicate = async (snapshot: TypebotHistoryItem) => {
+    console.log('Duplicating snapshot:', snapshot)
+    if (!typebot || !snapshot || !snapshot.content) return
 
     try {
+      const history = parseTypebotHistory(snapshot.content)
+
       duplicateTypebot({
         typebot: {
-          //ta errado tem que ser o do snapshot
-          ...typebot,
-          name: `${selectedSnapshot.content.name} (cópia)`,
+          ...history,
+          name: `${typebot.name} ${t('editor.header.user.duplicateSuffix')}`,
         },
         workspaceId: typebot.workspaceId,
-        // duplicateName: `${selectedSnapshot.content.name} (cópia)`,
-        // customTypebot: selectedSnapshot.content,
       })
     } catch (error) {
       console.error('Failed to duplicate:', error)
@@ -287,7 +268,13 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
                       size="xs"
                       colorScheme="blue"
                       variant="ghost"
-                      onClick={async () => handleRollback()}
+                      onClick={async () => {
+                        try {
+                          await handleRollback(item)
+                        } catch (error) {
+                          console.error('Failed to rollback:', error)
+                        }
+                      }}
                       isLoading={rollingBackItemId === item.id}
                     />
                     <IconButton
@@ -302,9 +289,16 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
                             historyId: item.id,
                             excludeContent: false,
                           })
+                          console.log(
+                            'Fetched snapshot for duplication:',
+                            result
+                          )
                           if (result.history.length > 0) {
-                            setSelectedSnapshot(result.history[0])
-                            handleDuplicate()
+                            console.log(
+                              'Setting selected snapshot:',
+                              result.history[0]
+                            )
+                            await handleDuplicate(result.history[0])
                           }
                         } catch (error) {
                           console.error(
