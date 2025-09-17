@@ -1,6 +1,6 @@
-import { canonicalize } from 'json-canonicalize'
 import { parseTypebotPublishEvents } from '@/features/telemetry/helpers/parseTypebotPublishEvents'
 
+import { generateHistoryChecksum } from '@/helpers/generateHistoryChecksum'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { env } from '@typebot.io/env'
@@ -17,7 +17,6 @@ import {
 } from '@typebot.io/schemas'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
-import crypto from 'crypto'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 
@@ -186,31 +185,7 @@ export const publishTypebot = authenticatedProcedure
         },
       })
 
-    const typebotSnapshot = {
-      name: existingTypebot.name,
-      icon: existingTypebot.icon,
-      folderId: existingTypebot.folderId,
-      groups: existingTypebot.groups,
-      events: existingTypebot.events,
-      variables: existingTypebot.variables,
-      edges: existingTypebot.edges,
-      theme: existingTypebot.theme,
-      selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
-      settings: existingTypebot.settings,
-      resultsTablePreferences: existingTypebot.resultsTablePreferences,
-      publicId: existingTypebot.publicId,
-      customDomain: existingTypebot.customDomain,
-      isArchived: existingTypebot.isArchived,
-      isClosed: existingTypebot.isClosed,
-      riskLevel: existingTypebot.riskLevel,
-      whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
-    }
-
-    const snapshotString = canonicalize(typebotSnapshot)
-    const snapshotChecksum = crypto
-      .createHash('sha256')
-      .update(snapshotString)
-      .digest('hex')
+    const snapshotChecksum = generateHistoryChecksum(existingTypebot)
 
     const origin = 'PUBLISH'
 

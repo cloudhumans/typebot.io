@@ -1,9 +1,8 @@
+import { generateHistoryChecksum } from '@/helpers/generateHistoryChecksum'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import prisma from '@typebot.io/lib/prisma'
 import { Prisma } from '@typebot.io/prisma'
-import crypto from 'crypto'
-import { canonicalize } from 'json-canonicalize'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 
@@ -45,27 +44,7 @@ export const updateTypebotHistory = authenticatedProcedure
         where: {
           id: typebotId,
         },
-        select: {
-          id: true,
-          version: true,
-          name: true,
-          icon: true,
-          folderId: true,
-          groups: true,
-          events: true,
-          variables: true,
-          edges: true,
-          theme: true,
-          selectedThemeTemplateId: true,
-          settings: true,
-          resultsTablePreferences: true,
-          publicId: true,
-          customDomain: true,
-          workspaceId: true,
-          isArchived: true,
-          isClosed: true,
-          riskLevel: true,
-          whatsAppCredentialsId: true,
+        include: {
           collaborators: {
             select: {
               userId: true,
@@ -89,45 +68,25 @@ export const updateTypebotHistory = authenticatedProcedure
         },
       })
 
-      if (
-        !existingTypebot?.id ||
-        (await isWriteTypebotForbidden(existingTypebot, user))
-      )
+      if (!existingTypebot) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Typebot not found',
         })
-
-      const typebotSnapshot = {
-        name: existingTypebot.name,
-        icon: existingTypebot.icon,
-        folderId: existingTypebot.folderId,
-        groups: existingTypebot.groups,
-        events: existingTypebot.events,
-        variables: existingTypebot.variables,
-        edges: existingTypebot.edges,
-        theme: existingTypebot.theme,
-        selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
-        settings: existingTypebot.settings,
-        resultsTablePreferences: existingTypebot.resultsTablePreferences,
-        publicId: existingTypebot.publicId,
-        customDomain: existingTypebot.customDomain,
-        isArchived: existingTypebot.isArchived,
-        isClosed: existingTypebot.isClosed,
-        riskLevel: existingTypebot.riskLevel,
-        whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
       }
 
-      const snapshotString = canonicalize(typebotSnapshot)
-      const snapshotChecksum = crypto
-        .createHash('sha256')
-        .update(snapshotString)
-        .digest('hex')
+      if (await isWriteTypebotForbidden(existingTypebot, user))
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not allowed to modify this typebot',
+        })
+
+      const snapshotChecksum = generateHistoryChecksum(existingTypebot)
 
       const existingSnapshot = await prisma.typebotHistory.findUnique({
         where: {
           typebotId_snapshotChecksum: {
-            typebotId: existingTypebot.id,
+            typebotId: typebotId,
             snapshotChecksum,
           },
         },
@@ -140,34 +99,35 @@ export const updateTypebotHistory = authenticatedProcedure
 
       const newHistory = await prisma.typebotHistory.create({
         data: {
-          typebotId: existingTypebot.id,
-          version: existingTypebot.version,
+          typebotId: typebotId,
+          version: existingTypebot?.version || null,
           authorId: user?.id,
           origin,
           publishedAt,
           isRestored: !!restoredFromId,
           restoredFromId,
 
-          name: existingTypebot.name,
-          icon: existingTypebot.icon,
-          folderId: existingTypebot.folderId,
-          groups: existingTypebot.groups || Prisma.JsonNull,
-          events: existingTypebot.events || Prisma.JsonNull,
-          variables: existingTypebot.variables || Prisma.JsonNull,
-          edges: existingTypebot.edges || Prisma.JsonNull,
-          theme: existingTypebot.theme || Prisma.JsonNull,
-          selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
-          settings: existingTypebot.settings || Prisma.JsonNull,
-          resultsTablePreferences: existingTypebot.resultsTablePreferences
+          name: existingTypebot?.name || 'Untitled',
+          icon: existingTypebot?.icon || null,
+          folderId: existingTypebot?.folderId || null,
+          groups: existingTypebot?.groups || Prisma.JsonNull,
+          events: existingTypebot?.events || Prisma.JsonNull,
+          variables: existingTypebot?.variables || Prisma.JsonNull,
+          edges: existingTypebot?.edges || Prisma.JsonNull,
+          theme: existingTypebot?.theme || Prisma.JsonNull,
+          selectedThemeTemplateId:
+            existingTypebot?.selectedThemeTemplateId || null,
+          settings: existingTypebot?.settings || Prisma.JsonNull,
+          resultsTablePreferences: existingTypebot?.resultsTablePreferences
             ? existingTypebot.resultsTablePreferences
             : Prisma.JsonNull,
-          publicId: existingTypebot.publicId,
-          customDomain: existingTypebot.customDomain,
-          workspaceId: existingTypebot.workspaceId,
-          isArchived: existingTypebot.isArchived,
-          isClosed: existingTypebot.isClosed,
-          riskLevel: existingTypebot.riskLevel,
-          whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
+          publicId: existingTypebot?.publicId || null,
+          customDomain: existingTypebot?.customDomain || null,
+          workspaceId: existingTypebot?.workspaceId || '',
+          isArchived: existingTypebot?.isArchived || false,
+          isClosed: existingTypebot?.isClosed || false,
+          riskLevel: existingTypebot?.riskLevel || null,
+          whatsAppCredentialsId: existingTypebot?.whatsAppCredentialsId || null,
 
           snapshotChecksum,
         },

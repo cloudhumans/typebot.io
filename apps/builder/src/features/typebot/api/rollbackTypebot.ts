@@ -1,11 +1,9 @@
-import { Prisma } from '@typebot.io/prisma'
-import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
+import prisma from '@typebot.io/lib/prisma'
+import { Prisma, TypebotHistoryOrigin } from '@typebot.io/prisma'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
-import { TypebotHistoryOrigin } from '@typebot.io/prisma'
-import crypto from 'crypto'
 
 export const rollbackTypebot = authenticatedProcedure
   .meta({
@@ -98,27 +96,6 @@ export const rollbackTypebot = authenticatedProcedure
         id: historyId,
         typebotId,
       },
-      select: {
-        id: true,
-        name: true,
-        icon: true,
-        groups: true,
-        events: true,
-        variables: true,
-        edges: true,
-        theme: true,
-        selectedThemeTemplateId: true,
-        settings: true,
-        resultsTablePreferences: true,
-        publicId: true,
-        customDomain: true,
-        workspaceId: true,
-        isArchived: true,
-        isClosed: true,
-        riskLevel: true,
-        whatsAppCredentialsId: true,
-        version: true,
-      },
     })
 
     if (!historySnapshot)
@@ -127,76 +104,6 @@ export const rollbackTypebot = authenticatedProcedure
         message: 'History snapshot not found',
       })
 
-    const typebotSnapshot = {
-      name: existingTypebot.name,
-      icon: existingTypebot.icon,
-      folderId: existingTypebot.folderId,
-      groups: existingTypebot.groups,
-      events: existingTypebot.events,
-      variables: existingTypebot.variables,
-      edges: existingTypebot.edges,
-      theme: existingTypebot.theme,
-      selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
-      settings: existingTypebot.settings,
-      resultsTablePreferences: existingTypebot.resultsTablePreferences,
-      publicId: existingTypebot.publicId,
-      customDomain: existingTypebot.customDomain,
-      isArchived: existingTypebot.isArchived,
-      isClosed: existingTypebot.isClosed,
-      riskLevel: existingTypebot.riskLevel,
-      whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
-    }
-
-    const snapshotString = JSON.stringify(
-      typebotSnapshot,
-      Object.keys(typebotSnapshot).sort()
-    )
-    const snapshotChecksum = crypto
-      .createHash('sha256')
-      .update(snapshotString)
-      .digest('hex')
-
-    const existingBackupSnapshot = await prisma.typebotHistory.findUnique({
-      where: {
-        typebotId_snapshotChecksum: {
-          typebotId: existingTypebot.id,
-          snapshotChecksum,
-        },
-      },
-      select: { id: true },
-    })
-
-    if (!existingBackupSnapshot) {
-      await prisma.typebotHistory.create({
-        data: {
-          typebotId: existingTypebot.id,
-          version: existingTypebot.version,
-          authorId: user?.id,
-          origin: 'MANUAL' as TypebotHistoryOrigin,
-          name: `before-restore-${existingTypebot.name}`,
-          icon: existingTypebot.icon,
-          folderId: existingTypebot.folderId,
-          groups: existingTypebot.groups || Prisma.JsonNull,
-          events: existingTypebot.events || Prisma.JsonNull,
-          variables: existingTypebot.variables || Prisma.JsonNull,
-          edges: existingTypebot.edges || Prisma.JsonNull,
-          theme: existingTypebot.theme || Prisma.JsonNull,
-          selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
-          settings: existingTypebot.settings || Prisma.JsonNull,
-          resultsTablePreferences: existingTypebot.resultsTablePreferences
-            ? existingTypebot.resultsTablePreferences
-            : Prisma.JsonNull,
-          publicId: existingTypebot.publicId,
-          customDomain: existingTypebot.customDomain,
-          workspaceId: existingTypebot.workspaceId,
-          isArchived: existingTypebot.isArchived,
-          isClosed: existingTypebot.isClosed,
-          riskLevel: existingTypebot.riskLevel,
-          whatsAppCredentialsId: existingTypebot.whatsAppCredentialsId,
-          snapshotChecksum,
-        },
-      })
-    }
     await prisma.typebot.update({
       where: {
         id: typebotId,
@@ -223,34 +130,11 @@ export const rollbackTypebot = authenticatedProcedure
       },
     })
 
-    const restoreSnapshot = {
-      name: `restored-${historySnapshot.name}`,
-      icon: historySnapshot.icon,
-      folderId: existingTypebot.folderId,
-      groups: historySnapshot.groups,
-      events: historySnapshot.events,
-      variables: historySnapshot.variables,
-      edges: historySnapshot.edges,
-      theme: historySnapshot.theme,
-      selectedThemeTemplateId: historySnapshot.selectedThemeTemplateId,
-      settings: historySnapshot.settings,
-      resultsTablePreferences: historySnapshot.resultsTablePreferences,
-      publicId: historySnapshot.publicId,
-      customDomain: historySnapshot.customDomain,
-      isArchived: historySnapshot.isArchived,
-      isClosed: historySnapshot.isClosed,
-      riskLevel: historySnapshot.riskLevel,
-      whatsAppCredentialsId: historySnapshot.whatsAppCredentialsId,
-    }
+    // const restoreSnapshotChecksum = generateHistoryChecksum(
+    //   parseTypebotHistory(historySnapshot)
+    // )
 
-    const restoreSnapshotString = JSON.stringify(
-      restoreSnapshot,
-      Object.keys(restoreSnapshot).sort()
-    )
-    const restoreSnapshotChecksum = crypto
-      .createHash('sha256')
-      .update(restoreSnapshotString)
-      .digest('hex')
+    const restoreSnapshotChecksum = 'TODO'
 
     const existingSnapshot = await prisma.typebotHistory.findUnique({
       where: {
