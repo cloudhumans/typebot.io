@@ -3,7 +3,14 @@ import {
   PublicTypebotV6,
   TypebotV6,
   typebotV6Schema,
+  GroupV6,
+  Variable,
+  Edge,
+  Theme,
 } from '@typebot.io/schemas'
+import { z } from '@typebot.io/schemas/zod'
+import { startEventSchema } from '@typebot.io/schemas/features/events/start/schema'
+import { settingsSchema } from '@typebot.io/schemas/features/typebot/settings/schema'
 import { Router } from 'next/router'
 import {
   createContext,
@@ -33,6 +40,33 @@ import { convertPublicTypebotToTypebot } from '@/features/publish/helpers/conver
 import { trpc } from '@/lib/trpc'
 import { EventsActions, eventsActions } from './typebotActions/events'
 import { useGroupsStore } from '@/features/graph/hooks/useGroupsStore'
+import { TypebotHistoryOrigin } from '@typebot.io/prisma'
+
+interface TypebotHistoryResponse {
+  history: {
+    id: string
+    createdAt: Date
+    version: string
+    origin: TypebotHistoryOrigin
+    authorName: string | null
+    restoredFromId: string | null
+    publishedAt: Date | null
+    isRestored: boolean
+    content?:
+      | {
+          name: string
+          icon: string | null
+          groups: GroupV6[] | null
+          events: z.infer<typeof startEventSchema>[] | null
+          variables: Variable[] | null
+          edges: Edge[] | null
+          theme: Theme | null
+          settings: z.infer<typeof settingsSchema> | null
+        }
+      | undefined
+  }[]
+  nextCursor: string | null
+}
 
 const autoSaveTimeout = 10000
 
@@ -66,6 +100,7 @@ const typebotContext = createContext<
     is404: boolean
     isPublished: boolean
     isSavingLoading: boolean
+    isSavingHistory: boolean
     save: () => Promise<void>
     undo: () => void
     redo: () => void
@@ -78,6 +113,15 @@ const typebotContext = createContext<
     isFlowEditor: boolean
     setIsFlowEditor: Dispatch<SetStateAction<boolean>>
     restorePublishedTypebot: () => void
+    getTypebotHistory: (options?: {
+      limit?: number
+      cursor?: string
+      excludeContent?: boolean
+      historyId?: string
+    }) => Promise<TypebotHistoryResponse>
+    rollbackTypebot: (
+      historyId: string
+    ) => Promise<{ historyId: string; message: string }>
   } & GroupsActions &
     BlocksActions &
     ItemsActions &
@@ -175,6 +219,63 @@ export const TypebotProvider = ({
       },
     })
 
+  const { mutateAsync: updateTypebotHistory, isLoading: isSavingHistory } =
+    trpc.typebot.updateTypebotHistory.useMutation({
+      onError: (error) =>
+        showToast({
+          title: 'Error while updating typebot history',
+          description: error.message,
+        }),
+      onSuccess: () => {
+        if (!typebotId) return
+        refetchTypebot()
+      },
+    })
+
+  const { mutateAsync: rollbackTypebotMutation } =
+    trpc.typebot.rollbackTypebot.useMutation({
+      onError: (error) =>
+        showToast({
+          title: 'Error while rolling back typebot',
+          description: error.message,
+        }),
+      onSuccess: () => {
+        if (!typebotId) return
+        refetchTypebot()
+        showToast({
+          status: 'info',
+          title: 'Typebot rolled back successfully',
+          description: 'The typebot has been restored to the selected version.',
+        })
+      },
+    })
+
+  const utils = trpc.useContext()
+
+  const getTypebotHistory = async (options?: {
+    limit?: number
+    cursor?: string
+    excludeContent?: boolean
+    historyId?: string
+  }): Promise<TypebotHistoryResponse> => {
+    if (!typebotId) return { history: [], nextCursor: null }
+    return utils.typebot.getTypebotHistory.fetch({
+      typebotId,
+      ...options,
+    }) as Promise<TypebotHistoryResponse>
+  }
+
+  const rollbackTypebot = async (
+    historyId: string
+  ): Promise<{ historyId: string; message: string }> => {
+    if (!typebotId) throw new Error('Typebot ID is not defined')
+    const result = await rollbackTypebotMutation({
+      typebotId,
+      historyId,
+    })
+    return result
+  }
+
   const typebot = typebotData?.typebot as TypebotV6
   const publishedTypebot = (publishedTypebotData?.publishedTypebot ??
     undefined) as PublicTypebotV6 | undefined
@@ -246,6 +347,9 @@ export const TypebotProvider = ({
           typebot: newParsedTypebot,
         })
         setUpdateDate(updatedAt)
+        await updateTypebotHistory({
+          typebotId: newParsedTypebot.id,
+        })
       } catch {
         setLocalTypebot({
           ...localTypebot,
@@ -259,6 +363,7 @@ export const TypebotProvider = ({
       setUpdateDate,
       typebot,
       updateTypebot,
+      updateTypebotHistory,
       isFlowEditor,
     ]
   )
@@ -331,6 +436,7 @@ export const TypebotProvider = ({
         publishedTypebotVersion: publishedTypebotData?.version,
         currentUserMode: typebotData?.currentUserMode ?? 'guest',
         isSavingLoading: isSaving,
+        isSavingHistory: isSavingHistory,
         is404,
         save: saveTypebot,
         undo,
@@ -342,6 +448,8 @@ export const TypebotProvider = ({
         isFlowEditor: isFlowEditor,
         setIsFlowEditor: setIsFlowEditor,
         restorePublishedTypebot,
+        getTypebotHistory,
+        rollbackTypebot,
         ...groupsActions(setLocalTypebot as SetTypebot),
         ...blocksAction(setLocalTypebot as SetTypebot),
         ...variablesAction(setLocalTypebot as SetTypebot),

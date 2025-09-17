@@ -25,6 +25,7 @@ export enum RightPanel {
   PREVIEW,
   VARIABLES,
   VALIDATION_ERRORS,
+  FLOW_HISTORY,
 }
 
 export type SocketUser = {
