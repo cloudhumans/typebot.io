@@ -1,16 +1,19 @@
+import { useGroupsStore } from '@/features/graph/hooks/useGroupsStore'
+import { areTypebotsEqual } from '@/features/publish/helpers/areTypebotsEqual'
+import { convertPublicTypebotToTypebot } from '@/features/publish/helpers/convertPublicTypebotToTypebot'
+import { isPublished as isPublishedHelper } from '@/features/publish/helpers/isPublished'
+import { preventUserFromRefreshing } from '@/helpers/preventUserFromRefreshing'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import { useToast } from '@/hooks/useToast'
+import { trpc } from '@/lib/trpc'
+import { isDefined, omit } from '@typebot.io/lib'
 import {
   PublicTypebot,
   PublicTypebotV6,
   TypebotV6,
   typebotV6Schema,
-  GroupV6,
-  Variable,
-  Edge,
-  Theme,
 } from '@typebot.io/schemas'
-import { z } from '@typebot.io/schemas/zod'
-import { startEventSchema } from '@typebot.io/schemas/features/events/start/schema'
-import { settingsSchema } from '@typebot.io/schemas/features/typebot/settings/schema'
+import { dequal } from 'dequal'
 import { Router } from 'next/router'
 import {
   createContext,
@@ -23,65 +26,14 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { isDefined, omit } from '@typebot.io/lib'
-import { edgesAction, EdgesActions } from './typebotActions/edges'
-import { itemsAction, ItemsActions } from './typebotActions/items'
-import { GroupsActions, groupsActions } from './typebotActions/groups'
-import { blocksAction, BlocksActions } from './typebotActions/blocks'
-import { variablesAction, VariablesActions } from './typebotActions/variables'
-import { dequal } from 'dequal'
-import { useToast } from '@/hooks/useToast'
 import { useUndo } from '../hooks/useUndo'
-import { useAutoSave } from '@/hooks/useAutoSave'
-import { preventUserFromRefreshing } from '@/helpers/preventUserFromRefreshing'
-import { areTypebotsEqual } from '@/features/publish/helpers/areTypebotsEqual'
-import { isPublished as isPublishedHelper } from '@/features/publish/helpers/isPublished'
-import { convertPublicTypebotToTypebot } from '@/features/publish/helpers/convertPublicTypebotToTypebot'
-import { trpc } from '@/lib/trpc'
+import { blocksAction, BlocksActions } from './typebotActions/blocks'
+import { edgesAction, EdgesActions } from './typebotActions/edges'
 import { EventsActions, eventsActions } from './typebotActions/events'
-import { useGroupsStore } from '@/features/graph/hooks/useGroupsStore'
-import { TypebotHistoryOrigin } from '@typebot.io/prisma'
-
-export interface TypebotHistoryContent {
-  name: string
-  icon: string | null
-  groups: GroupV6[] | null
-  events: z.infer<typeof startEventSchema>[] | null
-  variables: Variable[] | null
-  edges: Edge[] | null
-  theme: Theme | null
-  settings: z.infer<typeof settingsSchema> | null
-  folderId: string | null
-  selectedThemeTemplateId: string | null
-  resultsTablePreferences: z.infer<typeof settingsSchema> | null
-  publicId: string | null
-  customDomain: string | null
-  workspaceId: string
-  isArchived: boolean
-  isClosed: boolean
-  riskLevel: number | null
-  whatsAppCredentialsId: string | null
-}
-
-export interface TypebotHistoryResponse {
-  history: {
-    id: string
-    createdAt: Date
-    version: string
-    origin: TypebotHistoryOrigin
-    author: {
-      id: string
-      name: string | null
-      email: string | null
-      image: string | null
-    }
-    restoredFromId: string | null
-    publishedAt: Date | null
-    isRestored: boolean
-    content?: TypebotHistoryContent | undefined
-  }[]
-  nextCursor: string | null
-}
+import { GroupsActions, groupsActions } from './typebotActions/groups'
+import { itemsAction, ItemsActions } from './typebotActions/items'
+import { variablesAction, VariablesActions } from './typebotActions/variables'
+import { TypebotHistoryResponse } from '@typebot.io/schemas/features/typebot/typebotHistory'
 
 const autoSaveTimeout = 10000
 

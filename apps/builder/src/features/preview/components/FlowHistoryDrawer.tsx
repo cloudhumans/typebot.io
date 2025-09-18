@@ -15,37 +15,21 @@ import {
 import { useDrag } from '@use-gesture/react'
 import { useCallback, useEffect, useState } from 'react'
 import { headerHeight } from '../../editor/constants'
+import { useTypebot } from '../../editor/providers/TypebotProvider'
+
 import {
-  TypebotHistoryContent,
-  useTypebot,
-} from '../../editor/providers/TypebotProvider'
+  parseTypebotHistory,
+  TypebotHistory,
+} from '@typebot.io/schemas/features/typebot/typebotHistory'
+
 import { ResizeHandle } from './ResizeHandle'
 
 import { useToast } from '@/hooks/useToast'
 import { trpc } from '@/lib/trpc'
 import { useTranslate } from '@tolgee/react'
-import { TypebotHistoryOrigin } from '@typebot.io/prisma'
 
 type Props = {
   onClose: () => void
-}
-import { parseTypebotHistory } from '@/helpers/typebotHistoryMapper'
-
-export interface TypebotHistoryItem {
-  id: string
-  createdAt: Date
-  author: {
-    id: string
-    name: string | null
-    email: string | null
-    image: string | null
-  }
-  version: string
-  origin: TypebotHistoryOrigin
-  restoredFromId: string | null
-  publishedAt: Date | null
-  isRestored: boolean
-  content?: TypebotHistoryContent | undefined
 }
 
 export const FlowHistoryDrawer = ({ onClose }: Props) => {
@@ -77,7 +61,7 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
   )
 
   const [historyData, setHistoryData] = useState<{
-    history: TypebotHistoryItem[]
+    history: TypebotHistory[]
     nextCursor: string | null
   }>({ history: [], nextCursor: null })
   const [isLoading, setIsLoading] = useState(false)
@@ -94,7 +78,7 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }
   }, [getTypebotHistory])
 
-  const handleRollback = async (snapshot: TypebotHistoryItem) => {
+  const handleRollback = async (snapshot: TypebotHistory) => {
     if (!snapshot || rollingBackItemId) return
 
     try {
@@ -126,7 +110,7 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }
   }
 
-  const handleDuplicate = async (snapshot: TypebotHistoryItem) => {
+  const handleDuplicate = async (snapshot: TypebotHistory) => {
     console.log('Duplicating snapshot:', snapshot)
     if (!typebot || !snapshot || !snapshot.content) return
 
