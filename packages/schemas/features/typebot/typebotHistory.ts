@@ -1,3 +1,4 @@
+import { TypebotHistoryOrigin } from '@typebot.io/prisma'
 import { z } from '../../zod'
 import { EventType } from '../events/constants'
 import { startEventSchema } from '../events/start/schema'
@@ -40,16 +41,7 @@ export const typebotHistorySchema = z.object({
   id: z.string(),
   createdAt: z.coerce.date(),
   version: z.string(),
-  origin: z.enum([
-    'BUILDER',
-    'RESTORE',
-    'IMPORT',
-    'TEMPLATE',
-    'API',
-    'PUBLISH',
-    'DUPLICATION',
-    'MANUAL',
-  ]),
+  origin: z.nativeEnum(TypebotHistoryOrigin),
   author: z.object({
     id: z.string(),
     name: z.string().nullable(),
