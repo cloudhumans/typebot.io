@@ -166,12 +166,12 @@ export const useEditQueue = (typebotId?: string) => {
   }, 10000)
 
   useInterval(() => {
-    cleanupInactiveUsers(10).catch(console.error)
+    cleanupInactiveUsers(5).catch(console.error)
   }, cleanUpDelay)
 
   useEffect(() => {
     setTimeout(() => {
-      setCleanUpDelay(30 * 60 * 1000)
+      setCleanUpDelay(5 * 60 * 1000)
     }, 2000)
   }, [typebotId])
 
