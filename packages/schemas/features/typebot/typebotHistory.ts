@@ -5,26 +5,26 @@ import { edgeSchema } from './edge'
 import { groupV6Schema } from './group'
 import { TypebotV6 } from './typebot'
 import { variableSchema } from './variable'
+import {
+  TypebotHistory as PrismaTypebotHistory,
+  Typebot,
+} from '@typebot.io/prisma'
+import { themeSchema } from './theme'
+import { settingsSchema } from './settings'
+import { resultsTablePreferencesSchema } from './typebot'
 
-// Using a type that matches TypebotHistoryContent from apps/builder/src/features/editor/providers/TypebotProvider
 export const typebotHistoryContentSchema = z.object({
   name: z.string(),
   icon: z.string().nullable(),
-  groups: z
-    .array(z.lazy(() => z.any() as unknown as typeof groupV6Schema))
-    .nullable(),
+  groups: z.array(groupV6Schema).nullable(),
   events: z.array(startEventSchema).nullable(),
-  variables: z
-    .array(z.lazy(() => z.any() as unknown as typeof variableSchema))
-    .nullable(),
-  edges: z
-    .array(z.lazy(() => z.any() as unknown as typeof edgeSchema))
-    .nullable(),
-  theme: z.record(z.any()).nullable(),
-  settings: z.record(z.any()).nullable(),
+  variables: z.array(variableSchema).nullable(),
+  edges: z.array(edgeSchema).nullable(),
+  theme: themeSchema.nullable(),
+  settings: settingsSchema.nullable(),
   folderId: z.string().nullable(),
   selectedThemeTemplateId: z.string().nullable(),
-  resultsTablePreferences: z.record(z.any()).nullable(),
+  resultsTablePreferences: resultsTablePreferencesSchema.nullable(),
   publicId: z.string().nullable(),
   customDomain: z.string().nullable(),
   workspaceId: z.string(),
@@ -40,7 +40,16 @@ export const typebotHistorySchema = z.object({
   id: z.string(),
   createdAt: z.coerce.date(),
   version: z.string(),
-  origin: z.enum(['BUILDER', 'RESTORE', 'IMPORT', 'TEMPLATE', 'API']), // Matches TypebotHistoryOrigin
+  origin: z.enum([
+    'BUILDER',
+    'RESTORE',
+    'IMPORT',
+    'TEMPLATE',
+    'API',
+    'PUBLISH',
+    'DUPLICATION',
+    'MANUAL',
+  ]),
   author: z.object({
     id: z.string(),
     name: z.string().nullable(),
@@ -64,9 +73,59 @@ export type TypebotHistoryResponse = z.infer<
   typeof typebotHistoryResponseSchema
 >
 
-/**
- * Parses a TypebotHistoryContent object into a TypebotV6 object (minus id, createdAt, updatedAt)
- */
+export const parsePrismaTypebotHistory = (
+  prismaHistory: PrismaTypebotHistory & {
+    author?: {
+      id: string
+      name: string | null
+      email: string | null
+      image: string | null
+    } | null
+  }
+): TypebotHistory => {
+  const content: TypebotHistoryContent = {
+    name: prismaHistory.name,
+    icon: prismaHistory.icon,
+    groups: prismaHistory.groups as z.infer<typeof groupV6Schema>[] | null,
+    events: prismaHistory.events as z.infer<typeof startEventSchema>[] | null,
+    variables: prismaHistory.variables as
+      | z.infer<typeof variableSchema>[]
+      | null,
+    edges: prismaHistory.edges as z.infer<typeof edgeSchema>[] | null,
+    theme: prismaHistory.theme as z.infer<typeof themeSchema> | null,
+    settings: prismaHistory.settings as z.infer<typeof settingsSchema> | null,
+    folderId: prismaHistory.folderId,
+    selectedThemeTemplateId: prismaHistory.selectedThemeTemplateId,
+    resultsTablePreferences: prismaHistory.resultsTablePreferences as z.infer<
+      typeof resultsTablePreferencesSchema
+    > | null,
+    publicId: prismaHistory.publicId,
+    customDomain: prismaHistory.customDomain,
+    workspaceId: prismaHistory.workspaceId,
+    isArchived: prismaHistory.isArchived,
+    isClosed: prismaHistory.isClosed,
+    riskLevel: prismaHistory.riskLevel,
+    whatsAppCredentialsId: prismaHistory.whatsAppCredentialsId,
+  }
+
+  return {
+    id: prismaHistory.id,
+    createdAt: prismaHistory.createdAt,
+    version: prismaHistory.version || '6',
+    origin: prismaHistory.origin as TypebotHistory['origin'],
+    author: prismaHistory.author || {
+      id: prismaHistory.authorId || '',
+      name: null,
+      email: null,
+      image: null,
+    },
+    restoredFromId: prismaHistory.restoredFromId,
+    publishedAt: prismaHistory.publishedAt,
+    isRestored: prismaHistory.isRestored,
+    content,
+  }
+}
+
 export const parseTypebotHistory = (
   history: TypebotHistoryContent
 ): Omit<TypebotV6, 'id' | 'createdAt' | 'updatedAt'> => {
@@ -104,9 +163,6 @@ export const parseTypebotHistory = (
   }
 }
 
-/**
- * Creates a TypebotHistoryContent from a TypebotV6 object
- */
 export const createTypebotHistoryContent = (
   typebot: TypebotV6
 ): TypebotHistoryContent => {
@@ -132,10 +188,35 @@ export const createTypebotHistoryContent = (
   }
 }
 
-/**
- * Generates a unique ID for internal use
- * A simple implementation that doesn't rely on external dependencies
- */
+export const convertTypebotHistoryToTypebot = (
+  historySnapshot: PrismaTypebotHistory
+): Typebot => {
+  return {
+    id: historySnapshot.id,
+    version: historySnapshot.version,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    name: historySnapshot.name,
+    icon: historySnapshot.icon,
+    folderId: historySnapshot.folderId,
+    groups: historySnapshot.groups,
+    events: historySnapshot.events,
+    variables: historySnapshot.variables,
+    edges: historySnapshot.edges,
+    theme: historySnapshot.theme,
+    selectedThemeTemplateId: historySnapshot.selectedThemeTemplateId,
+    settings: historySnapshot.settings,
+    resultsTablePreferences: historySnapshot.resultsTablePreferences,
+    publicId: historySnapshot.publicId,
+    customDomain: historySnapshot.customDomain,
+    workspaceId: historySnapshot.workspaceId,
+    isArchived: historySnapshot.isArchived,
+    isClosed: historySnapshot.isClosed,
+    riskLevel: historySnapshot.riskLevel,
+    whatsAppCredentialsId: historySnapshot.whatsAppCredentialsId,
+  }
+}
+
 const generateId = (): string => {
   const timestamp = Date.now().toString(36)
   const randomPart = Math.random().toString(36).substring(2, 10)

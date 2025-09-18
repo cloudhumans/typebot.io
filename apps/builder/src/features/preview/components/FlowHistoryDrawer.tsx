@@ -240,7 +240,8 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
                       )}
                       {item.isRestored && (
                         <Text fontSize="xs" color="blue.500">
-                          • {t('preview.flowHistory.item.restored')}
+                          • {t('preview.flowHistory.item.restored')}a partir de{' '}
+                          {item.restoredFromId}
                         </Text>
                       )}
                     </HStack>

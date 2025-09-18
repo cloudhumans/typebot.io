@@ -185,9 +185,44 @@ export const publishTypebot = authenticatedProcedure
         },
       })
 
-    const snapshotChecksum = generateHistoryChecksum(existingTypebot)
+    const settings = (existingTypebot.settings as Record<string, unknown>) || {}
+    const restoreInfo = settings._restore as
+      | {
+          restoredFromId?: string
+          restoredAt?: string
+          isUnmodified?: boolean
+        }
+      | undefined
 
-    const origin = 'PUBLISH'
+    let origin: 'PUBLISH' | 'RESTORE' = 'PUBLISH'
+    let isRestored = false
+    let restoredFromId: string | undefined
+
+    if (
+      restoreInfo &&
+      restoreInfo.isUnmodified === true &&
+      restoreInfo.restoredFromId
+    ) {
+      origin = 'RESTORE'
+      isRestored = true
+      restoredFromId = restoreInfo.restoredFromId
+    }
+
+    const cleanedSettings = { ...settings }
+    if (cleanedSettings._restore) {
+      delete cleanedSettings._restore
+      await prisma.typebot.update({
+        where: { id: existingTypebot.id },
+        data: {
+          settings:
+            Object.keys(cleanedSettings).length > 0
+              ? JSON.parse(JSON.stringify(cleanedSettings))
+              : Prisma.JsonNull,
+        },
+      })
+    }
+
+    const snapshotChecksum = generateHistoryChecksum(existingTypebot)
 
     await prisma.typebotHistory.create({
       data: {
@@ -196,8 +231,8 @@ export const publishTypebot = authenticatedProcedure
         authorId: user?.id,
         origin,
         publishedAt: new Date(),
-        isRestored: false,
-        restoredFromId: undefined,
+        isRestored,
+        restoredFromId,
         name: existingTypebot.name,
         icon: existingTypebot.icon,
         folderId: existingTypebot.folderId,
@@ -207,7 +242,10 @@ export const publishTypebot = authenticatedProcedure
         edges: existingTypebot.edges || Prisma.JsonNull,
         theme: existingTypebot.theme || Prisma.JsonNull,
         selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
-        settings: existingTypebot.settings || Prisma.JsonNull,
+        settings:
+          Object.keys(cleanedSettings).length > 0
+            ? JSON.parse(JSON.stringify(cleanedSettings))
+            : Prisma.JsonNull,
         resultsTablePreferences: existingTypebot.resultsTablePreferences
           ? existingTypebot.resultsTablePreferences
           : Prisma.JsonNull,

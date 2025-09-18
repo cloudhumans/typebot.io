@@ -1,7 +1,7 @@
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import prisma from '@typebot.io/lib/prisma'
-import { Prisma, TypebotHistoryOrigin } from '@typebot.io/prisma'
+import { Prisma } from '@typebot.io/prisma'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 
@@ -41,6 +41,8 @@ export const rollbackTypebot = authenticatedProcedure
       select: {
         id: true,
         version: true,
+        createdAt: true,
+        updatedAt: true,
         name: true,
         icon: true,
         folderId: true,
@@ -104,6 +106,17 @@ export const rollbackTypebot = authenticatedProcedure
         message: 'History snapshot not found',
       })
 
+    const currentSettings =
+      (historySnapshot.settings as Record<string, unknown>) || {}
+    const settingsWithRestore = {
+      ...currentSettings,
+      _restore: {
+        restoredFromId: historyId,
+        restoredAt: new Date().toISOString(),
+        isUnmodified: true,
+      },
+    }
+
     await prisma.typebot.update({
       where: {
         id: typebotId,
@@ -117,7 +130,7 @@ export const rollbackTypebot = authenticatedProcedure
         edges: historySnapshot.edges || Prisma.JsonNull,
         theme: historySnapshot.theme || Prisma.JsonNull,
         selectedThemeTemplateId: historySnapshot.selectedThemeTemplateId,
-        settings: historySnapshot.settings || Prisma.JsonNull,
+        settings: settingsWithRestore || Prisma.JsonNull,
         resultsTablePreferences: historySnapshot.resultsTablePreferences
           ? historySnapshot.resultsTablePreferences
           : Prisma.JsonNull,
@@ -127,66 +140,11 @@ export const rollbackTypebot = authenticatedProcedure
         isClosed: historySnapshot.isClosed,
         riskLevel: historySnapshot.riskLevel,
         whatsAppCredentialsId: historySnapshot.whatsAppCredentialsId,
-      },
-    })
-
-    // const restoreSnapshotChecksum = generateHistoryChecksum(
-    //   parseTypebotHistory(historySnapshot)
-    // )
-
-    const restoreSnapshotChecksum = 'TODO'
-
-    const existingSnapshot = await prisma.typebotHistory.findUnique({
-      where: {
-        typebotId_snapshotChecksum: {
-          typebotId: existingTypebot.id,
-          snapshotChecksum: restoreSnapshotChecksum,
-        },
-      },
-      select: { id: true },
-    })
-
-    if (existingSnapshot) {
-      return {
-        message: `Successfully rolled back to snapshot: ${historySnapshot.name}`,
-        historyId: existingSnapshot.id,
-      }
-    }
-
-    const newHistory = await prisma.typebotHistory.create({
-      data: {
-        typebotId: existingTypebot.id,
-        version: historySnapshot.version || existingTypebot.version,
-        authorId: user?.id,
-        origin: 'RESTORE' as TypebotHistoryOrigin,
-        isRestored: true,
-        restoredFromId: historyId,
-        name: `restored-${historySnapshot.name}`,
-        icon: historySnapshot.icon,
-        folderId: existingTypebot.folderId,
-        groups: historySnapshot.groups || Prisma.JsonNull,
-        events: historySnapshot.events || Prisma.JsonNull,
-        variables: historySnapshot.variables || Prisma.JsonNull,
-        edges: historySnapshot.edges || Prisma.JsonNull,
-        theme: historySnapshot.theme || Prisma.JsonNull,
-        selectedThemeTemplateId: historySnapshot.selectedThemeTemplateId,
-        settings: historySnapshot.settings || Prisma.JsonNull,
-        resultsTablePreferences: historySnapshot.resultsTablePreferences
-          ? historySnapshot.resultsTablePreferences
-          : Prisma.JsonNull,
-        publicId: historySnapshot.publicId,
-        customDomain: historySnapshot.customDomain,
-        workspaceId: existingTypebot.workspaceId,
-        isArchived: historySnapshot.isArchived,
-        isClosed: historySnapshot.isClosed,
-        riskLevel: historySnapshot.riskLevel,
-        whatsAppCredentialsId: historySnapshot.whatsAppCredentialsId,
-        snapshotChecksum: restoreSnapshotChecksum,
       },
     })
 
     return {
       message: `Successfully rolled back to snapshot: ${historySnapshot.name}`,
-      historyId: newHistory.id,
+      historyId: historyId,
     }
   })

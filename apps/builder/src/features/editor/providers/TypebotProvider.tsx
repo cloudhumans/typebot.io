@@ -67,7 +67,6 @@ const typebotContext = createContext<
     is404: boolean
     isPublished: boolean
     isSavingLoading: boolean
-    isSavingHistory: boolean
     save: () => Promise<void>
     undo: () => void
     redo: () => void
@@ -178,19 +177,6 @@ export const TypebotProvider = ({
       onError: (error) =>
         showToast({
           title: 'Error while updating typebot',
-          description: error.message,
-        }),
-      onSuccess: () => {
-        if (!typebotId) return
-        refetchTypebot()
-      },
-    })
-
-  const { mutateAsync: updateTypebotHistory, isLoading: isSavingHistory } =
-    trpc.typebot.updateTypebotHistory.useMutation({
-      onError: (error) =>
-        showToast({
-          title: 'Error while updating typebot history',
           description: error.message,
         }),
       onSuccess: () => {
@@ -327,7 +313,6 @@ export const TypebotProvider = ({
       setUpdateDate,
       typebot,
       updateTypebot,
-      updateTypebotHistory,
       isFlowEditor,
     ]
   )
@@ -400,7 +385,6 @@ export const TypebotProvider = ({
         publishedTypebotVersion: publishedTypebotData?.version,
         currentUserMode: typebotData?.currentUserMode ?? 'guest',
         isSavingLoading: isSaving,
-        isSavingHistory: isSavingHistory,
         is404,
         save: saveTypebot,
         undo,
