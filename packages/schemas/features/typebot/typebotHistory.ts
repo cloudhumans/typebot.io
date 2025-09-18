@@ -85,7 +85,7 @@ export const parsePrismaTypebotHistory = (
       | null,
     edges: prismaHistory.edges as z.infer<typeof edgeSchema>[] | null,
     theme: prismaHistory.theme as z.infer<typeof themeSchema> | null,
-    settings: prismaHistory.settings as z.infer<typeof settingsSchema> | null,
+    settings: prismaHistory.settings as z.infer<typeof settingsSchema> | {},
     folderId: prismaHistory.folderId,
     selectedThemeTemplateId: prismaHistory.selectedThemeTemplateId,
     resultsTablePreferences: prismaHistory.resultsTablePreferences as z.infer<

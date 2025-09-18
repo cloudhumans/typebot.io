@@ -124,13 +124,13 @@ export const rollbackTypebot = authenticatedProcedure
       data: {
         name: historySnapshot.name,
         icon: historySnapshot.icon,
-        groups: historySnapshot.groups || Prisma.JsonNull,
-        events: historySnapshot.events || Prisma.JsonNull,
-        variables: historySnapshot.variables || Prisma.JsonNull,
-        edges: historySnapshot.edges || Prisma.JsonNull,
-        theme: historySnapshot.theme || Prisma.JsonNull,
+        groups: historySnapshot.groups || {},
+        events: historySnapshot.events || {},
+        variables: historySnapshot.variables || {},
+        edges: historySnapshot.edges || {},
+        theme: historySnapshot.theme || {},
         selectedThemeTemplateId: historySnapshot.selectedThemeTemplateId,
-        settings: settingsWithRestore || Prisma.JsonNull,
+        settings: settingsWithRestore || {},
         resultsTablePreferences: historySnapshot.resultsTablePreferences
           ? historySnapshot.resultsTablePreferences
           : Prisma.JsonNull,
@@ -140,6 +140,7 @@ export const rollbackTypebot = authenticatedProcedure
         isClosed: historySnapshot.isClosed,
         riskLevel: historySnapshot.riskLevel,
         whatsAppCredentialsId: historySnapshot.whatsAppCredentialsId,
+        updatedAt: new Date(),
       },
     })
 

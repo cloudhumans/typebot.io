@@ -217,7 +217,7 @@ export const publishTypebot = authenticatedProcedure
           settings:
             Object.keys(cleanedSettings).length > 0
               ? JSON.parse(JSON.stringify(cleanedSettings))
-              : Prisma.JsonNull,
+              : {},
         },
       })
     }
@@ -236,16 +236,16 @@ export const publishTypebot = authenticatedProcedure
         name: existingTypebot.name,
         icon: existingTypebot.icon,
         folderId: existingTypebot.folderId,
-        groups: existingTypebot.groups || Prisma.JsonNull,
-        events: existingTypebot.events || Prisma.JsonNull,
-        variables: existingTypebot.variables || Prisma.JsonNull,
-        edges: existingTypebot.edges || Prisma.JsonNull,
-        theme: existingTypebot.theme || Prisma.JsonNull,
+        groups: existingTypebot.groups || {},
+        events: existingTypebot.events || {},
+        variables: existingTypebot.variables || {},
+        edges: existingTypebot.edges || {},
+        theme: existingTypebot.theme || {},
         selectedThemeTemplateId: existingTypebot.selectedThemeTemplateId,
         settings:
           Object.keys(cleanedSettings).length > 0
             ? JSON.parse(JSON.stringify(cleanedSettings))
-            : Prisma.JsonNull,
+            : {}, // Sempre salvar como objeto vazio, nunca como null
         resultsTablePreferences: existingTypebot.resultsTablePreferences
           ? existingTypebot.resultsTablePreferences
           : Prisma.JsonNull,

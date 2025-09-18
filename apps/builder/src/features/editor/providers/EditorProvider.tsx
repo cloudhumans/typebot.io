@@ -68,7 +68,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const { queueItems, isLoading, joinQueue, currentEditor, leaveQueue } =
     useEditQueue(typebot?.id)
 
-  const isUserEditing = currentEditor?.userId === currentUser?.id
+  const isUserEditing = currentEditor?.userId
+    ? currentEditor.userId === currentUser?.id
+    : false
 
   useEffect(() => {
     setIsFlowEditor((prev) => {

@@ -110,14 +110,14 @@ export const updateTypebotHistory = authenticatedProcedure
           name: existingTypebot?.name || 'Untitled',
           icon: existingTypebot?.icon || null,
           folderId: existingTypebot?.folderId || null,
-          groups: existingTypebot?.groups || Prisma.JsonNull,
-          events: existingTypebot?.events || Prisma.JsonNull,
-          variables: existingTypebot?.variables || Prisma.JsonNull,
-          edges: existingTypebot?.edges || Prisma.JsonNull,
-          theme: existingTypebot?.theme || Prisma.JsonNull,
+          groups: existingTypebot?.groups || {},
+          events: existingTypebot?.events || {},
+          variables: existingTypebot?.variables || {},
+          edges: existingTypebot?.edges || {},
+          theme: existingTypebot?.theme || {},
           selectedThemeTemplateId:
             existingTypebot?.selectedThemeTemplateId || null,
-          settings: existingTypebot?.settings || Prisma.JsonNull,
+          settings: existingTypebot?.settings || {},
           resultsTablePreferences: existingTypebot?.resultsTablePreferences
             ? existingTypebot.resultsTablePreferences
             : Prisma.JsonNull,
