@@ -27,7 +27,7 @@ export const useTypebotHistory = ({
     },
     {
       enabled: !!typebotId && enabled,
-      staleTime: 30000, // 30 segundos
+      staleTime: 30000, // 30 seconds
       refetchOnWindowFocus: false,
     }
   )
