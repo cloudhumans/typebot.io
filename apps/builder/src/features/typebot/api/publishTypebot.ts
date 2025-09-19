@@ -245,7 +245,7 @@ export const publishTypebot = authenticatedProcedure
         settings:
           Object.keys(cleanedSettings).length > 0
             ? JSON.parse(JSON.stringify(cleanedSettings))
-            : {}, // Sempre salvar como objeto vazio, nunca como null
+            : {}, // Always save as an empty object, never as null. This ensures consistent data structure and avoids issues when reading settings elsewhere in the application.
         resultsTablePreferences: existingTypebot.resultsTablePreferences
           ? existingTypebot.resultsTablePreferences
           : Prisma.JsonNull,
