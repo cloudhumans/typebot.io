@@ -62,6 +62,9 @@ export const getTypebotHistory = authenticatedProcedure
         })
       ),
       nextCursor: z.string().nullable(),
+      totalCount: z.number(),
+      oldestDate: z.date().nullable(),
+      newestDate: z.date().nullable(),
     })
   )
   .query(
@@ -108,6 +111,23 @@ export const getTypebotHistory = authenticatedProcedure
         })
 
       const where = historyId ? { id: historyId, typebotId } : { typebotId }
+
+      // Get total count and date range
+      const [totalCount, oldestRecord, newestRecord] = await Promise.all([
+        prisma.typebotHistory.count({
+          where,
+        }),
+        prisma.typebotHistory.findFirst({
+          where,
+          orderBy: { createdAt: 'asc' },
+          select: { createdAt: true },
+        }),
+        prisma.typebotHistory.findFirst({
+          where,
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        }),
+      ])
 
       const history = await prisma.typebotHistory.findMany({
         where,
@@ -174,6 +194,9 @@ export const getTypebotHistory = authenticatedProcedure
             : {}),
         })),
         nextCursor,
+        totalCount,
+        oldestDate: oldestRecord?.createdAt || null,
+        newestDate: newestRecord?.createdAt || null,
       }
     }
   )

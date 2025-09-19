@@ -1,5 +1,4 @@
 import { CopyIcon, HistoryIcon } from '@/components/icons'
-import { TimeSince } from '@/components/TimeSince'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import {
   Avatar,
@@ -18,9 +17,12 @@ import {
   useDisclosure,
 } from '@chakra-ui/react'
 import { useDrag } from '@use-gesture/react'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
+import { formatDistanceToNowStrict } from 'date-fns'
+import { ptBR, enUS, es, fr, de, ro, it } from 'date-fns/locale'
 import { headerHeight } from '../../editor/constants'
 import { useTypebot } from '../../editor/providers/TypebotProvider'
+import { useTypebotHistoryInfinite } from '../hooks/useTypebotHistory'
 
 import {
   parseTypebotHistory,
@@ -31,8 +33,31 @@ import { ResizeHandle } from './ResizeHandle'
 
 import { useToast } from '@/hooks/useToast'
 import { trpc } from '@/lib/trpc'
-import { useTranslate } from '@tolgee/react'
+import { useTranslate, useTolgee } from '@tolgee/react'
 import { TypebotHistoryOrigin } from '@typebot.io/prisma'
+
+const localeMap = {
+  'pt-BR': ptBR,
+  pt: ptBR,
+  en: enUS,
+  es: es,
+  fr: fr,
+  de: de,
+  ro: ro,
+  it: it,
+} as const
+
+const TimeAgo = ({ date }: { date: string }) => {
+  const { getLanguage } = useTolgee()
+  const currentLanguage = getLanguage()
+  const locale = localeMap[currentLanguage as keyof typeof localeMap] || enUS
+
+  return (
+    <>
+      {formatDistanceToNowStrict(new Date(date), { addSuffix: true, locale })}
+    </>
+  )
+}
 
 type Props = {
   onClose: () => void
@@ -42,7 +67,23 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
   const { t } = useTranslate()
   const { showToast } = useToast()
 
-  const { typebot, getTypebotHistory, rollbackTypebot } = useTypebot()
+  const { typebot, rollbackTypebot } = useTypebot()
+  const {
+    data: historyPages,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useTypebotHistoryInfinite(typebot?.id)
+
+  // Flatten pages data
+  const historyData = historyPages?.pages[0]
+  const allHistory = historyPages?.pages.flatMap((page) => page.history) || []
+
+  const summaryBgColor = useColorModeValue('orange.50', 'orange.900')
+  const summaryBorderColor = useColorModeValue('orange.200', 'orange.700')
+  const summaryTitleColor = useColorModeValue('orange.800', 'orange.200')
+  const summaryTextColor = useColorModeValue('orange.600', 'orange.300')
 
   const getBadgeColorScheme = (origin: TypebotHistoryOrigin) => {
     switch (origin.toLowerCase()) {
@@ -76,9 +117,20 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }, 0)
   }
 
+  const getRestoredFromDetails = (restoredFromId: string) => {
+    const originalSnapshot = allHistory.find((h) => h.id === restoredFromId)
+    if (originalSnapshot) {
+      return {
+        author: originalSnapshot?.author?.name || 'Unknown',
+        date: originalSnapshot.createdAt,
+        origin: originalSnapshot.origin,
+      }
+    }
+    return null
+  }
+
   const [width, setWidth] = useState(500)
   const [isResizeHandleVisible, setIsResizeHandleVisible] = useState(false)
-  const [, setIsRollingBack] = useState(false)
   const [rollingBackItemId, setRollingBackItemId] = useState<string | null>(
     null
   )
@@ -89,6 +141,9 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     onOpen: onRestoreConfirmOpen,
     onClose: onRestoreConfirmClose,
   } = useDisclosure()
+
+  // Color values for restored items
+  // const restoredBgColor = useColorModeValue("blue.50", "blue.900")
 
   const { mutate: duplicateTypebot } = trpc.typebot.importTypebot.useMutation({
     onSuccess: (data) => {
@@ -105,29 +160,10 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }
   )
 
-  const [historyData, setHistoryData] = useState<{
-    history: TypebotHistory[]
-    nextCursor: string | null
-  }>({ history: [], nextCursor: null })
-  const [isLoading, setIsLoading] = useState(false)
-
-  const fetchHistory = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const result = await getTypebotHistory({ limit: 20 })
-      setHistoryData(result)
-    } catch (error) {
-      console.error('Failed to fetch typebot history:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [getTypebotHistory])
-
   const handleRollback = async (snapshot: TypebotHistory) => {
     if (!snapshot || rollingBackItemId) return
 
     try {
-      setIsRollingBack(true)
       setRollingBackItemId(snapshot.id)
 
       await rollbackTypebot(snapshot.id)
@@ -137,8 +173,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
         description: t('preview.flowHistory.toast.flowRestored'),
         status: 'success',
       })
-
-      await fetchHistory()
     } catch (error) {
       console.error('Failed to rollback:', error)
       showToast({
@@ -150,7 +184,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
         status: 'error',
       })
     } finally {
-      setIsRollingBack(false)
       setRollingBackItemId(null)
     }
   }
@@ -194,10 +227,6 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
     }
   }
 
-  useEffect(() => {
-    fetchHistory()
-  }, [fetchHistory])
-
   return (
     <Flex
       pos="absolute"
@@ -214,251 +243,289 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
       zIndex={10}
       style={{ width: `${width}px` }}
     >
-      <Flex
-        pos="absolute"
-        right="0"
-        top={`0`}
-        h={`100%`}
-        borderLeftWidth={'1px'}
-        shadow="lg"
-        borderLeftRadius={'lg'}
-        onMouseOver={() => setIsResizeHandleVisible(true)}
-        onMouseLeave={() => setIsResizeHandleVisible(false)}
-        p="6"
-        zIndex={10}
-        style={{ width: `${width}px` }}
-      >
-        <Fade in={isResizeHandleVisible}>
-          <ResizeHandle
-            {...useResizeHandleDrag()}
-            pos="absolute"
-            left="-7.5px"
-            top={`calc(50% - ${headerHeight}px)`}
-          />
-        </Fade>
+      <Fade in={isResizeHandleVisible}>
+        <ResizeHandle
+          {...useResizeHandleDrag()}
+          pos="absolute"
+          left="-7.5px"
+          top={`calc(50% - ${headerHeight}px)`}
+        />
+      </Fade>
 
-        <Stack w="full" spacing="4">
-          <CloseButton
-            pos="absolute"
-            right="1rem"
-            top="1rem"
-            onClick={onClose}
-          />
+      <Stack w="full" spacing="4">
+        <CloseButton pos="absolute" right="1rem" top="1rem" onClick={onClose} />
 
-          <HStack spacing={3} alignItems="center" paddingRight={6}>
-            <Heading fontSize="md">{t('preview.flowHistory.title')}</Heading>
+        <HStack spacing={3} alignItems="center" paddingRight={6}>
+          <Heading fontSize="md">{t('preview.flowHistory.title')}</Heading>
 
-            {isLoading && (
-              <HStack spacing={2}>
-                <Spinner size="xs" />
-                <Text fontSize="xs">{t('preview.flowHistory.loading')}</Text>
+          {isLoading && (
+            <HStack spacing={2}>
+              <Spinner size="xs" color="orange.500" />
+              <Text fontSize="xs" color="orange.500">
+                {t('preview.flowHistory.loading')}
+              </Text>
+            </HStack>
+          )}
+        </HStack>
+
+        {historyData && historyData.history.length > 0 && (
+          <Flex
+            p={3}
+            borderWidth="1px"
+            borderRadius="md"
+            bg={summaryBgColor}
+            borderColor={summaryBorderColor}
+            flexDir="column"
+            gap={2}
+          >
+            <Text fontSize="sm" fontWeight="medium" color={summaryTitleColor}>
+              {t('preview.flowHistory.summary.title')}
+            </Text>
+            <HStack spacing={4} fontSize="xs" wrap="wrap">
+              <HStack spacing={1}>
+                <Text fontWeight="medium">
+                  {t('preview.flowHistory.summary.total')}
+                </Text>
+                <Text color={summaryTextColor}>
+                  {historyData?.totalCount || 0}{' '}
+                  {t('preview.flowHistory.summary.versions', {
+                    count: historyData?.totalCount || 0,
+                  })}
+                </Text>
               </HStack>
-            )}
-          </HStack>
 
-          {historyData.history.length === 0 && !isLoading ? (
-            <Text>{t('preview.flowHistory.noHistoryFound')}</Text>
-          ) : (
-            <Stack
-              spacing={2}
-              overflowY="auto"
-              maxH="calc(100vh - 150px)"
-              pr={2}
-            >
-              {historyData.history.map((item) => (
-                <Flex
-                  key={item.id}
-                  p={3}
-                  borderWidth="1px"
-                  borderRadius="md"
-                  flexDir="column"
-                >
-                  <HStack justifyContent="space-between" mb={2}>
-                    <Text fontWeight="medium">
-                      <TimeSince date={item.createdAt.toISOString()} />
-                    </Text>
-                    <Text fontSize="xs">
-                      <Tag
-                        rounded="full"
-                        colorScheme={getBadgeColorScheme(item.origin)}
-                        size="sm"
-                      >
-                        {getOriginLabel(item.origin)}
-                      </Tag>
-                    </Text>
-                  </HStack>
-
-                  {item.content && (
-                    <HStack spacing={3} wrap="wrap" fontSize={'sm'} mb={4}>
-                      {item.content.groups && (
-                        <HStack spacing={1}>
-                          <Text fontWeight="medium" color="blue.400">
-                            {item.content.groups.length}
-                          </Text>
-                          <Text color="gray.400">
-                            {t('preview.flowHistory.snapshotDetails.groups', {
-                              count: item.content.groups.length,
-                            })}
-                          </Text>
-                        </HStack>
-                      )}
-
-                      {item.content.groups && (
-                        <HStack spacing={1}>
-                          <Text fontWeight="medium" color="green.500">
-                            {countBlocks(item.content.groups)}
-                          </Text>
-                          <Text color="gray.400">
-                            {t('preview.flowHistory.snapshotDetails.blocks', {
-                              count: countBlocks(item.content.groups),
-                            })}
-                          </Text>
-                        </HStack>
-                      )}
-
-                      {item.content.variables && (
-                        <HStack spacing={1}>
-                          <Text fontWeight="medium" color="orange.500">
-                            {item.content.variables.length}
-                          </Text>
-                          <Text color="gray.400">
-                            {t(
-                              'preview.flowHistory.snapshotDetails.variables',
-                              {
-                                count: item.content.variables.length,
-                              }
-                            )}
-                          </Text>
-                        </HStack>
-                      )}
-
-                      {item.content.edges && (
-                        <HStack spacing={1}>
-                          <Text fontWeight="medium" color="purple.500">
-                            {item.content.edges.length}
-                          </Text>
-                          <Text color="gray.400">
-                            {t(
-                              'preview.flowHistory.snapshotDetails.connections',
-                              {
-                                count: item.content.edges.length,
-                              }
-                            )}
-                          </Text>
-                        </HStack>
-                      )}
-                      {item.isRestored && (
-                        <Text fontSize="xs" color="blue.500">
-                          • {t('preview.flowHistory.item.restored')} a partir de{' '}
-                          {item.restoredFromId}
-                        </Text>
-                      )}
-                    </HStack>
+              <HStack spacing={1}>
+                <Text fontWeight="medium">
+                  {t('preview.flowHistory.summary.oldest')}
+                </Text>
+                <Text color={summaryTextColor}>
+                  {historyData?.oldestDate ? (
+                    <TimeAgo date={historyData.oldestDate.toISOString()} />
+                  ) : (
+                    '--'
                   )}
-                  <HStack justifyContent="space-between" spacing={2}>
-                    <HStack>
-                      <Avatar
-                        name={item.author.name ?? undefined}
-                        src={item.author.image ?? undefined}
-                        boxSize="20px"
-                      />
-                      <Text fontSize="xs">
-                        {item.author.name ||
-                          t('preview.flowHistory.item.unknownUser')}
-                      </Text>
-                    </HStack>
-                    <HStack>
-                      <Tooltip
-                        label={t('preview.flowHistory.actions.restore')}
-                        placement="bottom"
-                      >
-                        <IconButton
-                          aria-label={t('preview.flowHistory.actions.restore')}
-                          icon={<HistoryIcon />}
-                          size="sm"
-                          colorScheme="gray"
-                          variant="outline"
-                          onClick={() => handleRestoreClick(item)}
-                          isLoading={rollingBackItemId === item.id}
-                        />
-                      </Tooltip>
-                      <Tooltip
-                        label={t('preview.flowHistory.actions.duplicate')}
-                        placement="bottom"
-                      >
-                        <IconButton
-                          aria-label={t(
-                            'preview.flowHistory.actions.duplicate'
-                          )}
-                          icon={<CopyIcon />}
-                          size="sm"
-                          colorScheme="gray"
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const result = await getTypebotHistory({
-                                historyId: item.id,
-                                excludeContent: false,
-                              })
-                              console.log(
-                                'Fetched snapshot for duplication:',
-                                result
-                              )
-                              if (result.history.length > 0) {
-                                console.log(
-                                  'Setting selected snapshot:',
-                                  result.history[0]
-                                )
-                                await handleDuplicate(result.history[0])
-                              }
-                            } catch (error) {
-                              console.error(
-                                'Failed to get snapshot details for duplication:',
-                                error
-                              )
-                            }
-                          }}
-                        />
-                      </Tooltip>
-                    </HStack>
+                </Text>
+              </HStack>
+
+              <HStack spacing={1}>
+                <Text fontWeight="medium">
+                  {t('preview.flowHistory.summary.newest')}
+                </Text>
+                <Text color={summaryTextColor}>
+                  {historyData?.newestDate ? (
+                    <TimeAgo date={historyData.newestDate.toISOString()} />
+                  ) : (
+                    '--'
+                  )}
+                </Text>
+              </HStack>
+            </HStack>
+          </Flex>
+        )}
+
+        {historyData &&
+        historyData.history &&
+        historyData.history.length === 0 &&
+        !isLoading ? (
+          <Text>{t('preview.flowHistory.noHistoryFound')}</Text>
+        ) : (
+          <Stack spacing={2} overflowY="auto" maxH="calc(100vh - 150px)" pr={2}>
+            {allHistory.map((item) => (
+              <Flex
+                key={item.id}
+                p={3}
+                borderWidth="1px"
+                borderRadius="md"
+                flexDir="column"
+              >
+                <HStack justifyContent="space-between" mb={2}>
+                  <HStack spacing={2}>
+                    <Text fontWeight="medium" fontSize={`sm`}>
+                      <TimeAgo date={item.createdAt.toISOString()} />
+                    </Text>
                   </HStack>
-                </Flex>
-              ))}
-              {historyData.nextCursor && (
-                <Flex justifyContent="center" py={2}>
+                  <Text fontSize="xs">
+                    <Tag
+                      rounded="full"
+                      colorScheme={getBadgeColorScheme(item.origin)}
+                      size="sm"
+                    >
+                      {getOriginLabel(item.origin)}
+                    </Tag>
+                  </Text>
+                </HStack>
+
+                {item.content && (
+                  <HStack spacing={3} wrap="wrap" fontSize={'sm'} mb={4}>
+                    {item.content.groups && (
+                      <HStack spacing={1}>
+                        <Text fontWeight="medium" color="blue.300">
+                          {item.content.groups.length}
+                        </Text>
+                        <Text color="gray.400">
+                          {t('preview.flowHistory.snapshotDetails.groups', {
+                            count: item.content.groups.length,
+                          })}
+                        </Text>
+                      </HStack>
+                    )}
+
+                    {item.content.groups && (
+                      <HStack spacing={1}>
+                        <Text fontWeight="medium" color="green.500">
+                          {countBlocks(item.content.groups)}
+                        </Text>
+                        <Text color="gray.400">
+                          {t('preview.flowHistory.snapshotDetails.blocks', {
+                            count: countBlocks(item.content.groups),
+                          })}
+                        </Text>
+                      </HStack>
+                    )}
+
+                    {item.content.variables && (
+                      <HStack spacing={1}>
+                        <Text fontWeight="medium" color="orange.500">
+                          {item.content.variables.length}
+                        </Text>
+                        <Text color="gray.400">
+                          {t('preview.flowHistory.snapshotDetails.variables', {
+                            count: item.content.variables.length,
+                          })}
+                        </Text>
+                      </HStack>
+                    )}
+
+                    {item.content.edges && (
+                      <HStack spacing={1}>
+                        <Text fontWeight="medium" color="purple.500">
+                          {item.content.edges.length}
+                        </Text>
+                        <Text color="gray.400">
+                          {t(
+                            'preview.flowHistory.snapshotDetails.connections',
+                            {
+                              count: item.content.edges.length,
+                            }
+                          )}
+                        </Text>
+                      </HStack>
+                    )}
+                    {item.isRestored && (
+                      <HStack spacing={1} mt={1}>
+                        <HStack spacing={1}>
+                          <HistoryIcon boxSize="12px" color="blue.400" />
+                          <Text
+                            fontSize="xs"
+                            color="blue.400"
+                            fontWeight="medium"
+                          >
+                            {t('preview.flowHistory.item.restored')}
+                          </Text>
+                        </HStack>
+                        {(() => {
+                          const details = item.restoredFromId
+                            ? getRestoredFromDetails(item.restoredFromId)
+                            : null
+                          if (details) {
+                            return (
+                              <Text fontSize="xs" color="blue.400">
+                                {t('preview.flowHistory.item.restoredBy')}{' '}
+                                {details.author} •{' '}
+                                <TimeAgo date={details.date.toISOString()} />
+                              </Text>
+                            )
+                          }
+                          return (
+                            <Text fontSize="xs" color="blue.400">
+                              {t(
+                                'preview.flowHistory.item.fromPreviousVersion'
+                              )}
+                            </Text>
+                          )
+                        })()}
+                      </HStack>
+                    )}
+                  </HStack>
+                )}
+                <HStack justifyContent="space-between" spacing={2}>
+                  <HStack>
+                    <Avatar
+                      name={item.author?.name ?? undefined}
+                      src={item.author?.image ?? undefined}
+                      boxSize="20px"
+                    />
+                    <Text fontSize="xs">
+                      {item.author?.name ||
+                        t('preview.flowHistory.item.unknownUser')}
+                    </Text>
+                  </HStack>
+                  <HStack>
+                    <Tooltip
+                      label={t('preview.flowHistory.actions.restore')}
+                      placement="bottom"
+                    >
+                      <IconButton
+                        aria-label={t('preview.flowHistory.actions.restore')}
+                        icon={<HistoryIcon />}
+                        size="sm"
+                        colorScheme="gray"
+                        variant="outline"
+                        onClick={() =>
+                          handleRestoreClick(item as TypebotHistory)
+                        }
+                        isLoading={rollingBackItemId === item.id}
+                      />
+                    </Tooltip>
+                    <Tooltip
+                      label={t('preview.flowHistory.actions.duplicate')}
+                      placement="bottom"
+                    >
+                      <IconButton
+                        aria-label={t('preview.flowHistory.actions.duplicate')}
+                        icon={<CopyIcon />}
+                        size="sm"
+                        colorScheme="gray"
+                        variant="outline"
+                        onClick={async () => {
+                          await handleDuplicate(item as TypebotHistory)
+                        }}
+                      />
+                    </Tooltip>
+                  </HStack>
+                </HStack>
+              </Flex>
+            ))}
+            {hasNextPage && (
+              <Flex justifyContent="center" py={2}>
+                {isFetchingNextPage ? (
+                  <HStack spacing={2}>
+                    <Spinner size="sm" color="orange.500" />
+                    <Text fontSize="sm" color="orange.500">
+                      {t('preview.flowHistory.loading')}
+                    </Text>
+                  </HStack>
+                ) : (
                   <Text
                     fontSize="sm"
-                    color="blue.500"
+                    color="orange.500"
                     cursor="pointer"
-                    onClick={async () => {
-                      if (isLoading) return
-                      setIsLoading(true)
-                      try {
-                        const nextPage = await getTypebotHistory({
-                          limit: 20,
-                          // cursor: historyData.nextCursor
-                        })
-                        setHistoryData({
-                          history: [
-                            ...historyData.history,
-                            ...nextPage.history,
-                          ],
-                          nextCursor: nextPage.nextCursor,
-                        })
-                      } catch (error) {
-                        console.error('Failed to fetch more history:', error)
-                      } finally {
-                        setIsLoading(false)
-                      }
-                    }}
+                    onClick={() => fetchNextPage()}
                   >
                     {t('preview.flowHistory.actions.loadMore')}
                   </Text>
-                </Flex>
-              )}
-            </Stack>
-          )}
-        </Stack>
+                )}
+              </Flex>
+            )}
+            {!hasNextPage && allHistory.length > 0 && (
+              <Flex justifyContent="center" py={4}>
+                <Text fontSize="sm" color="gray.500">
+                  {t('preview.flowHistory.endOfHistory')} 🎉
+                </Text>
+              </Flex>
+            )}
+          </Stack>
+        )}
 
         <ConfirmModal
           isOpen={isRestoreConfirmOpen}
@@ -471,7 +538,7 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
           confirmButtonLabel={t('preview.flowHistory.confirm.restoreButton')}
           confirmButtonColor="blue"
         />
-      </Flex>
+      </Stack>
     </Flex>
   )
 }

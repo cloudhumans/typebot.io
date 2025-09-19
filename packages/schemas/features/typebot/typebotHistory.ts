@@ -42,12 +42,14 @@ export const typebotHistorySchema = z.object({
   createdAt: z.coerce.date(),
   version: z.string(),
   origin: z.nativeEnum(TypebotHistoryOrigin),
-  author: z.object({
-    id: z.string(),
-    name: z.string().nullable(),
-    email: z.string().nullable(),
-    image: z.string().nullable(),
-  }),
+  author: z
+    .object({
+      id: z.string(),
+      name: z.string().nullable(),
+      email: z.string().nullable(),
+      image: z.string().nullable(),
+    })
+    .nullable(),
   restoredFromId: z.string().nullable(),
   publishedAt: z.coerce.date().nullable(),
   isRestored: z.boolean(),
@@ -59,6 +61,9 @@ export type TypebotHistory = z.infer<typeof typebotHistorySchema>
 export const typebotHistoryResponseSchema = z.object({
   history: z.array(typebotHistorySchema),
   nextCursor: z.string().nullable(),
+  totalCount: z.number(),
+  oldestDate: z.coerce.date().nullable(),
+  newestDate: z.coerce.date().nullable(),
 })
 
 export type TypebotHistoryResponse = z.infer<

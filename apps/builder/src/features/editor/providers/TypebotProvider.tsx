@@ -33,7 +33,6 @@ import { EventsActions, eventsActions } from './typebotActions/events'
 import { GroupsActions, groupsActions } from './typebotActions/groups'
 import { itemsAction, ItemsActions } from './typebotActions/items'
 import { variablesAction, VariablesActions } from './typebotActions/variables'
-import { TypebotHistoryResponse } from '@typebot.io/schemas/features/typebot/typebotHistory'
 
 const autoSaveTimeout = 10000
 
@@ -79,12 +78,6 @@ const typebotContext = createContext<
     isFlowEditor: boolean
     setIsFlowEditor: Dispatch<SetStateAction<boolean>>
     restorePublishedTypebot: () => void
-    getTypebotHistory: (options?: {
-      limit?: number
-      cursor?: string
-      excludeContent?: boolean
-      historyId?: string
-    }) => Promise<TypebotHistoryResponse>
     rollbackTypebot: (
       historyId: string
     ) => Promise<{ historyId: string; message: string }>
@@ -195,28 +188,8 @@ export const TypebotProvider = ({
       onSuccess: () => {
         if (!typebotId) return
         refetchTypebot()
-        showToast({
-          status: 'info',
-          title: 'Typebot rolled back successfully',
-          description: 'The typebot has been restored to the selected version.',
-        })
       },
     })
-
-  const utils = trpc.useContext()
-
-  const getTypebotHistory = async (options?: {
-    limit?: number
-    cursor?: string
-    excludeContent?: boolean
-    historyId?: string
-  }): Promise<TypebotHistoryResponse> => {
-    if (!typebotId) return { history: [], nextCursor: null }
-    return utils.typebot.getTypebotHistory.fetch({
-      typebotId,
-      ...options,
-    }) as Promise<TypebotHistoryResponse>
-  }
 
   const rollbackTypebot = async (
     historyId: string
@@ -396,7 +369,6 @@ export const TypebotProvider = ({
         isFlowEditor: isFlowEditor,
         setIsFlowEditor: setIsFlowEditor,
         restorePublishedTypebot,
-        getTypebotHistory,
         rollbackTypebot,
         ...groupsActions(setLocalTypebot as SetTypebot),
         ...blocksAction(setLocalTypebot as SetTypebot),
