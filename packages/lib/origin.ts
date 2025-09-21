@@ -5,15 +5,57 @@
  * @returns true if the origin matches the pattern
  */
 export const matchesOriginPattern = (origin: string, pattern: string): boolean => {
-  if (pattern.startsWith('*.')) {
-    const domain = pattern.substring(2)
+  // Handle wildcard patterns like "https://*.app.cloudhumans.com"
+  if (pattern.includes('://*.')) {
     try {
+      // Extract the domain from the pattern: "https://*.app.cloudhumans.com" -> "app.cloudhumans.com"
+      const patternUrl = new URL(pattern.replace('*.', 'dummy.'))
+      const domain = patternUrl.hostname.replace('dummy.', '')
+      
+      // Extract hostname from origin
       const originUrl = new URL(origin)
-      return originUrl.hostname.endsWith('.' + domain) || originUrl.hostname === domain
+      const hostname = originUrl.hostname
+      
+      // Check exact match first
+      if (hostname === domain) return true
+      
+      // For wildcard, ensure it's a direct subdomain (only one additional level)
+      if (hostname.endsWith('.' + domain)) {
+        const prefix = hostname.replace('.' + domain, '')
+        // Ensure the prefix doesn't contain dots (prevents subdomain injection)
+        return !prefix.includes('.')
+      }
+      
+      return false
     } catch {
       return false
     }
   }
+  
+  // Handle simple wildcard patterns like "*.app.cloudhumans.com" (no protocol)
+  if (pattern.startsWith('*.')) {
+    const domain = pattern.substring(2)
+    try {
+      const originUrl = new URL(origin)
+      const hostname = originUrl.hostname
+      
+      // Check exact match first
+      if (hostname === domain) return true
+      
+      // For wildcard, ensure it's a direct subdomain (only one additional level)
+      if (hostname.endsWith('.' + domain)) {
+        const prefix = hostname.replace('.' + domain, '')
+        // Ensure the prefix doesn't contain dots (prevents subdomain injection)
+        return !prefix.includes('.')
+      }
+      
+      return false
+    } catch {
+      return false
+    }
+  }
+  
+  // Exact match for full URLs or simple patterns
   return origin === pattern
 }
 
