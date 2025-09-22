@@ -594,9 +594,11 @@ const createGroupTitleMap = (groups: Group[]): Map<string, string> => {
 const validateTypebot = async ({
   groups,
   edges,
+  isSecondaryFlow = false,
 }: {
   groups: Group[]
   edges: Edge[]
+  isSecondaryFlow?: boolean
 }) => {
   const safeEdges = (edges as Edge[]) || []
   const groupTitleMap = createGroupTitleMap(groups)
@@ -614,35 +616,55 @@ const validateTypebot = async ({
     groupId: b.groupId,
     message: getErrorMessage('brokenLinks', groupTitleMap.get(b.groupId)),
   }))
-  const missingTextBeforeClaudia = validateTextBeforeClaudia(groups, safeEdges)
-  const missingTextBeforeClaudiaErrors: ValidationErrorItem[] =
-    missingTextBeforeClaudia.map((groupId) => ({
-      type: 'missingTextBeforeClaudia',
-      groupId,
-      message: getErrorMessage(
-        'missingTextBeforeClaudia',
-        groupTitleMap.get(groupId)
-      ),
-    }))
-  const missingClaudiaInFlowBranches = validateFlowBranchesHaveClaudia(
-    groups,
-    safeEdges
-  )
-  const missingClaudiaInFlowBranchesErrors: ValidationErrorItem[] =
-    missingClaudiaInFlowBranches.map((groupId) => ({
-      type: 'missingClaudiaInFlowBranches',
-      groupId,
-      message: getErrorMessage(
-        'missingClaudiaInFlowBranches',
-        groupTitleMap.get(groupId)
-      ),
-    }))
+
+  let missingTextBeforeClaudiaErrors: ValidationErrorItem[] = []
+  let missingClaudiaInFlowBranchesErrors: ValidationErrorItem[] = []
+  let missingTextBetweenInputBlocksErrors: ValidationErrorItem[] = []
+
+  if (!isSecondaryFlow) {
+    const missingTextBeforeClaudia = validateTextBeforeClaudia(
+      groups,
+      safeEdges
+    )
+    missingTextBeforeClaudiaErrors = missingTextBeforeClaudia.map(
+      (groupId) => ({
+        type: 'missingTextBeforeClaudia',
+        groupId,
+        message: getErrorMessage(
+          'missingTextBeforeClaudia',
+          groupTitleMap.get(groupId)
+        ),
+      })
+    )
+
+    const missingClaudiaInFlowBranches = validateFlowBranchesHaveClaudia(
+      groups,
+      safeEdges
+    )
+    missingClaudiaInFlowBranchesErrors = missingClaudiaInFlowBranches.map(
+      (groupId) => ({
+        type: 'missingClaudiaInFlowBranches',
+        groupId,
+        message: getErrorMessage(
+          'missingClaudiaInFlowBranches',
+          groupTitleMap.get(groupId)
+        ),
+      })
+    )
+
+    missingTextBetweenInputBlocksErrors = missingTextBetweenInputBlocks(
+      groups,
+      safeEdges,
+      groupTitleMap
+    )
+  }
+
   const errors = [
     ...invalidGroupsErrors,
     ...brokenLinksErrors,
     ...missingTextBeforeClaudiaErrors,
     ...missingClaudiaInFlowBranchesErrors,
-    ...missingTextBetweenInputBlocks(groups, safeEdges, groupTitleMap),
+    ...missingTextBetweenInputBlocksErrors,
   ]
   return { isValid: errors.length === 0, errors }
 }
@@ -667,14 +689,17 @@ export const getTypebotValidation = publicProcedure
   .query(async ({ input }) => {
     const typebot = (await prisma.typebot.findFirst({
       where: { id: input.typebotId },
-      select: { groups: true, edges: true },
-    })) as { groups: Group[]; edges: Edge[] } | null
+      select: { groups: true, edges: true, isSecondaryFlow: true },
+    })) as { groups: Group[]; edges: Edge[]; isSecondaryFlow: boolean } | null
 
     if (!typebot) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
     }
 
-    const { isValid, errors } = await validateTypebot(typebot)
+    const { isValid, errors } = await validateTypebot({
+      ...typebot,
+      isSecondaryFlow: typebot.isSecondaryFlow,
+    })
     return { isValid, errors }
   })
 
@@ -696,6 +721,7 @@ export const postTypebotValidation = publicProcedure
         .object({
           edges: z.array(edgeSchema),
           groups: z.array(groupV6Schema.or(groupV5Schema)),
+          isSecondaryFlow: z.boolean().optional().default(false),
         })
         .describe(
           'Typebot object to be validated directly (optional override)'
@@ -704,6 +730,6 @@ export const postTypebotValidation = publicProcedure
   )
   .output(responseSchema)
   .mutation(async ({ input }) => {
-    const { groups, edges } = input.typebot
-    return await validateTypebot({ groups, edges })
+    const { groups, edges, isSecondaryFlow } = input.typebot
+    return await validateTypebot({ groups, edges, isSecondaryFlow })
   })

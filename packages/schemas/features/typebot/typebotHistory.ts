@@ -31,6 +31,7 @@ export const typebotHistoryContentSchema = z.object({
   workspaceId: z.string(),
   isArchived: z.boolean().optional(),
   isClosed: z.boolean().optional(),
+  isSecondaryFlow: z.boolean().optional().default(false),
   riskLevel: z.number().nullable(),
   whatsAppCredentialsId: z.string().nullable(),
 })
@@ -155,6 +156,7 @@ export const parseTypebotHistory = (
     workspaceId: history.workspaceId,
     isArchived: false,
     isClosed: false,
+    isSecondaryFlow: history.isSecondaryFlow || false,
     riskLevel: null,
     whatsAppCredentialsId: history.whatsAppCredentialsId || null,
   }
@@ -180,6 +182,7 @@ export const createTypebotHistoryContent = (
     workspaceId: typebot.workspaceId,
     isArchived: typebot.isArchived,
     isClosed: typebot.isClosed,
+    isSecondaryFlow: typebot.isSecondaryFlow || false,
     riskLevel: typebot.riskLevel,
     whatsAppCredentialsId: typebot.whatsAppCredentialsId,
   }
@@ -209,6 +212,7 @@ export const convertTypebotHistoryToTypebot = (
     workspaceId: historySnapshot.workspaceId,
     isArchived: historySnapshot.isArchived,
     isClosed: historySnapshot.isClosed,
+    isSecondaryFlow: historySnapshot.isSecondaryFlow || false,
     riskLevel: historySnapshot.riskLevel,
     whatsAppCredentialsId: historySnapshot.whatsAppCredentialsId,
   }
