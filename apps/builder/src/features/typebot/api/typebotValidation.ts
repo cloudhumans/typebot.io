@@ -1,35 +1,35 @@
 import { publicProcedure } from '@/helpers/server/trpc'
-import prisma from '@typebot.io/lib/prisma'
 import { TRPCError } from '@trpc/server'
-import { z } from 'zod'
-import logger from '@/helpers/logger'
+import prisma from '@typebot.io/lib/prisma'
 import {
-  ValidationErrorItem,
-  validationErrorSchema,
-} from '../constants/errorTypes'
-import {
-  Group,
   Block,
-  TypebotLinkBlock,
   Edge,
   edgeSchema,
+  Group,
   groupV5Schema,
   groupV6Schema,
+  TypebotLinkBlock,
   Variable,
+  variableSchema,
 } from '@typebot.io/schemas'
-import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
+import {
+  isClaudiaAnswerTicketBlock,
+  isClaudiaBlock,
+} from '@typebot.io/schemas/features/blocks/forged/helpers'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
+import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
+import { JumpBlock } from '@typebot.io/schemas/features/blocks/logic/jump'
 import {
   isConditionBlock,
   isTextBubbleBlock,
 } from '@typebot.io/schemas/helpers'
-import { JumpBlock } from '@typebot.io/schemas/features/blocks/logic/jump'
+import { z } from 'zod'
 import {
-  isClaudiaBlock,
-  isClaudiaAnswerTicketBlock,
-} from '@typebot.io/schemas/features/blocks/forged/helpers'
+  ValidationErrorItem,
+  validationErrorSchema,
+} from '../constants/errorTypes'
 
-const HELPDESKID = 'helpdeskid'
+const PREFILLED_VARIABLES = ['helpdeskId']
 
 const responseSchema = validationErrorSchema
 
@@ -403,6 +403,7 @@ const validateTextBeforeClaudia = (groups: Group[], edges: Edge[]) => {
 }
 
 const missingTextBetweenInputBlocks = (
+  variables: Variable[],
   groups: Group[],
   edges: Edge[],
   groupTitleMap?: Map<string, string>
@@ -412,46 +413,9 @@ const missingTextBetweenInputBlocks = (
 
   const allVariables = new Map<string, string>()
 
-  try {
-    const typebotInput = groups[0] as { typebot?: { variables?: Variable[] } }
-    if (
-      typebotInput &&
-      typeof typebotInput === 'object' &&
-      typebotInput.typebot &&
-      Array.isArray(typebotInput.typebot.variables)
-    ) {
-      typebotInput.typebot.variables.forEach((variable: Variable) => {
-        if (variable.id && variable.name) {
-          allVariables.set(variable.id, variable.name)
-        }
-      })
-    }
-  } catch (error) {
-    logger.debug('Failed to extract variables from first group:', error)
-  }
-
-  groups.forEach((group) => {
-    if (hasBlocks(group)) {
-      group.blocks.forEach((block) => {
-        if (
-          'options' in block &&
-          block.options &&
-          'variableId' in block.options &&
-          typeof block.options.variableId === 'string' &&
-          block.options.variableId
-        ) {
-          const variableId = block.options.variableId
-
-          if (!allVariables.has(variableId)) {
-            if (
-              'variableName' in block.options &&
-              typeof block.options.variableName === 'string'
-            ) {
-              allVariables.set(variableId, block.options.variableName)
-            }
-          }
-        }
-      })
+  variables.forEach((variable: Variable) => {
+    if (variable.id && variable.name) {
+      allVariables.set(variable.id, variable.name)
     }
   })
 
@@ -534,21 +498,11 @@ const missingTextBetweenInputBlocks = (
     let nextNeedText = needTextBeforeNextInput
     if (block.type === 'text') {
       nextNeedText = false
-    } else if (inputBlockTypes.has(block.type)) {
-      const isHelpdeskIdInput =
-        'options' in block &&
-        block.options &&
-        'variableId' in block.options &&
-        typeof block.options.variableId === 'string' &&
-        block.options.variableId &&
-        ((allVariables.has(block.options.variableId) &&
-          allVariables.get(block.options.variableId)?.toLowerCase() ===
-            HELPDESKID) ||
-          ('variableName' in block.options &&
-            typeof block.options.variableName === 'string' &&
-            block.options.variableName.toLowerCase() === HELPDESKID))
-
-      if (needTextBeforeNextInput && !isHelpdeskIdInput) {
+    } else if (
+      inputBlockTypes.has(block.type) &&
+      !isPrefilledVariable(block, allVariables)
+    ) {
+      if (needTextBeforeNextInput) {
         invalidGroupIds.add(group.id)
       }
       nextNeedText = true
@@ -574,6 +528,21 @@ const missingTextBetweenInputBlocks = (
   }))
 }
 
+const isPrefilledVariable = (
+  block: Block,
+  allVariables: Map<string, string>
+): boolean => {
+  if (block.type === 'text input') {
+    const variableId = block?.options?.variableId
+    const variableName = variableId && allVariables.get(variableId)
+
+    return variableName && PREFILLED_VARIABLES.includes(variableName)
+      ? true
+      : false
+  }
+  return false
+}
+
 const getErrorMessage = (type: string, groupTitle?: string): string => {
   const errorMessages = {
     conditionalBlocks: 'Incomplete Conditions',
@@ -592,10 +561,12 @@ const createGroupTitleMap = (groups: Group[]): Map<string, string> => {
 }
 
 const validateTypebot = async ({
+  variables,
   groups,
   edges,
   isSecondaryFlow = false,
 }: {
+  variables: Variable[]
   groups: Group[]
   edges: Edge[]
   isSecondaryFlow?: boolean
@@ -653,6 +624,7 @@ const validateTypebot = async ({
     )
 
     missingTextBetweenInputBlocksErrors = missingTextBetweenInputBlocks(
+      variables,
       groups,
       safeEdges,
       groupTitleMap
@@ -689,8 +661,18 @@ export const getTypebotValidation = publicProcedure
   .query(async ({ input }) => {
     const typebot = (await prisma.typebot.findFirst({
       where: { id: input.typebotId },
-      select: { groups: true, edges: true, isSecondaryFlow: true },
-    })) as { groups: Group[]; edges: Edge[]; isSecondaryFlow: boolean } | null
+      select: {
+        variables: true,
+        groups: true,
+        edges: true,
+        isSecondaryFlow: true,
+      },
+    })) as {
+      variables: Variable[]
+      groups: Group[]
+      edges: Edge[]
+      isSecondaryFlow: boolean
+    } | null
 
     if (!typebot) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
@@ -719,6 +701,7 @@ export const postTypebotValidation = publicProcedure
     z.object({
       typebot: z
         .object({
+          variables: z.array(variableSchema),
           edges: z.array(edgeSchema),
           groups: z.array(groupV6Schema.or(groupV5Schema)),
           isSecondaryFlow: z.boolean().optional().default(false),
@@ -730,6 +713,6 @@ export const postTypebotValidation = publicProcedure
   )
   .output(responseSchema)
   .mutation(async ({ input }) => {
-    const { groups, edges, isSecondaryFlow } = input.typebot
-    return await validateTypebot({ groups, edges, isSecondaryFlow })
+    const { variables, groups, edges, isSecondaryFlow } = input.typebot
+    return await validateTypebot({ variables, groups, edges, isSecondaryFlow })
   })

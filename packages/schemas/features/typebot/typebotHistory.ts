@@ -102,6 +102,7 @@ export const parsePrismaTypebotHistory = (
     workspaceId: prismaHistory.workspaceId,
     isArchived: prismaHistory.isArchived,
     isClosed: prismaHistory.isClosed,
+    isSecondaryFlow: prismaHistory.isSecondaryFlow,
     riskLevel: prismaHistory.riskLevel,
     whatsAppCredentialsId: prismaHistory.whatsAppCredentialsId,
   }
