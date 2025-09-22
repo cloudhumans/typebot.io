@@ -80,10 +80,10 @@ export const FlowHistoryDrawer = ({ onClose }: Props) => {
   const historyData = historyPages?.pages[0]
   const allHistory = historyPages?.pages.flatMap((page) => page.history) || []
 
-  const summaryBgColor = useColorModeValue('orange.50', 'orange.900')
-  const summaryBorderColor = useColorModeValue('orange.200', 'orange.700')
-  const summaryTitleColor = useColorModeValue('orange.800', 'orange.200')
-  const summaryTextColor = useColorModeValue('orange.600', 'orange.300')
+  const summaryBgColor = useColorModeValue('blue.50', 'blue.900')
+  const summaryBorderColor = useColorModeValue('blue.200', 'blue.700')
+  const summaryTitleColor = useColorModeValue('blue.800', 'blue.200')
+  const summaryTextColor = useColorModeValue('blue.600', 'blue.300')
 
   const getBadgeColorScheme = (origin: TypebotHistoryOrigin) => {
     switch (origin.toLowerCase()) {
