@@ -2,6 +2,7 @@ import { publicProcedure } from '@/helpers/server/trpc'
 import prisma from '@typebot.io/lib/prisma'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
+import logger from '@/helpers/logger'
 import {
   ValidationErrorItem,
   validationErrorSchema,
@@ -14,6 +15,7 @@ import {
   edgeSchema,
   groupV5Schema,
   groupV6Schema,
+  Variable,
 } from '@typebot.io/schemas'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
@@ -26,6 +28,8 @@ import {
   isClaudiaBlock,
   isClaudiaAnswerTicketBlock,
 } from '@typebot.io/schemas/features/blocks/forged/helpers'
+
+const HELPDESKID = 'helpdeskid'
 
 const responseSchema = validationErrorSchema
 
@@ -405,6 +409,52 @@ const missingTextBetweenInputBlocks = (
 ) => {
   const inputBlockTypes = new Set<string>(Object.values(InputBlockType))
   const groupMap = new Map<string, Group>(groups.map((g) => [g.id, g]))
+
+  const allVariables = new Map<string, string>()
+
+  try {
+    const typebotInput = groups[0] as { typebot?: { variables?: Variable[] } }
+    if (
+      typebotInput &&
+      typeof typebotInput === 'object' &&
+      typebotInput.typebot &&
+      Array.isArray(typebotInput.typebot.variables)
+    ) {
+      typebotInput.typebot.variables.forEach((variable: Variable) => {
+        if (variable.id && variable.name) {
+          allVariables.set(variable.id, variable.name)
+        }
+      })
+    }
+  } catch (error) {
+    logger.debug('Failed to extract variables from first group:', error)
+  }
+
+  groups.forEach((group) => {
+    if (hasBlocks(group)) {
+      group.blocks.forEach((block) => {
+        if (
+          'options' in block &&
+          block.options &&
+          'variableId' in block.options &&
+          typeof block.options.variableId === 'string' &&
+          block.options.variableId
+        ) {
+          const variableId = block.options.variableId
+
+          if (!allVariables.has(variableId)) {
+            if (
+              'variableName' in block.options &&
+              typeof block.options.variableName === 'string'
+            ) {
+              allVariables.set(variableId, block.options.variableName)
+            }
+          }
+        }
+      })
+    }
+  })
+
   const startGroupIds = edges
     .filter(
       (e): e is Edge & { from: { eventId: string }; to: { groupId: string } } =>
@@ -485,7 +535,20 @@ const missingTextBetweenInputBlocks = (
     if (block.type === 'text') {
       nextNeedText = false
     } else if (inputBlockTypes.has(block.type)) {
-      if (needTextBeforeNextInput) {
+      const isHelpdeskIdInput =
+        'options' in block &&
+        block.options &&
+        'variableId' in block.options &&
+        typeof block.options.variableId === 'string' &&
+        block.options.variableId &&
+        ((allVariables.has(block.options.variableId) &&
+          allVariables.get(block.options.variableId)?.toLowerCase() ===
+            HELPDESKID) ||
+          ('variableName' in block.options &&
+            typeof block.options.variableName === 'string' &&
+            block.options.variableName.toLowerCase() === HELPDESKID))
+
+      if (needTextBeforeNextInput && !isHelpdeskIdInput) {
         invalidGroupIds.add(group.id)
       }
       nextNeedText = true
