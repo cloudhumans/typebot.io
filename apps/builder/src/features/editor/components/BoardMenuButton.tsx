@@ -169,12 +169,13 @@ const ValidationErrorsButton = () => {
 
 const FlowHistoryButton = () => {
   const { setRightPanel } = useEditor()
+  const { t } = useTranslate()
 
   return (
     <Box position="relative">
       <IconButton
         icon={<HistoryIcon />}
-        aria-label="Open flow history drawer"
+        aria-label={t('editor.graph.menu.flowHistoryButton.ariaLabel')}
         size="sm"
         shadow="lg"
         bgColor={useColorModeValue('white', undefined)}

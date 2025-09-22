@@ -13,6 +13,7 @@ import {
   TypebotV6,
   typebotV6Schema,
 } from '@typebot.io/schemas'
+import { useTranslate } from '@tolgee/react'
 import { dequal } from 'dequal'
 import { Router } from 'next/router'
 import {
@@ -99,6 +100,7 @@ export const TypebotProvider = ({
   typebotId?: string
 }) => {
   const { showToast } = useToast()
+  const { t } = useTranslate()
   const [is404, setIs404] = useState(false)
   const setGroupsCoordinates = useGroupsStore(
     (state) => state.setGroupsCoordinates
@@ -178,11 +180,13 @@ export const TypebotProvider = ({
       },
     })
 
+  const rollbackErrorTitle = t('editor.header.rollbackTypebot.error.label')
+
   const { mutateAsync: rollbackTypebotMutation } =
     trpc.typebot.rollbackTypebot.useMutation({
       onError: (error) =>
         showToast({
-          title: 'Error while rolling back typebot',
+          title: rollbackErrorTitle,
           description: error.message,
         }),
       onSuccess: () => {

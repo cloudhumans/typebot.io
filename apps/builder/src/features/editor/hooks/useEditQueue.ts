@@ -55,9 +55,7 @@ export const useEditQueue = (typebotId?: string) => {
   })
 
   const updateActivityMutation =
-    trpc.typebotEditQueue.updateActivity.useMutation({
-      onError: () => {},
-    })
+    trpc.typebotEditQueue.updateActivity.useMutation()
 
   const cleanupInactiveUsersMutation =
     trpc.typebotEditQueue.cleanupInactiveUsers.useMutation({

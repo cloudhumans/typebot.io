@@ -52,10 +52,21 @@ const TimeAgo = ({ date }: { date: string }) => {
   const currentLanguage = getLanguage()
   const locale = localeMap[currentLanguage as keyof typeof localeMap] || enUS
 
+  const dateObj = new Date(date)
+  const formattedDate = dateObj.toLocaleString(currentLanguage, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
   return (
-    <>
-      {formatDistanceToNowStrict(new Date(date), { addSuffix: true, locale })}
-    </>
+    <Tooltip label={formattedDate} placement="top">
+      <Text as="span">
+        {formatDistanceToNowStrict(dateObj, { addSuffix: true, locale })}
+      </Text>
+    </Tooltip>
   )
 }
 
