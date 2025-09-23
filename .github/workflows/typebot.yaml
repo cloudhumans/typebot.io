@@ -15,7 +15,7 @@ env:
 jobs:
   migrate:
     if: ${{ github.ref == 'refs/heads/fix/migrations' }}
-    runs-on: [self-hosted, production]
+    runs-on: [production]
 
     steps:
       - name: Checkout
