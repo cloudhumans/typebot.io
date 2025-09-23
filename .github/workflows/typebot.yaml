@@ -17,6 +17,23 @@ jobs:
     if: ${{ github.ref == 'refs/heads/fix/migrations' }}
     runs-on: [self-hosted, production]
 
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres:13
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: typebot
+          POSTGRES_DB: typebot
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -30,9 +47,8 @@ jobs:
 
       - name: test postgres connection
         run: |
-          # docker build -t psql-client -f .github/docker/pgsql-client.Dockerfile . 
-          # docker run -it --rm psql-client psql postgresql://postgres:typebot@localhost:5433/typebot
-          psql postgresql://postgres:typebot@localhost:5433/typebot
+          docker build -t psql-client -f .github/docker/pgsql-client.Dockerfile . 
+          docker run -it --rm psql-client psql postgresql://postgres:typebot@localhost:5432/typebot
 
   build:
     if: ${{ github.ref == 'refs/heads/main' }}
