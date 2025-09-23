@@ -50,6 +50,7 @@ export const getTypebot = publicProcedure
           collaborators: true,
           workspace: {
             select: {
+              name: true,
               isSuspended: true,
               isPastDue: true,
               members: {

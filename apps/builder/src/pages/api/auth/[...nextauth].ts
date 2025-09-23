@@ -23,6 +23,7 @@ import { env } from '@typebot.io/env'
 import * as Sentry from '@sentry/nextjs'
 import { getIp } from '@typebot.io/lib/getIp'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
+import { TokenWithCognito } from '@/features/auth/types/cognito'
 
 const providers: Provider[] = []
 
@@ -152,9 +153,16 @@ providers.push(
       token: { label: 'Token', type: 'text' },
     },
     async authorize(credentials) {
-      if (!credentials?.token) return null
+      console.log('🔍 CloudChat Authorize Function Called')
+      console.log('  Credentials received:', !!credentials?.token)
+
+      if (!credentials?.token) {
+        console.log('  ❌ No token provided')
+        return null
+      }
 
       try {
+        console.log('  📡 Calling Cognito GetUser API...')
         // Verify token using AWS Cognito GetUser API
         const cognitoRegion = env.AWS_COGNITO_REGION || 'us-east-1'
         const cognitoResponse = await fetch(
@@ -175,12 +183,21 @@ providers.push(
         if (!cognitoResponse.ok) {
           console.error(
             '❌ Cognito verification failed:',
-            cognitoResponse.status
+            cognitoResponse.status,
+            cognitoResponse.statusText
           )
+          const errorBody = await cognitoResponse.text()
+          console.error('  Error body:', errorBody)
           return null
         }
 
         const userInfo = await cognitoResponse.json()
+        console.log('  ✅ Cognito response received')
+        console.log('  UserInfo keys:', Object.keys(userInfo))
+        console.log(
+          '  UserAttributes length:',
+          userInfo.UserAttributes?.length || 0
+        )
 
         const email = userInfo.UserAttributes?.find(
           (attr: { Name: string; Value: string }) => attr.Name === 'email'
@@ -189,6 +206,23 @@ providers.push(
           userInfo.UserAttributes?.find(
             (attr: { Name: string; Value: string }) => attr.Name === 'name'
           )?.Value || userInfo.Username
+
+        // Extract custom Cognito claims
+        const hubRole = userInfo.UserAttributes?.find(
+          (attr: { Name: string; Value: string }) =>
+            attr.Name === 'custom:hub_role'
+        )?.Value
+        const tenantId = userInfo.UserAttributes?.find(
+          (attr: { Name: string; Value: string }) =>
+            attr.Name === 'custom:tenant_id'
+        )?.Value
+
+        console.log('🔍 Cognito Authorize - Custom Claims Debug:')
+        console.log('  Email:', email)
+        console.log('  Name:', name)
+        console.log('  Hub Role:', hubRole)
+        console.log('  Tenant ID:', tenantId)
+        console.log('  All UserAttributes:', userInfo.UserAttributes)
 
         if (!email) return null
 
@@ -211,6 +245,8 @@ providers.push(
           name: user.name,
           image: user.image,
           emailVerified: user.emailVerified,
+          'custom:hub_role': hubRole,
+          'custom:tenant_id': tenantId,
         }
       } catch (error) {
         console.error('❌ Cognito authentication failed:', error)
@@ -275,29 +311,97 @@ export const getAuthOptions = ({
     },
   },
   callbacks: {
-    jwt: async ({ token, user, account }) => {
+    jwt: async ({ token, user, account }): Promise<TokenWithCognito> => {
+      console.log('🔍 JWT Callback Called')
+      console.log('  User provided:', !!user)
+      console.log('  Account provided:', !!account)
+      console.log('  Account provider:', account?.provider)
+      console.log('  Existing token keys:', Object.keys(token))
+      console.log(
+        '  Existing token cognitoClaims:',
+        (token as TokenWithCognito).cognitoClaims
+      )
+
+      const tokenWithCognito = token as TokenWithCognito
+
       // If user is provided (first sign in), add user info to token
       if (user && account) {
-        token.userId = user.id
-        token.email = user.email
-        token.name = user.name
-        token.image = user.image
-        token.provider = account.provider
+        console.log('  Adding user info to token...')
+        tokenWithCognito.userId = user.id
+        tokenWithCognito.email = user.email
+        tokenWithCognito.name = user.name
+        tokenWithCognito.image = user.image
+        tokenWithCognito.provider = account.provider
+
+        // Extract Cognito claims from cloudchat-embedded provider
+        if (account.provider === 'cloudchat-embedded' && user) {
+          console.log('  🎯 Processing cloudchat-embedded provider')
+          const hubRole = (user as Record<string, unknown>)['custom:hub_role']
+          const tenantId = (user as Record<string, unknown>)['custom:tenant_id']
+
+          console.log('🔍 JWT Callback - Cognito Claims Debug:')
+          console.log('  Provider:', account.provider)
+          console.log('  User object keys:', Object.keys(user))
+          console.log('  Raw hub_role:', hubRole)
+          console.log('  Raw tenant_id:', tenantId)
+          console.log('  User email:', user.email)
+
+          tokenWithCognito.cognitoClaims = {
+            'custom:hub_role': hubRole as 'ADMIN' | 'CLIENT' | 'MANAGER',
+            'custom:tenant_id': tenantId as string,
+          }
+
+          console.log('  Final cognitoClaims:', tokenWithCognito.cognitoClaims)
+        } else {
+          console.log('  ⚠️  Not cloudchat-embedded provider or no user')
+        }
+      } else {
+        console.log('  ⚠️  No user or account provided - existing token')
+        console.log('  Current token provider:', tokenWithCognito.provider)
+
+        // PATCH: If this is a cloudchat-embedded token without cognitoClaims,
+        // force a complete re-authentication by returning null
+        if (
+          tokenWithCognito.provider === 'cloudchat-embedded' &&
+          (!tokenWithCognito.cognitoClaims ||
+            Object.keys(tokenWithCognito.cognitoClaims).length === 0)
+        ) {
+          console.log(
+            '  🚫 Invalidating token for cloudchat-embedded without claims'
+          )
+          // Return null to force NextAuth to clear the session and require re-authentication
+          return null as unknown as TokenWithCognito
+        }
       }
-      return token
+      return tokenWithCognito
     },
     session: async ({ session, token }) => {
+      const tokenWithCognito = token as TokenWithCognito
+
+      console.log('🔍 Session Callback Debug:')
+      console.log('  Token cognitoClaims:', tokenWithCognito.cognitoClaims)
+      console.log('  Session user email:', session.user?.email)
+
       // Get user from database using token info
-      if (token?.userId) {
+      if (tokenWithCognito?.userId) {
         const userFromDb = await prisma.user.findUnique({
-          where: { id: token.userId as string },
+          where: { id: tokenWithCognito.userId },
         })
         if (userFromDb) {
           await updateLastActivityDate(userFromDb)
-          return {
+          const finalSession = {
             ...session,
-            user: userFromDb,
+            user: {
+              ...userFromDb,
+              cognitoClaims: tokenWithCognito.cognitoClaims, // Pass Cognito claims to user object
+            },
           }
+
+          console.log(
+            '  Final session user cognitoClaims:',
+            finalSession.user.cognitoClaims
+          )
+          return finalSession
         }
       }
       return session

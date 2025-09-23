@@ -32,7 +32,9 @@ export const listMembersInWorkspace = authenticatedProcedure
   .query(async ({ input: { workspaceId }, ctx: { user } }) => {
     const workspace = await prisma.workspace.findFirst({
       where: { id: workspaceId },
-      include: {
+      select: {
+        id: true,
+        name: true,
         members: {
           include: {
             user: true,
