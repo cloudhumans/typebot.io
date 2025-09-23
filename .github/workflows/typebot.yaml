@@ -30,8 +30,9 @@ jobs:
 
       - name: test postgres connection
         run: |
-          docker build -t psql-client -f .github/docker/pgsql-client.Dockerfile . 
-          docker run -it --rm psql-client psql postgresql://postgres:typebot@localhost:5433/typebot
+          # docker build -t psql-client -f .github/docker/pgsql-client.Dockerfile . 
+          # docker run -it --rm psql-client psql postgresql://postgres:typebot@localhost:5433/typebot
+          psql postgresql://postgres:typebot@localhost:5433/typebot
 
   build:
     if: ${{ github.ref == 'refs/heads/main' }}
