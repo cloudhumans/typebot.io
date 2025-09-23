@@ -30,11 +30,11 @@ jobs:
 
       - name: test postgres connection
         run: |
-          docker build -t psql-client -f .github/docker/pgsql-client.Dockerfile . 
-          echo "Testing Postgres connection..."
-          docker run -it --rm psql-client \
-            psql ${{ secrets.POSTGRES_CONNECTION }} \
-            -c "SELECT now();"
+          set -euo pipefail
+          docker build -t psql-client -f .github/docker/pgsql-client.Dockerfile .
+          echo "Testing Postgres connection (non-interactive)..."
+          docker run --rm psql-client \
+            psql "${{ secrets.POSTGRES_CONNECTION }}" -v ON_ERROR_STOP=1 -c "SELECT now();"
 
 
   build:
