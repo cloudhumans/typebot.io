@@ -31,10 +31,13 @@ jobs:
       - name: test postgres connection
         run: |
           set -euo pipefail
-          docker build -t psql-client -f .github/docker/pgsql-client.Dockerfile .
-          echo "Testing Postgres connection (non-interactive)..."
-          docker run --rm psql-client \
-            psql "${{ secrets.POSTGRES_CONNECTION }}" -v ON_ERROR_STOP=1 -c "SELECT now();"
+          IMAGE=postgres:17-alpine
+          echo "Pulling $IMAGE..."
+          docker pull "$IMAGE"
+          echo "Testing Postgres connection (using official image)..."
+          # Usando SELECT 1 para teste rápido; troque para SELECT now() se quiser timestamp.
+          docker run --rm "$IMAGE" \
+            psql "${{ secrets.POSTGRES_CONNECTION }}" -v ON_ERROR_STOP=1 -c 'SELECT 1;'
 
 
   build:
