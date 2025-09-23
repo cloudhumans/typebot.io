@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - fix/migrations
+      - feat/run-typbot-migration-on-github
 
 env:
   AWS_REGION: us-east-1
@@ -13,6 +13,32 @@ env:
   ECR_REGISTRY: 585814034319.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
+  migrate:
+    if: ${{ github.ref == 'refs/heads/feat/run-typbot-migration-on-github' }}
+    runs-on: [self-hosted, production]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials production
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CI_EKS_PRODUCTION_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_CI_EKS_PRODUCTION_SECRET }}
+          aws-region: us-east-1
+
+      - name: test postgres connection
+        run: |
+          set -euo pipefail
+          IMAGE=postgres:17-alpine
+          echo "Pulling $IMAGE..."
+          docker pull "$IMAGE"
+          echo "Testing Postgres connection (using official image)..."
+          # Usando SELECT 1 para teste rápido; troque para SELECT now() se quiser timestamp.
+          docker run --rm "$IMAGE" \
+            psql "${{ secrets.POSTGRES_CONNECTION }}" -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+
   build:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
