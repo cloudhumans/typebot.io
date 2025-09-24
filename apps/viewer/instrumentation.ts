@@ -1,18 +1,8 @@
-import tracer from 'dd-trace'
+// Next.js instrumentation entrypoint (Node runtime only)
+// Initializes Datadog tracer early for auto-instrumentation.
+// Docs: https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
+import { ensureDatadogInitialized } from '@typebot.io/lib/trpc/datadogInit'
 
-if (typeof window === 'undefined') {
-  try {
-    if (!(tracer as any)._initialized) {
-      tracer.init({
-        service: process.env.DD_SERVICE || 'typebot-viewer',
-        env: process.env.DD_ENV || process.env.NODE_ENV,
-        version: process.env.DD_VERSION || '0.0.0',
-        logInjection: true,
-      })
-    }
-  } catch (e) {
-    // silent
-  }
-}
+ensureDatadogInitialized({ service: 'typebot-viewer' })
 
 export function register() {}
