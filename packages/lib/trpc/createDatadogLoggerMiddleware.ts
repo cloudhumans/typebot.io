@@ -92,17 +92,17 @@ export const createDatadogLoggerMiddleware = (
             if (debug) console.log('[datadog] tagged via path fallback', path)
           }
           const maybeUser = ctx?.user
-          if (
-            maybeUser &&
-            typeof maybeUser === 'object' &&
-            'email' in maybeUser
-          ) {
+          if (maybeUser && typeof maybeUser === 'object') {
             try {
-              span.setTag('user.email', (maybeUser as any).email)
+              if ('email' in maybeUser)
+                span.setTag('user.email', (maybeUser as any).email)
+              if ('id' in maybeUser)
+                span.setTag('user.id', (maybeUser as any).id)
               if (debug)
                 console.log(
-                  '[datadog] tagged user email',
-                  (maybeUser as any).email
+                  '[datadog] tagged user info',
+                  (maybeUser as any).email,
+                  (maybeUser as any).id
                 )
             } catch {}
           }

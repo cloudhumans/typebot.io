@@ -42,23 +42,19 @@ const injectUser = t.middleware(({ next, ctx }) => {
   })
 })
 
-// Middleware que garante autenticação e estreita o tipo de user.
 const isAuthed = t.middleware(({ next, ctx }) => {
   if (!ctx.user?.id) {
     throw new TRPCError({ code: 'UNAUTHORIZED' })
   }
   return next({
-    // Reexpõe contexto limitando user como User (não undefined)
     ctx: { user: ctx.user as User },
   })
 })
 
-// Pipeline base (público) mantém user possivelmente indefinido.
 const finalMiddleware = datadogLoggerMiddleware
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(injectUser)
 
-// Pipeline autenticado aplica narrowing de user.
 const authenticatedMiddleware = datadogLoggerMiddleware
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(isAuthed)
@@ -70,7 +66,6 @@ export const mergeRouters = t.mergeRouters
 
 export const publicProcedure = t.procedure.use(finalMiddleware)
 
-// Cria um tipo derivado onde user é obrigatório para rotas autenticadas
 export const authenticatedProcedure = t.procedure
   .use(authenticatedMiddleware)
   .use(
