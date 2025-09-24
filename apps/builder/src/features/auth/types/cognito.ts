@@ -9,7 +9,7 @@ export interface UserWithCognito extends User {
 }
 
 // Type for NextAuth JWT token with Cognito claims
-export interface TokenWithCognito {
+export interface TokenWithCognito extends Record<string, unknown> {
   userId?: string
   email?: string
   name?: string
