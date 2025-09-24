@@ -24,7 +24,9 @@ const t = initTRPC
     },
   })
 
-const datadogLoggerMiddleware = createDatadogLoggerMiddleware(t)
+const datadogLoggerMiddleware = createDatadogLoggerMiddleware(t, {
+  service: 'typebot-builder',
+})
 
 const sentryMiddleware = t.middleware(
   Sentry.Handlers.trpcMiddleware({
