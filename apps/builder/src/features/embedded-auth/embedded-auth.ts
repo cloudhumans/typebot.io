@@ -184,7 +184,9 @@ export const handleEmbeddedAuthentication = async (): Promise<boolean> => {
 
       if (updatedSession?.user) {
         console.log('✅ Session verified successfully:', updatedSession.user)
-        console.log('🔐 User successfully authenticated via embedded Cognito token')
+        console.log(
+          '🔐 User successfully authenticated via embedded Cognito token'
+        )
 
         // Notify parent of success using the confirmed origin
         const targetOrigin = parentOrigin || getAllowedOrigins()[0]

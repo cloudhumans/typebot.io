@@ -200,8 +200,6 @@ providers.push(
             attr.Name === 'custom:tenant_id'
         )?.Value
 
-
-
         if (!email) return null
 
         // Use the adapter to find or create user
@@ -301,15 +299,21 @@ export const getAuthOptions = ({
 
         // Extract Cognito claims from cloudchat-embedded provider
         if (account.provider === 'cloudchat-embedded' && user) {
-          const hubRole = (user as unknown as Record<string, unknown>)['custom:hub_role']
-          const tenantId = (user as unknown as Record<string, unknown>)['custom:tenant_id']
+          const hubRole = (user as unknown as Record<string, unknown>)[
+            'custom:hub_role'
+          ]
+          const tenantId = (user as unknown as Record<string, unknown>)[
+            'custom:tenant_id'
+          ]
 
           tokenWithCognito.cognitoClaims = {
             'custom:hub_role': hubRole as 'ADMIN' | 'CLIENT' | 'MANAGER',
             'custom:tenant_id': tenantId as string,
           }
 
-          console.log(`🔐 User authenticated via Cognito token - Role: ${hubRole}, Tenant: ${tenantId}`)
+          console.log(
+            `🔐 User authenticated via Cognito token - Role: ${hubRole}, Tenant: ${tenantId}`
+          )
         } else {
           console.log(`🔐 User authenticated via ${account.provider} provider`)
         }
@@ -344,7 +348,6 @@ export const getAuthOptions = ({
               cognitoClaims: tokenWithCognito.cognitoClaims, // Pass Cognito claims to user object
             },
           }
-
 
           return finalSession
         }

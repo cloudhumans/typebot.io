@@ -12,7 +12,6 @@ export const isReadWorkspaceFobidden = (
   },
   user: Pick<User, 'email' | 'id'> & { cognitoClaims?: unknown }
 ) => {
-
   // Admin email check (highest priority)
   if (env.ADMIN_EMAIL?.some((email) => email === user.email)) {
     return false
@@ -26,7 +25,9 @@ export const isReadWorkspaceFobidden = (
       const userWorkspaceName = getUserWorkspaceNameFromCognito(cognitoClaims)
 
       if (userWorkspaceName === workspace.name) {
-        console.log(`✅ Workspace access granted via Cognito token for workspace "${workspace.name}"`)
+        console.log(
+          `✅ Workspace access granted via Cognito token for workspace "${workspace.name}"`
+        )
         return false
       }
     }
@@ -36,7 +37,11 @@ export const isReadWorkspaceFobidden = (
   const dbMember = workspace.members.find((member) => member.userId === user.id)
 
   if (dbMember) {
-    console.log(`✅ Workspace access granted via database membership for workspace "${workspace.name || 'unnamed'}"`)
+    console.log(
+      `✅ Workspace access granted via database membership for workspace "${
+        workspace.name || 'unnamed'
+      }"`
+    )
     return false
   }
 

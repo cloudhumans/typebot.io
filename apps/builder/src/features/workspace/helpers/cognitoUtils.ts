@@ -6,7 +6,7 @@ export interface CognitoUserClaims {
 }
 
 export const extractCognitoUserClaims = (
-  user: unknown,
+  user: unknown
 ): CognitoUserClaims | undefined => {
   if (typeof user !== 'object' || user === null) {
     return undefined

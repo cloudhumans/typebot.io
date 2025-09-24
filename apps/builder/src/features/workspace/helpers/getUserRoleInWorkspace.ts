@@ -35,7 +35,9 @@ export const getUserRoleInWorkspace = (
       const tokenRole = getRoleFromCognitoToken(cognitoUser, workspaceName)
 
       if (tokenRole) {
-        console.log(`✅ User authenticated via Cognito token for workspace "${workspaceName}" with role: ${tokenRole}`)
+        console.log(
+          `✅ User authenticated via Cognito token for workspace "${workspaceName}" with role: ${tokenRole}`
+        )
         return tokenRole
       }
     }
@@ -44,7 +46,9 @@ export const getUserRoleInWorkspace = (
   // Fallback: Use existing database-based approach
   const dbMember = workspaceMembers?.find((member) => member.userId === userId)
   if (dbMember) {
-    console.log(`✅ User authenticated via database for userId "${userId}" with role: ${dbMember.role}`)
+    console.log(
+      `✅ User authenticated via database for userId "${userId}" with role: ${dbMember.role}`
+    )
   }
   return dbMember?.role
 }
