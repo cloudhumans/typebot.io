@@ -4,7 +4,8 @@ import { OpenApiMeta } from '@lilyrose2798/trpc-openapi'
 import superjson from 'superjson'
 import * as Sentry from '@sentry/nextjs'
 import { ZodError } from 'zod'
-import tracer from 'dd-trace'
+import { createDatadogLoggerMiddleware } from '@typebot.io/lib/trpc/createDatadogLoggerMiddleware'
+import { User } from '@typebot.io/prisma'
 
 const t = initTRPC
   .context<Context>()
@@ -23,33 +24,7 @@ const t = initTRPC
     },
   })
 
-const datadogLoggerMiddleware = t.middleware(async ({ ctx, next }) => {
-  const span = tracer.scope().active()
-  let traceId = null
-  let spanId = null
-  const context = span?.context()
-  if (context) {
-    if (typeof context.toTraceId === 'function') {
-      traceId = context.toTraceId()
-    } else {
-      console.warn('dd-trace: context.toTraceId is not a function')
-    }
-    if (typeof context.toSpanId === 'function') {
-      spanId = context.toSpanId()
-    } else {
-      console.warn('dd-trace: context.toSpanId is not a function')
-    }
-  }
-  return next({
-    ctx: {
-      ...ctx,
-      datadog: {
-        traceId,
-        spanId,
-      },
-    },
-  })
-})
+const datadogLoggerMiddleware = createDatadogLoggerMiddleware(t)
 
 const sentryMiddleware = t.middleware(
   Sentry.Handlers.trpcMiddleware({
@@ -65,23 +40,23 @@ const injectUser = t.middleware(({ next, ctx }) => {
   })
 })
 
+// Middleware que garante autenticação e estreita o tipo de user.
 const isAuthed = t.middleware(({ next, ctx }) => {
   if (!ctx.user?.id) {
-    throw new TRPCError({
-      code: 'UNAUTHORIZED',
-    })
+    throw new TRPCError({ code: 'UNAUTHORIZED' })
   }
   return next({
-    ctx: {
-      user: ctx.user,
-    },
+    // Reexpõe contexto limitando user como User (não undefined)
+    ctx: { user: ctx.user as User },
   })
 })
 
+// Pipeline base (público) mantém user possivelmente indefinido.
 const finalMiddleware = datadogLoggerMiddleware
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(injectUser)
 
+// Pipeline autenticado aplica narrowing de user.
 const authenticatedMiddleware = datadogLoggerMiddleware
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(isAuthed)
@@ -93,4 +68,11 @@ export const mergeRouters = t.mergeRouters
 
 export const publicProcedure = t.procedure.use(finalMiddleware)
 
-export const authenticatedProcedure = t.procedure.use(authenticatedMiddleware)
+// Cria um tipo derivado onde user é obrigatório para rotas autenticadas
+export const authenticatedProcedure = t.procedure
+  .use(authenticatedMiddleware)
+  .use(
+    t.middleware(({ next, ctx }) =>
+      next({ ctx: ctx as Context & { user: User } })
+    )
+  )

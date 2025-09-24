@@ -4,6 +4,7 @@ import superjson from 'superjson'
 import { Context } from './context'
 import * as Sentry from '@sentry/nextjs'
 import { ZodError } from 'zod'
+import { createDatadogLoggerMiddleware } from '@typebot.io/lib/trpc/createDatadogLoggerMiddleware'
 
 const t = initTRPC
   .context<Context>()
@@ -49,8 +50,13 @@ const isAuthed = t.middleware(({ next, ctx }) => {
   })
 })
 
-const finalMiddleware = sentryMiddleware.unstable_pipe(injectUser)
-const authenticatedMiddleware = sentryMiddleware.unstable_pipe(isAuthed)
+const datadogLoggerMiddleware = createDatadogLoggerMiddleware(t)
+const finalMiddleware = datadogLoggerMiddleware
+  .unstable_pipe(sentryMiddleware)
+  .unstable_pipe(injectUser)
+const authenticatedMiddleware = datadogLoggerMiddleware
+  .unstable_pipe(sentryMiddleware)
+  .unstable_pipe(isAuthed)
 
 export const middleware = t.middleware
 

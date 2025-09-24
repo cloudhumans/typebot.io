@@ -1,20 +1,24 @@
 import tracer from 'dd-trace'
 
-// Extract route data safely without depending on express types
+// Keep types minimal to avoid bringing express types into shared lib
 interface RequestLike {
   baseUrl?: unknown
   path?: unknown
 }
+
 interface NextOptions {
   ctx?: object
 }
+
 type NextFn = (opts?: NextOptions) => Promise<unknown>
-// New interface to avoid any
-interface TRPCMiddlewareFactory {
-  middleware: (
-    resolver: (opts: { ctx: unknown; next: NextFn }) => Promise<unknown>
-  ) => unknown
+
+// Narrow abstraction over t.middleware to avoid importing full tRPC types here
+export interface TRPCMiddlewareFactoryLike {
+  // We only need something that exposes a middleware(fn) method compatible with tRPC's
+  // actual `t.middleware`. Use a broad signature to avoid tight coupling on generics.
+  middleware: (resolver: (opts: { ctx: unknown; next: NextFn }) => any) => any
 }
+
 const extractRoute = (
   req: unknown
 ): { baseUrl: string; path: string } | null => {
@@ -30,7 +34,7 @@ const extractRoute = (
  * Factory to create a Datadog enrichment middleware for a given tRPC instance.
  * Attaches trace/span ids to ctx.datadog and tags http.route when available.
  */
-export const createDatadogLoggerMiddleware = (t: TRPCMiddlewareFactory) =>
+export const createDatadogLoggerMiddleware = (t: TRPCMiddlewareFactoryLike) =>
   t.middleware(async ({ ctx, next }: { ctx: unknown; next: NextFn }) => {
     const span = tracer.scope().active()
     let traceId: string | null = null
@@ -50,10 +54,10 @@ export const createDatadogLoggerMiddleware = (t: TRPCMiddlewareFactory) =>
         route &&
         route.baseUrl &&
         route.path &&
-        route.baseUrl.endsWith('/api/rpc')
+        route.baseUrl.endsWith('/api/rpc') &&
+        typeof (span as any).setTag === 'function'
       ) {
-        span.setTag &&
-          span.setTag('http.route', `${route.baseUrl}${route.path}`)
+        ;(span as any).setTag('http.route', `${route.baseUrl}${route.path}`)
       }
     }
 
