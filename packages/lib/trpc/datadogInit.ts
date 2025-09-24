@@ -13,9 +13,12 @@ export interface DatadogInitOptions {
  * Ensures Datadog tracer is initialized exactly once (idempotent) on the server.
  * Should be called as early as possible (instrumentation.ts) to maximize auto‑instrumentation coverage.
  */
-export function ensureDatadogInitialized(opts: DatadogInitOptions = {}) {
-  if (typeof window !== 'undefined') return
-  if (opts.enabled === false) return
+export function ensureDatadogInitialized(
+  opts: DatadogInitOptions = {}
+): boolean {
+  if (typeof window !== 'undefined') return false
+  if (process.env.NEXT_RUNTIME === 'edge') return false
+  if (opts.enabled === false) return false
   try {
     if (!(tracer as any)._initialized) {
       tracer.init({
@@ -24,8 +27,10 @@ export function ensureDatadogInitialized(opts: DatadogInitOptions = {}) {
         version: opts.version || process.env.DD_VERSION,
         logInjection: opts.logInjection ?? true,
       })
+      return true
     }
   } catch {
     // Swallow init errors (double init etc.)
   }
+  return false
 }

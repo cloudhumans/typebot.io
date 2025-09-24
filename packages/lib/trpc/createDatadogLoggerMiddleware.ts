@@ -1,4 +1,5 @@
 import tracer from 'dd-trace'
+import { ensureDatadogInitialized } from './datadogInit'
 
 interface RequestLike {
   baseUrl?: unknown
@@ -38,23 +39,10 @@ export const createDatadogLoggerMiddleware = (
   t.middleware(
     async ({ ctx, next, path }: { ctx: any; next: NextFn; path?: string }) => {
       const debug = process.env.DEBUG_DATADOG === 'true'
-      if (
-        options?.autoInit !== false &&
-        typeof window === 'undefined' &&
-        (tracer as any)._initialized !== true &&
-        process.env.NEXT_RUNTIME !== 'edge'
-      ) {
-        try {
-          tracer.init({
-            service:
-              options?.service || process.env.DD_SERVICE || 'typebot-app',
-            env: process.env.DD_ENV || process.env.NODE_ENV,
-            logInjection: true,
-          })
-          if (debug) console.log('[datadog] tracer lazy-initialized')
-        } catch {
-          if (debug) console.log('[datadog] tracer init skipped')
-        }
+      if (options?.autoInit !== false) {
+        const didInit = ensureDatadogInitialized({ service: options?.service })
+        if (debug && didInit)
+          console.log('[datadog] tracer lazy-initialized (middleware)')
       }
 
       // Defensive: only attempt to read active scope if internal tracer ready
