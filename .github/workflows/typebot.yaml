@@ -21,7 +21,7 @@ jobs:
       count: ${{ steps.build-matrix.outputs.count }}
     steps:
       - name: Configure AWS credentials production
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_CI_EKS_PRODUCTION_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_CI_EKS_PRODUCTION_SECRET }}
