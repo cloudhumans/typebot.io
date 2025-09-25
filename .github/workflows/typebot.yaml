@@ -13,14 +13,14 @@ env:
   ECR_REGISTRY: 585814034319.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
-  migrate:
+  prepare-matrix:
+    name: Prepare migration matrix
     if: ${{ github.ref == 'refs/heads/feat/run-typbot-migration-on-github' }}
-    runs-on: [self-hosted, production]
-
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+      count: ${{ steps.build-matrix.outputs.count }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
       - name: Configure AWS credentials production
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -28,16 +28,113 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_CI_EKS_PRODUCTION_SECRET }}
           aws-region: us-east-1
 
-      - name: test postgres connection
+      - name: Fetch SSM parameter & build matrix JSON
+        id: build-matrix
+        env:
+          SSM_PARAM_NAME: '/prd/typebot/databases'
+        run: |
+          set -euo pipefail
+          echo "Reading SSM parameter: $SSM_PARAM_NAME"
+          RAW=$(aws ssm get-parameter --name "$SSM_PARAM_NAME" --with-decryption --query 'Parameter.Value' --output text || true)
+          if [ -z "$RAW" ]; then
+            echo "No content in parameter" >&2
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Building matrix... (content redacted)"
+          JSON_ITEMS="[]"
+          # Use jq if available; otherwise fall back to manual assembly
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "jq not found. Downloading locally..."
+            curl -sSL https://github.com/jqlang/jq/releases/download/jq-1.7/jq-linux-amd64 -o jq && chmod +x jq
+            PATH="$PWD:$PATH"
+          fi
+          # Filter valid lines and turn into JSON objects
+          # Supports passwords containing '=' by using parameter expansion
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            case "$line" in \#*) continue;; esac
+            case "$line" in *=*) : ;; *) continue;; esac
+            NAME=${line%%=*}
+            CONN=${line#*=}
+            [ -z "$CONN" ] && continue
+            case "$CONN" in
+              postgresql://*|postgres://*) : ;;
+              *) echo "Skipping $NAME (invalid protocol)" >&2; continue;;
+            esac
+            OBJ=$(jq -nc --arg name "$NAME" --arg connection "$CONN" '{name:$name,connection:$connection}')
+            JSON_ITEMS=$(jq -nc --argjson arr "$JSON_ITEMS" --argjson obj "$OBJ" '$arr + [$obj]')
+          done <<< "$RAW"
+          MATRIX=$(jq -nc --argjson inc "$JSON_ITEMS" '{include:$inc}')
+          COUNT=$(echo "$MATRIX" | jq '.include | length')
+          echo "Matrix count: $COUNT" >&2
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Instances included:" >&2
+            echo "$MATRIX" | jq -r '.include[] | " - " + .name' >&2
+          fi
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+  migrate:
+    name: Migrate (per instance)
+    if: ${{ github.ref == 'refs/heads/feat/run-typbot-migration-on-github' && needs.prepare-matrix.outputs.count != '0' }}
+    needs: prepare-matrix
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    runs-on: [self-hosted, production]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+          run_install: false
+
+      - name: Install dependencies (prisma only)
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile --filter @typebot.io/prisma... || pnpm install --frozen-lockfile
+
+      - name: Test connection
+        if: false
+        env:
+          INSTANCE_NAME: ${{ matrix.name }}
+          CONNECTION: ${{ matrix.connection }}
         run: |
           set -euo pipefail
           IMAGE=postgres:17-alpine
           echo "Pulling $IMAGE..."
           docker pull "$IMAGE"
-          echo "Testing Postgres connection (using official image)..."
+          echo "Testing Postgres connection to instance $INSTANCE_NAME (using official image)..."
           # Usando SELECT 1 para teste rápido; troque para SELECT now() se quiser timestamp.
           docker run --rm "$IMAGE" \
-            psql "${{ secrets.POSTGRES_CONNECTION }}" -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+            psql "${{ CONNECTION }}" -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+
+      # - name: Run migration
+      #   if: false
+      #   env:
+      #     INSTANCE_NAME: ${{ matrix.name }}
+      #     CONNECTION: ${{ matrix.connection }}
+      #   run: |
+      #     set -euo pipefail
+      #     if [ -z "${CONNECTION:-}" ]; then
+      #       echo "Empty connection for $INSTANCE_NAME" >&2
+      #       exit 1
+      #     fi
+
+      #     echo "Running migration for instance: $INSTANCE_NAME"
+      #     DATABASE_URL="$CONNECTION" pnpm --filter @typebot.io/prisma exec prisma migrate deploy --schema=packages/prisma/postgresql/schema.prisma
+      #     echo "Migration done for $INSTANCE_NAME"
 
   build:
     if: ${{ github.ref == 'refs/heads/main' }}
