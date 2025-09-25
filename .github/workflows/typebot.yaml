@@ -154,7 +154,8 @@ jobs:
           if [ -z "${CONNECTION:-}" ]; then
             echo "Missing CONNECTION variable for $INSTANCE_NAME" >&2; exit 1; fi
           echo "Running migration for instance: $INSTANCE_NAME"
-          DATABASE_URL="$CONNECTION" pnpm --filter @typebot.io/prisma exec prisma migrate deploy --schema=packages/prisma/postgresql/schema.prisma
+          # Use the package script which auto-selects the correct schema based on DATABASE_URL
+          DATABASE_URL="$CONNECTION" pnpm --filter @typebot.io/prisma run migrate:deploy
           echo "Migration done for $INSTANCE_NAME"
 
   build:
