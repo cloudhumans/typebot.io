@@ -11,6 +11,7 @@ env:
   ECR_BUILDER_REPOSITORY: typebot-builder
   ECR_VIEWER_REPOSITORY: typebot-viewer
   ECR_REGISTRY: 585814034319.dkr.ecr.us-east-1.amazonaws.com
+  SSM_PARAM_NAME: '/prd/typebot/databases'
 
 jobs:
   prepare-matrix:
@@ -30,8 +31,6 @@ jobs:
 
       - name: Fetch SSM parameter & build matrix (names only, no jq)
         id: build-matrix
-        env:
-          SSM_PARAM_NAME: '/prd/typebot/databases'
         run: |
           set -euo pipefail
           echo "Reading SSM parameter: $SSM_PARAM_NAME"
@@ -110,7 +109,6 @@ jobs:
         id: prepare-connection
         env:
           INSTANCE_NAME: ${{ matrix.name }}
-          SSM_PARAM_NAME: '/prd/typebot/databases'
         run: |
           set -euo pipefail
           if [ -z "${INSTANCE_NAME:-}" ]; then
