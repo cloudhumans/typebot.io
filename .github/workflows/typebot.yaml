@@ -118,7 +118,7 @@ jobs:
           echo "Testing Postgres connection to instance $INSTANCE_NAME (using official image)..."
           # Usando SELECT 1 para teste rápido; troque para SELECT now() se quiser timestamp.
           docker run --rm "$IMAGE" \
-            psql "${{ CONNECTION }}" -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+            psql "$CONNECTION" -v ON_ERROR_STOP=1 -c 'SELECT 1;'
 
       # - name: Run migration
       #   if: false
