@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/run-typbot-migration-on-github
 
 env:
   AWS_REGION: us-east-1
@@ -16,7 +15,6 @@ env:
 jobs:
   prepare-matrix:
     name: Prepare migration matrix
-    if: ${{ github.ref == 'refs/heads/feat/run-typbot-migration-on-github' }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.matrix }}
@@ -70,7 +68,7 @@ jobs:
 
   migrate:
     name: Migrate (per instance)
-    if: ${{ github.ref == 'refs/heads/feat/run-typbot-migration-on-github' && needs.prepare-matrix.outputs.count != '0' }}
+    if: ${{ needs.prepare-matrix.outputs.count != '0' }}
     needs: prepare-matrix
     strategy:
       fail-fast: false
@@ -143,7 +141,7 @@ jobs:
           echo "Connection OK for $INSTANCE_NAME"
 
       - name: Run migration
-        if: false # Temporarily disabled; enable later by removing or changing this condition
+        if: ${{ github.ref == 'refs/heads/main' }}
         env:
           INSTANCE_NAME: ${{ matrix.name }}
           CONNECTION: ${{ env.CONNECTION }}
