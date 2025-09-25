@@ -156,6 +156,7 @@ jobs:
 
   build:
     if: ${{ github.ref == 'refs/heads/main' }}
+    needs: migrate
     runs-on: ubuntu-latest
 
     steps:
