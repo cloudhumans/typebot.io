@@ -117,13 +117,13 @@ jobs:
           esac
           echo "::add-mask::$CONNECTION"
           echo "Prepared connection for $INSTANCE_NAME"
-          # Export for subsequent steps
-          echo "CONNECTION=$CONNECTION" >> "$GITHUB_ENV"
+          # Set as step output
+          echo "connection=$CONNECTION" >> "$GITHUB_OUTPUT"
 
       - name: Test connection
         env:
           INSTANCE_NAME: ${{ matrix.name }}
-          CONNECTION: ${{ env.CONNECTION }}
+          CONNECTION: ${{ steps.prepare-connection.outputs.connection }}
         run: |
           set -euo pipefail
           if [ -z "${CONNECTION:-}" ]; then
@@ -139,7 +139,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         env:
           INSTANCE_NAME: ${{ matrix.name }}
-          CONNECTION: ${{ env.CONNECTION }}
+          CONNECTION: ${{ steps.prepare-connection.outputs.connection }}
         run: |
           set -euo pipefail
           if [ -z "${CONNECTION:-}" ]; then
