@@ -57,8 +57,20 @@ const handleAuthError = (
       targetOrigin
     )
   } else {
-    // Fallback: try all allowed origins
-    getAllowedOrigins().forEach((origin) => {
+    // Fallback: try all allowed origins, but filter out wildcard patterns since postMessage doesn't support them
+    const allowedOrigins = getAllowedOrigins()
+    const nonWildcardOrigins = allowedOrigins.filter(
+      (origin) => !origin.includes('*')
+    )
+
+    if (nonWildcardOrigins.length === 0) {
+      console.error(
+        '❌ No valid target origins for AUTH_ERROR (all contain wildcards)'
+      )
+      return false
+    }
+
+    nonWildcardOrigins.forEach((origin) => {
       window.parent.postMessage(
         {
           type: 'AUTH_ERROR',
