@@ -182,6 +182,11 @@ providers.push(
 
         const userInfo = await cognitoResponse.json()
 
+        console.log(
+          '🔍 [NextAuth] Cognito UserInfo received:',
+          JSON.stringify(userInfo.UserAttributes, null, 2)
+        )
+
         const email = userInfo.UserAttributes?.find(
           (attr: { Name: string; Value: string }) => attr.Name === 'email'
         )?.Value
@@ -199,6 +204,15 @@ providers.push(
           (attr: { Name: string; Value: string }) =>
             attr.Name === 'custom:tenant_id'
         )?.Value
+        const claudiaProjects = userInfo.UserAttributes?.find(
+          (attr: { Name: string; Value: string }) =>
+            attr.Name === 'custom:claudia_projects'
+        )?.Value
+
+        console.log('🔍 [NextAuth] Extracted values:')
+        console.log('  - hubRole:', hubRole)
+        console.log('  - tenantId:', tenantId)
+        console.log('  - claudiaProjects:', claudiaProjects)
 
         if (!email) return null
 
@@ -215,7 +229,7 @@ providers.push(
           })
         }
 
-        return {
+        const userResult = {
           id: user.id,
           email: user.email,
           name: user.name,
@@ -223,7 +237,14 @@ providers.push(
           emailVerified: user.emailVerified,
           'custom:hub_role': hubRole,
           'custom:tenant_id': tenantId,
+          'custom:claudia_projects': claudiaProjects,
         }
+
+        console.log(
+          '🔍 [NextAuth] Final user object:',
+          JSON.stringify(userResult, null, 2)
+        )
+        return userResult
       } catch (error) {
         return null
       }
@@ -305,11 +326,26 @@ export const getAuthOptions = ({
           const tenantId = (user as unknown as Record<string, unknown>)[
             'custom:tenant_id'
           ]
+          const claudiaProjects = (user as unknown as Record<string, unknown>)[
+            'custom:claudia_projects'
+          ]
 
-          tokenWithCognito.cognitoClaims = {
+          const claims: Record<string, string | undefined> = {
             'custom:hub_role': hubRole as 'ADMIN' | 'CLIENT' | 'MANAGER',
             'custom:tenant_id': tenantId as string,
+            'custom:claudia_projects': claudiaProjects as string | undefined,
           }
+
+          console.log(
+            '🔍 [NextAuth] Added all claims to cognitoClaims. claudia_projects:',
+            claudiaProjects || 'undefined'
+          )
+
+          tokenWithCognito.cognitoClaims = claims
+          console.log(
+            '🔍 [NextAuth] Final cognitoClaims:',
+            JSON.stringify(claims, null, 2)
+          )
 
           console.log(
             `🔐 User authenticated via Cognito token - Role: ${hubRole}, Tenant: ${tenantId}`

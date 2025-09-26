@@ -1,9 +1,6 @@
 import { env } from '@typebot.io/env'
 import { MemberInWorkspace, User } from '@typebot.io/prisma'
-import {
-  extractCognitoUserClaims,
-  getUserWorkspaceNameFromCognito,
-} from './cognitoUtils'
+import { extractCognitoUserClaims, hasWorkspaceAccess } from './cognitoUtils'
 
 export const isReadWorkspaceFobidden = (
   workspace: {
@@ -21,15 +18,8 @@ export const isReadWorkspaceFobidden = (
   if (workspace.name && user.cognitoClaims) {
     const cognitoClaims = extractCognitoUserClaims(user.cognitoClaims)
 
-    if (cognitoClaims) {
-      const userWorkspaceName = getUserWorkspaceNameFromCognito(cognitoClaims)
-
-      if (userWorkspaceName === workspace.name) {
-        console.log(
-          `✅ Workspace access granted via Cognito token for workspace "${workspace.name}"`
-        )
-        return false
-      }
+    if (cognitoClaims && hasWorkspaceAccess(cognitoClaims, workspace.name)) {
+      return false
     }
   }
 
@@ -37,11 +27,6 @@ export const isReadWorkspaceFobidden = (
   const dbMember = workspace.members.find((member) => member.userId === user.id)
 
   if (dbMember) {
-    console.log(
-      `✅ Workspace access granted via database membership for workspace "${
-        workspace.name || 'unnamed'
-      }"`
-    )
     return false
   }
 

@@ -3,19 +3,21 @@ import {
   CognitoUserClaims,
   extractCognitoUserClaims,
   mapCognitoRoleToWorkspaceRole,
+  hasWorkspaceAccess,
 } from './cognitoUtils'
 
 const getRoleFromCognitoToken = (
   cognitoUser: CognitoUserClaims | undefined,
   workspaceName: string
 ): WorkspaceRole | undefined => {
-  if (!cognitoUser?.['custom:tenant_id'] || !cognitoUser?.['custom:hub_role']) {
+  if (!cognitoUser?.['custom:hub_role']) {
     return undefined
   }
 
-  // Check if user has access to this workspace via tenant_id matching workspace name
-  if (cognitoUser['custom:tenant_id'] === workspaceName) {
-    return mapCognitoRoleToWorkspaceRole(cognitoUser['custom:hub_role'])
+  // Check if user has access to this workspace via tenant_id or claudia_projects (case-insensitive)
+  if (hasWorkspaceAccess(cognitoUser, workspaceName)) {
+    const role = mapCognitoRoleToWorkspaceRole(cognitoUser['custom:hub_role'])
+    return role
   }
 
   return undefined

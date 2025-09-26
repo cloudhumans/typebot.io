@@ -1,8 +1,5 @@
 import { MemberInWorkspace, User, WorkspaceRole } from '@typebot.io/prisma'
-import {
-  extractCognitoUserClaims,
-  getUserWorkspaceNameFromCognito,
-} from './cognitoUtils'
+import { extractCognitoUserClaims, hasWorkspaceAccess } from './cognitoUtils'
 
 export const isWriteWorkspaceForbidden = (
   workspace: {
@@ -14,12 +11,8 @@ export const isWriteWorkspaceForbidden = (
   // Primary: Check Cognito token claims if workspace name is available
   if (workspace.name && user.cognitoClaims) {
     const cognitoClaims = extractCognitoUserClaims(user.cognitoClaims)
-    if (cognitoClaims) {
-      const userWorkspaceName = getUserWorkspaceNameFromCognito(cognitoClaims)
-      if (
-        userWorkspaceName === workspace.name &&
-        cognitoClaims['custom:hub_role']
-      ) {
+    if (cognitoClaims && cognitoClaims['custom:hub_role']) {
+      if (hasWorkspaceAccess(cognitoClaims, workspace.name)) {
         // All Cognito roles (ADMIN/MEMBER) have write access
         return false
       }

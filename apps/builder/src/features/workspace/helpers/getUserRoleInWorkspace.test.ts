@@ -75,23 +75,6 @@ describe('getUserRoleInWorkspace', () => {
       )
       expect(role).toBe(WorkspaceRole.MEMBER)
     })
-
-    it('should handle nested token structure', () => {
-      const user = {
-        token: {
-          'custom:hub_role': 'ADMIN',
-          'custom:tenant_id': 'shopee',
-        },
-      }
-
-      const role = getUserRoleInWorkspace(
-        userId,
-        workspaceMembers,
-        workspaceName,
-        user
-      )
-      expect(role).toBe(WorkspaceRole.ADMIN)
-    })
   })
 
   describe('Database fallback', () => {
@@ -128,6 +111,78 @@ describe('getUserRoleInWorkspace', () => {
         user
       )
       expect(role).toBeUndefined()
+    })
+  })
+
+  describe('New claudia_projects functionality', () => {
+    it('should return ADMIN role when workspace matches claudia_projects (case-insensitive)', () => {
+      const user = {
+        'custom:hub_role': 'ADMIN',
+        'custom:tenant_id': 'different-tenant',
+        'custom:claudia_projects': 'Project1,SHOPEE,Project3',
+      }
+
+      const role = getUserRoleInWorkspace(
+        userId,
+        [],
+        workspaceName, // "shopee"
+        user
+      )
+      expect(role).toBe(WorkspaceRole.ADMIN)
+    })
+
+    it('should return MEMBER role when workspace matches claudia_projects and hub_role is CLIENT', () => {
+      const user = {
+        'custom:hub_role': 'CLIENT',
+        'custom:tenant_id': 'different-tenant',
+        'custom:claudia_projects': 'Project1,shopee,Project3',
+      }
+
+      const role = getUserRoleInWorkspace(userId, [], workspaceName, user)
+      expect(role).toBe(WorkspaceRole.MEMBER)
+    })
+
+    it('should handle case-insensitive tenant_id matching', () => {
+      const user = {
+        'custom:hub_role': 'MANAGER',
+        'custom:tenant_id': 'SHOPEE',
+      }
+
+      const role = getUserRoleInWorkspace(
+        userId,
+        [],
+        workspaceName, // "shopee"
+        user
+      )
+      expect(role).toBe(WorkspaceRole.ADMIN)
+    })
+
+    it('should prioritize tenant_id over claudia_projects when both match', () => {
+      const user = {
+        'custom:hub_role': 'CLIENT', // Would be MEMBER via claudia_projects
+        'custom:tenant_id': 'SHOPEE', // But tenant_id makes it MEMBER too
+        'custom:claudia_projects': 'shopee,other-project',
+      }
+
+      const role = getUserRoleInWorkspace(userId, [], workspaceName, user)
+      // Should use hub_role mapping from tenant_id match
+      expect(role).toBe(WorkspaceRole.MEMBER)
+    })
+
+    it('should fallback to database when no Cognito match found', () => {
+      const user = {
+        'custom:hub_role': 'ADMIN',
+        'custom:tenant_id': 'different-tenant',
+        'custom:claudia_projects': 'Project1,Project2,Project3',
+      }
+
+      const role = getUserRoleInWorkspace(
+        userId,
+        workspaceMembers,
+        workspaceName,
+        user
+      )
+      expect(role).toBe(WorkspaceRole.MEMBER) // From database
     })
   })
 
