@@ -22,6 +22,7 @@ export const getSubscription = async ({ workspaceId, user }: Props) => {
       id: workspaceId,
     },
     select: {
+      name: true,
       stripeId: true,
       members: {
         select: {
