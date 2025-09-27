@@ -154,21 +154,52 @@ providers.push(
       token: { label: 'Token', type: 'text' },
     },
     async authorize(credentials) {
+      console.log('authorize called with credentials:', credentials)
       if (!credentials?.token) {
         return null
       }
 
       try {
-        // Verify token using AWS Cognito GetUser API
-        const cognitoRegion = env.AWS_COGNITO_REGION || 'us-east-1'
+        console.log('token: ', credentials?.token)
+
+        // First, decode the access token to extract custom claims
+        const tokenParts = credentials.token.split('.')
+        if (tokenParts.length !== 3) {
+          console.error('Invalid JWT token format')
+          return null
+        }
+
+        const payload = JSON.parse(
+          Buffer.from(tokenParts[1], 'base64url').toString('utf8')
+        )
+
+        console.log(
+          '🔍 [NextAuth] CloudChat access token payload:',
+          JSON.stringify(payload, null, 2)
+        )
+
+        // Verify token hasn't expired
+        if (payload.exp && Date.now() >= payload.exp * 1000) {
+          console.error('Access token has expired')
+          return null
+        }
+
+        // Extract the region from the token issuer
+        const issuer = payload.iss
+        const region =
+          issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ||
+          'us-east-1'
+
+        // Also call GetUser API to get hub_role which is stored as user attribute
+        console.log('📝 [NextAuth] Fetching hub_role from Cognito GetUser API')
+
         const cognitoResponse = await fetch(
-          `https://cognito-idp.${cognitoRegion}.amazonaws.com/`,
+          `https://cognito-idp.${region}.amazonaws.com/`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-amz-json-1.1',
               'X-Amz-Target': 'AWSCognitoIdentityProviderService.GetUser',
-              Authorization: `Bearer ${credentials.token}`,
             },
             body: JSON.stringify({
               AccessToken: credentials.token,
@@ -177,42 +208,57 @@ providers.push(
         )
 
         if (!cognitoResponse.ok) {
+          console.error(
+            'Failed to get user from Cognito:',
+            cognitoResponse.status
+          )
           return null
         }
 
         const userInfo = await cognitoResponse.json()
 
         console.log(
-          '🔍 [NextAuth] Cognito UserInfo received:',
+          '🔍 [NextAuth] Cognito GetUser response:',
           JSON.stringify(userInfo.UserAttributes, null, 2)
         )
 
-        const email = userInfo.UserAttributes?.find(
-          (attr: { Name: string; Value: string }) => attr.Name === 'email'
-        )?.Value
+        // Get basic info - prefer from GetUser response, fallback to token
+        const email =
+          userInfo.UserAttributes?.find(
+            (attr: { Name: string; Value: string }) => attr.Name === 'email'
+          )?.Value || payload.email
+
         const name =
           userInfo.UserAttributes?.find(
             (attr: { Name: string; Value: string }) => attr.Name === 'name'
-          )?.Value || userInfo.Username
+          )?.Value ||
+          userInfo.Username ||
+          payload.username
 
-        // Extract custom Cognito claims
+        // Get hub_role from user attributes (not in token)
         const hubRole = userInfo.UserAttributes?.find(
           (attr: { Name: string; Value: string }) =>
             attr.Name === 'custom:hub_role'
         )?.Value
-        const tenantId = userInfo.UserAttributes?.find(
-          (attr: { Name: string; Value: string }) =>
-            attr.Name === 'custom:tenant_id'
-        )?.Value
-        const claudiaProjects = userInfo.UserAttributes?.find(
-          (attr: { Name: string; Value: string }) =>
-            attr.Name === 'custom:claudia_projects'
-        )?.Value
 
-        console.log('🔍 [NextAuth] Extracted values:')
+        // Get other custom claims from token payload (these are available there)
+        const tenantId = payload['custom:tenant_id']
+        const claudiaProjects = payload['custom:claudia_projects']
+        const tenantVersion = payload['custom:tenant_version']
+        const cloudchatInstance = payload['custom:cloudchat_instance']
+        const connectorProjects = payload['custom:connector_projects']
+        const projects = payload['custom:projects']
+
+        console.log('🔍 [NextAuth] Final extracted values:')
+        console.log('  - email:', email)
+        console.log('  - name:', name)
         console.log('  - hubRole:', hubRole)
         console.log('  - tenantId:', tenantId)
         console.log('  - claudiaProjects:', claudiaProjects)
+        console.log('  - tenantVersion:', tenantVersion)
+        console.log('  - cloudchatInstance:', cloudchatInstance)
+        console.log('  - connectorProjects:', connectorProjects)
+        console.log('  - projects:', projects)
 
         if (!email) return null
 
