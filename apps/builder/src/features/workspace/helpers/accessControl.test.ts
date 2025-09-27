@@ -1,5 +1,17 @@
+import { vi } from 'vitest'
+
+// Mock must be at the top level before any other imports
+vi.mock('@typebot.io/env', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    ENCRYPTION_SECRET: '12345678901234567890123456789012',
+    ADMIN_EMAIL: ['admin@test.com'],
+  },
+}))
+
 import { describe, it, expect } from 'vitest'
 import { WorkspaceRole } from '@typebot.io/prisma'
+
 import { isReadWorkspaceFobidden } from './isReadWorkspaceFobidden'
 import { isWriteWorkspaceForbidden } from './isWriteWorkspaceForbidden'
 import { isAdminWriteWorkspaceForbidden } from './isAdminWriteWorkspaceForbidden'
