@@ -16,7 +16,6 @@ export const extractCognitoUserClaims = (
 
   const userObj = user as Record<string, unknown>
 
-  // Extract claims directly from the user object (Pattern 2 is the only one used in production)
   if (
     'custom:hub_role' in userObj &&
     'custom:tenant_id' in userObj &&
