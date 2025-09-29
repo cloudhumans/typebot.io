@@ -16,7 +16,6 @@ export const getUsage = async ({ workspaceId, user }: Props) => {
       id: workspaceId,
     },
     select: {
-      name: true,
       stripeId: true,
       plan: true,
       members: {

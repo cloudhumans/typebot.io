@@ -40,7 +40,6 @@ export const createCheckoutSession = async ({
       id: workspaceId,
     },
     select: {
-      name: true,
       stripeId: true,
       members: {
         select: {
