@@ -38,7 +38,6 @@ const injectUser = t.middleware(({ next, ctx }) => {
   })
 })
 
-// Middleware de autenticação: valida presença e faz narrowing do tipo de user
 const isAuthed = t.middleware(({ next, ctx }) => {
   if (!ctx.user?.id) {
     throw new TRPCError({ code: 'UNAUTHORIZED' })
