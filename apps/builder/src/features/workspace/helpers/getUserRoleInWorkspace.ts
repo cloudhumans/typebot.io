@@ -11,14 +11,19 @@ const getRoleFromCognitoToken = (
   cognitoUser: CognitoUserClaims | undefined,
   workspaceName: string
 ): WorkspaceRole | undefined => {
-  if (!cognitoUser?.['custom:hub_role']) {
+  if (!cognitoUser) {
     return undefined
   }
 
   // Check if user has access to this workspace via tenant_id or claudia_projects (case-insensitive)
   if (hasWorkspaceAccess(cognitoUser, workspaceName)) {
-    const role = mapCognitoRoleToWorkspaceRole(cognitoUser['custom:hub_role'])
-    return role
+    // If user has hub_role, use it to determine workspace role
+    if (cognitoUser['custom:hub_role']) {
+      const role = mapCognitoRoleToWorkspaceRole(cognitoUser['custom:hub_role'])
+      return role
+    }
+    // If no hub_role but has workspace access, default to MEMBER
+    return WorkspaceRole.MEMBER
   }
 
   return undefined

@@ -221,10 +221,10 @@ providers.push(
         )
 
         if (!cognitoResponse.ok) {
-          console.error(
-            'Failed to get user from Cognito:',
-            cognitoResponse.status
-          )
+          logger.error('Failed to get user from Cognito', {
+            status: cognitoResponse.status,
+            statusText: cognitoResponse.statusText,
+          })
           return null
         }
 
