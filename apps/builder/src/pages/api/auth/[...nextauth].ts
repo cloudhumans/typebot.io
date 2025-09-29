@@ -408,7 +408,7 @@ export const getAuthOptions = ({
             Object.keys(tokenWithCognito.cognitoClaims).length === 0)
         ) {
           // Return null to force NextAuth to clear the session and require re-authentication
-          return null as unknown as TokenWithCognito
+          return null
         }
       }
       return tokenWithCognito as JWT & TokenWithCognito
