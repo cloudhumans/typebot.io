@@ -309,6 +309,8 @@ providers.push(
         })
         return userResult
       } catch (error) {
+        console.error('Error in cloudchat-embedded authorize:', error);
+        Sentry.captureException(error);
         return null
       }
     },
