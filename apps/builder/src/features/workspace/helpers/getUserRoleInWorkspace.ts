@@ -54,7 +54,7 @@ export const getUserRoleInWorkspace = (
     logger.info('User authenticated via database', {
       userId,
       role: dbMember.role,
-      workspace: 'not specified',
+      workspace: workspaceName || 'not specified',
     })
   }
   return dbMember?.role
