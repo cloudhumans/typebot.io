@@ -1,4 +1,5 @@
 import { WorkspaceRole } from '@typebot.io/prisma'
+import logger from '@/helpers/logger'
 
 export interface CognitoUserClaims {
   'custom:hub_role'?: 'ADMIN' | 'CLIENT' | 'MANAGER'
@@ -60,7 +61,10 @@ export const hasWorkspaceAccess = (
   if (claims['custom:tenant_id']) {
     const tenantIdLower = claims['custom:tenant_id'].toLowerCase()
     if (tenantIdLower === workspaceNameLower) {
-      console.log('✅ [WorkspaceAccess] MATCH found via tenant_id!')
+      logger.info('WorkspaceAccess match found via tenant_id', {
+        tenantId: claims['custom:tenant_id'],
+        workspace: workspaceName,
+      })
       return true
     }
   }
@@ -74,7 +78,10 @@ export const hasWorkspaceAccess = (
       .map((project) => project.trim())
 
     if (projectsLower.includes(workspaceNameLower)) {
-      console.log('✅ [WorkspaceAccess] MATCH found via claudia_projects!')
+      logger.info('WorkspaceAccess match found via claudia_projects', {
+        claudiaProjects: claims['custom:claudia_projects'],
+        workspace: workspaceName,
+      })
       return true
     }
   }

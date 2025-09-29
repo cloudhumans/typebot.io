@@ -25,6 +25,7 @@ import * as Sentry from '@sentry/nextjs'
 import { getIp } from '@typebot.io/lib/getIp'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { TokenWithCognito } from '@/features/auth/types/cognito'
+import logger from '@/helpers/logger'
 
 const providers: Provider[] = []
 
@@ -154,18 +155,24 @@ providers.push(
       token: { label: 'Token', type: 'text' },
     },
     async authorize(credentials) {
-      console.log('authorize called with credentials:', credentials)
+      logger.info('Cognito authorize called', {
+        hasToken: !!credentials?.token,
+      })
       if (!credentials?.token) {
         return null
       }
 
       try {
-        console.log('token: ', credentials?.token)
+        logger.debug('Processing Cognito token', {
+          tokenLength: credentials.token.length,
+        })
 
         // First, decode the access token to extract custom claims
         const tokenParts = credentials.token.split('.')
         if (tokenParts.length !== 3) {
-          console.error('Invalid JWT token format')
+          logger.error('Invalid JWT token format', {
+            tokenParts: tokenParts.length,
+          })
           return null
         }
 
@@ -173,14 +180,20 @@ providers.push(
           Buffer.from(tokenParts[1], 'base64url').toString('utf8')
         )
 
-        console.log(
-          '🔍 [NextAuth] CloudChat access token payload:',
-          JSON.stringify(payload, null, 2)
-        )
+        logger.debug('CloudChat access token payload decoded', {
+          sub: payload.sub,
+          exp: payload.exp,
+          hasCustomClaims: !!(
+            payload['custom:hub_role'] || payload['custom:tenant_id']
+          ),
+        })
 
         // Verify token hasn't expired
         if (payload.exp && Date.now() >= payload.exp * 1000) {
-          console.error('Access token has expired')
+          logger.error('Access token has expired', {
+            exp: payload.exp,
+            now: Date.now(),
+          })
           return null
         }
 
@@ -191,7 +204,7 @@ providers.push(
           'us-east-1'
 
         // Also call GetUser API to get hub_role which is stored as user attribute
-        console.log('📝 [NextAuth] Fetching hub_role from Cognito GetUser API')
+        logger.info('Fetching hub_role from Cognito GetUser API')
 
         const cognitoResponse = await fetch(
           `https://cognito-idp.${region}.amazonaws.com/`,
@@ -217,10 +230,12 @@ providers.push(
 
         const userInfo = await cognitoResponse.json()
 
-        console.log(
-          '🔍 [NextAuth] Cognito GetUser response:',
-          JSON.stringify(userInfo.UserAttributes, null, 2)
-        )
+        logger.debug('Cognito GetUser response received', {
+          attributeCount: userInfo.UserAttributes?.length || 0,
+          hasEmail: userInfo.UserAttributes?.some(
+            (attr: { Name: string; Value: string }) => attr.Name === 'email'
+          ),
+        })
 
         // Get basic info - prefer from GetUser response, fallback to token
         const email =
@@ -249,16 +264,17 @@ providers.push(
         const connectorProjects = payload['custom:connector_projects']
         const projects = payload['custom:projects']
 
-        console.log('🔍 [NextAuth] Final extracted values:')
-        console.log('  - email:', email)
-        console.log('  - name:', name)
-        console.log('  - hubRole:', hubRole)
-        console.log('  - tenantId:', tenantId)
-        console.log('  - claudiaProjects:', claudiaProjects)
-        console.log('  - tenantVersion:', tenantVersion)
-        console.log('  - cloudchatInstance:', cloudchatInstance)
-        console.log('  - connectorProjects:', connectorProjects)
-        console.log('  - projects:', projects)
+        logger.debug('Extracted Cognito values', {
+          hasEmail: !!email,
+          hasName: !!name,
+          hubRole,
+          hasTenantId: !!tenantId,
+          hasClaudiaProjects: !!claudiaProjects,
+          tenantVersion,
+          cloudchatInstance,
+          hasConnectorProjects: !!connectorProjects,
+          hasProjects: !!projects,
+        })
 
         if (!email) return null
 
@@ -286,10 +302,11 @@ providers.push(
           'custom:claudia_projects': claudiaProjects,
         }
 
-        console.log(
-          '🔍 [NextAuth] Final user object:',
-          JSON.stringify(userResult, null, 2)
-        )
+        logger.debug('Final user object created', {
+          userId: userResult.id,
+          email: userResult.email,
+          hasName: !!userResult.name,
+        })
         return userResult
       } catch (error) {
         return null
@@ -382,22 +399,30 @@ export const getAuthOptions = ({
             'custom:claudia_projects': claudiaProjects as string | undefined,
           }
 
-          console.log(
-            '🔍 [NextAuth] Added all claims to cognitoClaims. claudia_projects:',
-            claudiaProjects || 'undefined'
-          )
+          logger.debug('Added claims to cognitoClaims', {
+            hasClaudiaProjects: !!claudiaProjects,
+            claudiaProjectsCount:
+              typeof claudiaProjects === 'string'
+                ? claudiaProjects.split(',').length
+                : 0,
+          })
 
           tokenWithCognito.cognitoClaims = claims
-          console.log(
-            '🔍 [NextAuth] Final cognitoClaims:',
-            JSON.stringify(claims, null, 2)
-          )
+          logger.debug('Final cognitoClaims set', {
+            hasHubRole: !!claims['custom:hub_role'],
+            hasTenantId: !!claims['custom:tenant_id'],
+            hasClaudiaProjects: !!claims['custom:claudia_projects'],
+          })
 
-          console.log(
-            `🔐 User authenticated via Cognito token - Role: ${hubRole}, Tenant: ${tenantId}`
-          )
+          logger.info('User authenticated via Cognito token', {
+            hubRole,
+            hasTenantId: !!tenantId,
+            provider: 'cognito',
+          })
         } else {
-          console.log(`🔐 User authenticated via ${account.provider} provider`)
+          logger.info('User authenticated via OAuth provider', {
+            provider: account.provider,
+          })
         }
       } else {
         // PATCH: If this is a cloudchat-embedded token without cognitoClaims,

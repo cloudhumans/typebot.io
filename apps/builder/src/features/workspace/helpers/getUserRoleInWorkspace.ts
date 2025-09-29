@@ -1,4 +1,5 @@
 import { MemberInWorkspace, WorkspaceRole } from '@typebot.io/prisma'
+import logger from '@/helpers/logger'
 import {
   CognitoUserClaims,
   extractCognitoUserClaims,
@@ -37,9 +38,11 @@ export const getUserRoleInWorkspace = (
       const tokenRole = getRoleFromCognitoToken(cognitoUser, workspaceName)
 
       if (tokenRole) {
-        console.log(
-          `✅ User authenticated via Cognito token for workspace "${workspaceName}" with role: ${tokenRole}`
-        )
+        logger.info('User authenticated via Cognito token', {
+          workspace: workspaceName,
+          role: tokenRole,
+          userId,
+        })
         return tokenRole
       }
     }
@@ -48,9 +51,11 @@ export const getUserRoleInWorkspace = (
   // Fallback: Use existing database-based approach
   const dbMember = workspaceMembers?.find((member) => member.userId === userId)
   if (dbMember) {
-    console.log(
-      `✅ User authenticated via database for userId "${userId}" with role: ${dbMember.role}`
-    )
+    logger.info('User authenticated via database', {
+      userId,
+      role: dbMember.role,
+      workspace: 'not specified',
+    })
   }
   return dbMember?.role
 }
