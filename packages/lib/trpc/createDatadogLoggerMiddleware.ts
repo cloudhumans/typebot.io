@@ -45,17 +45,22 @@ export const createDatadogLoggerMiddleware = (
           console.log('[datadog] tracer lazy-initialized (middleware)')
       }
 
-      // Defensive: only attempt to read active scope if internal tracer ready
-      const ddAny = tracer as any
+      // Public API usage only: attempt to get active span defensively
       let span: any = undefined
-      if (ddAny && ddAny._tracer) {
+      const scopeFn = (tracer as any)?.scope
+      if (typeof scopeFn === 'function') {
         try {
-          span = ddAny.scope().active()
+          const scope = scopeFn.call(tracer)
+          if (scope && typeof scope.active === 'function') {
+            span = scope.active()
+          } else if (debug) {
+            console.log('[datadog] scope.active not available')
+          }
         } catch {
           if (debug) console.log('[datadog] failed to access active span')
         }
       } else if (debug) {
-        console.log('[datadog] tracer not ready (_tracer missing)')
+        console.log('[datadog] tracer.scope not available')
       }
 
       if (debug) console.log('[datadog] active span at entry:', !!span)
@@ -68,7 +73,9 @@ export const createDatadogLoggerMiddleware = (
             traceId = ddContext.toTraceId()
           if (typeof ddContext.toSpanId === 'function')
             spanId = ddContext.toSpanId()
-        } catch {}
+        } catch {
+          // silent; keep nulls
+        }
       }
 
       if (span && typeof span.setTag === 'function') {
@@ -104,10 +111,12 @@ export const createDatadogLoggerMiddleware = (
                   (maybeUser as any).email,
                   (maybeUser as any).id
                 )
-            } catch {}
+            } catch {
+              // swallow user tagging errors
+            }
           }
         } catch {
-          if (debug) console.log('[datadog] tagging failed')
+          if (debug) console.error('[datadog] tagging failed')
         }
       }
 
