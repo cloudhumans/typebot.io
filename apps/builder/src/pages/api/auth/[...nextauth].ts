@@ -26,7 +26,7 @@ import { getIp } from '@typebot.io/lib/getIp'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import {
   TokenWithCognito,
-  UserWithCognitoClaims,
+  UserWithCognito,
 } from '@/features/auth/types/cognito'
 import logger from '@/helpers/logger'
 
@@ -300,9 +300,11 @@ providers.push(
           name: user.name,
           image: user.image,
           emailVerified: user.emailVerified,
-          'custom:hub_role': hubRole,
-          'custom:tenant_id': tenantId,
-          'custom:claudia_projects': claudiaProjects,
+          cognitoClaims: {
+            'custom:hub_role': hubRole as 'ADMIN' | 'CLIENT' | 'MANAGER',
+            'custom:tenant_id': tenantId,
+            'custom:claudia_projects': claudiaProjects,
+          },
         }
 
         logger.debug('Final user object created', {
@@ -388,37 +390,31 @@ export const getAuthOptions = ({
 
         // Extract Cognito claims from cloudchat-embedded provider
         if (account.provider === 'cloudchat-embedded') {
-          const userWithClaims = user as UserWithCognitoClaims
-          const hubRole = userWithClaims['custom:hub_role']
-          const tenantId = userWithClaims['custom:tenant_id']
-          const claudiaProjects = userWithClaims['custom:claudia_projects']
+          const userWithCognito = user as UserWithCognito
+          const cognitoClaims = userWithCognito.cognitoClaims
 
-          const claims: Record<string, string | undefined> = {
-            'custom:hub_role': hubRole as 'ADMIN' | 'CLIENT' | 'MANAGER',
-            'custom:tenant_id': tenantId as string,
-            'custom:claudia_projects': claudiaProjects as string | undefined,
+          if (cognitoClaims) {
+            logger.debug('Added claims to cognitoClaims', {
+              hasClaudiaProjects: !!cognitoClaims['custom:claudia_projects'],
+              claudiaProjectsCount:
+                typeof cognitoClaims['custom:claudia_projects'] === 'string'
+                  ? cognitoClaims['custom:claudia_projects'].split(',').length
+                  : 0,
+            })
+
+            tokenWithCognito.cognitoClaims = cognitoClaims
+            logger.debug('Final cognitoClaims set', {
+              hasHubRole: !!cognitoClaims['custom:hub_role'],
+              hasTenantId: !!cognitoClaims['custom:tenant_id'],
+              hasClaudiaProjects: !!cognitoClaims['custom:claudia_projects'],
+            })
+
+            logger.info('User authenticated via Cognito token', {
+              hubRole: cognitoClaims['custom:hub_role'],
+              hasTenantId: !!cognitoClaims['custom:tenant_id'],
+              provider: 'cognito',
+            })
           }
-
-          logger.debug('Added claims to cognitoClaims', {
-            hasClaudiaProjects: !!claudiaProjects,
-            claudiaProjectsCount:
-              typeof claudiaProjects === 'string'
-                ? claudiaProjects.split(',').length
-                : 0,
-          })
-
-          tokenWithCognito.cognitoClaims = claims
-          logger.debug('Final cognitoClaims set', {
-            hasHubRole: !!claims['custom:hub_role'],
-            hasTenantId: !!claims['custom:tenant_id'],
-            hasClaudiaProjects: !!claims['custom:claudia_projects'],
-          })
-
-          logger.info('User authenticated via Cognito token', {
-            hubRole,
-            hasTenantId: !!tenantId,
-            provider: 'cognito',
-          })
         } else {
           logger.info('User authenticated via OAuth provider', {
             provider: account.provider,
