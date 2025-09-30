@@ -3,10 +3,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { workspaceSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
-import {
-  extractCognitoUserClaims,
-  hasWorkspaceAccess,
-} from '../helpers/cognitoUtils'
+import { checkCognitoWorkspaceAccess } from '../helpers/cognitoUtils'
 
 export const listWorkspaces = authenticatedProcedure
   .meta({
@@ -37,23 +34,21 @@ export const listWorkspaces = authenticatedProcedure
     const dbWorkspaceIds = new Set(dbWorkspaces.map((w) => w.id))
 
     // Then, check for Cognito-based workspace access
-    const cognitoClaims = extractCognitoUserClaims(user)
     let cognitoWorkspaces: typeof dbWorkspaces = []
 
-    if (cognitoClaims) {
-      // Get workspaces that user doesn't already have database access to
-      const remainingWorkspaces = await prisma.workspace.findMany({
-        where: {
-          id: { notIn: Array.from(dbWorkspaceIds) },
-        },
-        select: { name: true, id: true, icon: true, plan: true },
-      })
+    // Get workspaces that user doesn't already have database access to
+    const remainingWorkspaces = await prisma.workspace.findMany({
+      where: {
+        id: { notIn: Array.from(dbWorkspaceIds) },
+      },
+      select: { name: true, id: true, icon: true, plan: true },
+    })
 
-      cognitoWorkspaces = remainingWorkspaces.filter(
-        (workspace) =>
-          workspace.name && hasWorkspaceAccess(cognitoClaims, workspace.name)
-      )
-    }
+    cognitoWorkspaces = remainingWorkspaces.filter((workspace) => {
+      if (!workspace.name) return false
+      const cognitoAccess = checkCognitoWorkspaceAccess(user, workspace.name)
+      return cognitoAccess.hasAccess
+    })
 
     // Combine workspaces (no need for Map since they're now guaranteed to be unique)
     const workspaces = [...dbWorkspaces, ...cognitoWorkspaces]

@@ -1,5 +1,11 @@
-import { WorkspaceRole } from '@typebot.io/prisma'
+import { WorkspaceRole, User } from '@typebot.io/prisma'
 import logger from '@/helpers/logger'
+
+export interface CognitoWorkspaceAccessResult {
+  hasAccess: boolean
+  role?: WorkspaceRole
+  claims?: CognitoUserClaims
+}
 
 export interface CognitoUserClaims {
   'custom:hub_role'?: 'ADMIN' | 'CLIENT' | 'MANAGER'
@@ -123,4 +129,28 @@ export const mapCognitoRoleToWorkspaceRole = (
     default:
       return WorkspaceRole.MEMBER
   }
+}
+
+/**
+ * Centralized function to check Cognito-based workspace access and return role information.
+ * This replaces the duplicated pattern of extracting claims, checking access, and mapping roles.
+ */
+export const checkCognitoWorkspaceAccess = (
+  user: Pick<User, 'email' | 'id'> & { cognitoClaims?: unknown },
+  workspaceName?: string
+): CognitoWorkspaceAccessResult => {
+  if (!workspaceName || !user.cognitoClaims) {
+    return { hasAccess: false }
+  }
+
+  const cognitoClaims = extractCognitoUserClaims(user)
+  if (!cognitoClaims || !hasWorkspaceAccess(cognitoClaims, workspaceName)) {
+    return { hasAccess: false }
+  }
+
+  const role = cognitoClaims['custom:hub_role']
+    ? mapCognitoRoleToWorkspaceRole(cognitoClaims['custom:hub_role'])
+    : WorkspaceRole.MEMBER
+
+  return { hasAccess: true, role, claims: cognitoClaims }
 }

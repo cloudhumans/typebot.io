@@ -7,11 +7,7 @@ import { isReadTypebotForbidden } from '@/features/typebot/helpers/isReadTypebot
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 import { CollaborationType } from '@typebot.io/prisma'
 import { env } from '@typebot.io/env'
-import {
-  extractCognitoUserClaims,
-  hasWorkspaceAccess,
-  mapCognitoRoleToWorkspaceRole,
-} from '@/features/workspace/helpers/cognitoUtils'
+import { checkCognitoWorkspaceAccess } from '@/features/workspace/helpers/cognitoUtils'
 
 export const getTypebot = publicProcedure
   .meta({
@@ -124,19 +120,15 @@ const getCurrentUserMode = (
 
   // Check for Cognito-based workspace access
   if (user?.cognitoClaims && typebot.workspace.name) {
-    const cognitoClaims = extractCognitoUserClaims(user)
+    const cognitoAccess = checkCognitoWorkspaceAccess(
+      user,
+      typebot.workspace.name
+    )
 
-    if (
-      cognitoClaims &&
-      hasWorkspaceAccess(cognitoClaims, typebot.workspace.name)
-    ) {
+    if (cognitoAccess.hasAccess) {
       // User has Cognito-based access to this workspace
-      const cognitoRole = cognitoClaims['custom:hub_role']
-        ? mapCognitoRoleToWorkspaceRole(cognitoClaims['custom:hub_role'])
-        : 'MEMBER'
-
       // Map workspace role to user mode
-      if (cognitoRole === 'ADMIN' || cognitoRole === 'MEMBER') {
+      if (cognitoAccess.role === 'ADMIN' || cognitoAccess.role === 'MEMBER') {
         return 'write'
       }
       return 'read'

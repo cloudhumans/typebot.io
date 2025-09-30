@@ -1,6 +1,6 @@
 import { env } from '@typebot.io/env'
 import { MemberInWorkspace, User } from '@typebot.io/prisma'
-import { extractCognitoUserClaims, hasWorkspaceAccess } from './cognitoUtils'
+import { checkCognitoWorkspaceAccess } from './cognitoUtils'
 
 export const isReadWorkspaceFobidden = (
   workspace: {
@@ -15,12 +15,9 @@ export const isReadWorkspaceFobidden = (
   }
 
   // Primary: Check Cognito token claims if workspace name is available
-  if (workspace.name && user.cognitoClaims) {
-    const cognitoClaims = extractCognitoUserClaims(user)
-
-    if (cognitoClaims && hasWorkspaceAccess(cognitoClaims, workspace.name)) {
-      return false
-    }
+  const cognitoAccess = checkCognitoWorkspaceAccess(user, workspace.name)
+  if (cognitoAccess.hasAccess) {
+    return false
   }
 
   // Fallback: Check database members

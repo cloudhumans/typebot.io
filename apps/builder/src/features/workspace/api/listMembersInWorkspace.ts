@@ -4,11 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { workspaceMemberSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
 import { isReadWorkspaceFobidden } from '../helpers/isReadWorkspaceFobidden'
-import {
-  extractCognitoUserClaims,
-  hasWorkspaceAccess,
-  mapCognitoRoleToWorkspaceRole,
-} from '../helpers/cognitoUtils'
+import { checkCognitoWorkspaceAccess } from '../helpers/cognitoUtils'
 
 export const listMembersInWorkspace = authenticatedProcedure
   .meta({
@@ -60,24 +56,14 @@ export const listMembersInWorkspace = authenticatedProcedure
     }))
 
     // Check if current user has Cognito-based access and isn't already a database member
-    const cognitoClaims = extractCognitoUserClaims(user)
     const isDbMember = workspace.members.some(
       (member) => member.userId === user.id
     )
 
     let allMembers = dbMembers
 
-    if (
-      cognitoClaims &&
-      workspace.name &&
-      hasWorkspaceAccess(cognitoClaims, workspace.name) &&
-      !isDbMember
-    ) {
-      // Add virtual member for current Cognito user
-      const cognitoRole = cognitoClaims['custom:hub_role']
-        ? mapCognitoRoleToWorkspaceRole(cognitoClaims['custom:hub_role'])
-        : 'MEMBER'
-
+    const cognitoAccess = checkCognitoWorkspaceAccess(user, workspace.name)
+    if (cognitoAccess.hasAccess && !isDbMember) {
       // Fetch the full user object for the virtual member
       const fullUser = await prisma.user.findUnique({
         where: { id: user.id },
@@ -85,7 +71,7 @@ export const listMembersInWorkspace = authenticatedProcedure
 
       if (fullUser) {
         const virtualMember = {
-          role: cognitoRole,
+          role: cognitoAccess.role!,
           user: fullUser,
           workspaceId,
           userId: user.id,
