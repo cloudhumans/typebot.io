@@ -14,7 +14,7 @@ export const isAdminWriteWorkspaceForbidden = (
 ) => {
   // Primary: Check Cognito token claims if workspace name is available
   if (workspace.name && user.cognitoClaims) {
-    const cognitoClaims = extractCognitoUserClaims(user.cognitoClaims)
+    const cognitoClaims = extractCognitoUserClaims(user)
     if (cognitoClaims && hasWorkspaceAccess(cognitoClaims, workspace.name)) {
       if (cognitoClaims['custom:hub_role']) {
         // Use the specific hub_role to determine admin access

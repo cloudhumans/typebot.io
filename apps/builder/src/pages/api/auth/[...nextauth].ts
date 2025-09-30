@@ -24,7 +24,10 @@ import { env } from '@typebot.io/env'
 import * as Sentry from '@sentry/nextjs'
 import { getIp } from '@typebot.io/lib/getIp'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
-import { TokenWithCognito } from '@/features/auth/types/cognito'
+import {
+  TokenWithCognito,
+  UserWithCognitoClaims,
+} from '@/features/auth/types/cognito'
 import logger from '@/helpers/logger'
 
 const providers: Provider[] = []
@@ -384,16 +387,11 @@ export const getAuthOptions = ({
         tokenWithCognito.provider = account.provider
 
         // Extract Cognito claims from cloudchat-embedded provider
-        if (account.provider === 'cloudchat-embedded' && user) {
-          const hubRole = (user as unknown as Record<string, unknown>)[
-            'custom:hub_role'
-          ]
-          const tenantId = (user as unknown as Record<string, unknown>)[
-            'custom:tenant_id'
-          ]
-          const claudiaProjects = (user as unknown as Record<string, unknown>)[
-            'custom:claudia_projects'
-          ]
+        if (account.provider === 'cloudchat-embedded') {
+          const userWithClaims = user as UserWithCognitoClaims
+          const hubRole = userWithClaims['custom:hub_role']
+          const tenantId = userWithClaims['custom:tenant_id']
+          const claudiaProjects = userWithClaims['custom:claudia_projects']
 
           const claims: Record<string, string | undefined> = {
             'custom:hub_role': hubRole as 'ADMIN' | 'CLIENT' | 'MANAGER',
@@ -426,42 +424,42 @@ export const getAuthOptions = ({
             provider: account.provider,
           })
         }
-      } else {
-        // PATCH: If this is a cloudchat-embedded token without cognitoClaims,
-        // force a complete re-authentication by returning null
-        if (
-          tokenWithCognito.provider === 'cloudchat-embedded' &&
-          (!tokenWithCognito.cognitoClaims ||
-            Object.keys(tokenWithCognito.cognitoClaims).length === 0)
-        ) {
-          // Return null to force NextAuth to clear the session and require re-authentication
-          return null
-        }
       }
       return tokenWithCognito as JWT & TokenWithCognito
     },
     session: async ({ session, token }) => {
       const tokenWithCognito = token as TokenWithCognito
 
-      // Get user from database using token info
-      if (tokenWithCognito?.userId) {
-        const userFromDb = await prisma.user.findUnique({
-          where: { id: tokenWithCognito.userId },
-        })
-        if (userFromDb) {
-          await updateLastActivityDate(userFromDb)
-          const finalSession = {
-            ...session,
-            user: {
-              ...userFromDb,
-              cognitoClaims: tokenWithCognito.cognitoClaims, // Pass Cognito claims to user object
-            },
-          }
-
-          return finalSession
-        }
+      // Check if we have a valid userId in the token
+      if (!tokenWithCognito?.userId) {
+        logger.info(
+          'Session callback: No userId in token - returning empty session'
+        )
+        return { ...session, user: undefined }
       }
-      return session
+
+      // Get user from database using token info
+      const userFromDb = await prisma.user.findUnique({
+        where: { id: tokenWithCognito.userId },
+      })
+
+      if (!userFromDb) {
+        logger.warn('Session callback: User not found in database', {
+          userId: tokenWithCognito.userId,
+        })
+        return { ...session, user: undefined }
+      }
+
+      await updateLastActivityDate(userFromDb)
+      const finalSession = {
+        ...session,
+        user: {
+          ...userFromDb,
+          cognitoClaims: tokenWithCognito.cognitoClaims, // Pass Cognito claims to user object
+        },
+      }
+
+      return finalSession
     },
     signIn: async ({ account, user }) => {
       if (restricted === 'rate-limited') throw new Error('rate-limited')

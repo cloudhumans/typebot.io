@@ -5,6 +5,10 @@ import { WorkspaceRole } from '@typebot.io/prisma'
 import { folderSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
+import {
+  extractCognitoUserClaims,
+  hasWorkspaceAccess,
+} from '@/features/workspace/helpers/cognitoUtils'
 
 export const listFolders = authenticatedProcedure
   .meta({
@@ -30,18 +34,38 @@ export const listFolders = authenticatedProcedure
   .query(async ({ input: { workspaceId, parentFolderId }, ctx: { user } }) => {
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, members: true, plan: true },
+      select: { id: true, name: true, members: true, plan: true },
     })
-    const userRole = getUserRoleInWorkspace(user.id, workspace?.members)
-    if (
-      userRole === undefined ||
-      userRole === WorkspaceRole.GUEST ||
-      !workspace
-    )
+
+    if (!workspace) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Workspace not found',
       })
+    }
+
+    const userRole = getUserRoleInWorkspace(user.id, workspace.members)
+
+    // Check for Cognito-based access if user is not a database member
+    let hasAccess = userRole !== undefined && userRole !== WorkspaceRole.GUEST
+
+    if (!hasAccess) {
+      const cognitoClaims = extractCognitoUserClaims(user)
+      if (
+        cognitoClaims &&
+        workspace.name &&
+        hasWorkspaceAccess(cognitoClaims, workspace.name)
+      ) {
+        hasAccess = true
+      }
+    }
+
+    if (!hasAccess) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Workspace not found',
+      })
+    }
 
     const folders = await prisma.dashboardFolder.findMany({
       where: {

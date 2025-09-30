@@ -16,7 +16,7 @@ export const isReadWorkspaceFobidden = (
 
   // Primary: Check Cognito token claims if workspace name is available
   if (workspace.name && user.cognitoClaims) {
-    const cognitoClaims = extractCognitoUserClaims(user.cognitoClaims)
+    const cognitoClaims = extractCognitoUserClaims(user)
 
     if (cognitoClaims && hasWorkspaceAccess(cognitoClaims, workspace.name)) {
       return false

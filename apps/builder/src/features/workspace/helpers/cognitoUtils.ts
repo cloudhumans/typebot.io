@@ -16,12 +16,25 @@ export const extractCognitoUserClaims = (
 
   const userObj = user as Record<string, unknown>
 
+  // Check if user has cognitoClaims property
+  if (
+    !('cognitoClaims' in userObj) ||
+    typeof userObj.cognitoClaims !== 'object' ||
+    userObj.cognitoClaims === null
+  ) {
+    return undefined
+  }
+
+  const cognitoClaims = userObj.cognitoClaims as Record<string, unknown>
+
   // Check if user has any relevant Cognito claims
-  const hasHubRole = 'custom:hub_role' in userObj && userObj['custom:hub_role']
+  const hasHubRole =
+    'custom:hub_role' in cognitoClaims && cognitoClaims['custom:hub_role']
   const hasTenantId =
-    'custom:tenant_id' in userObj && userObj['custom:tenant_id']
+    'custom:tenant_id' in cognitoClaims && cognitoClaims['custom:tenant_id']
   const hasClaudiaProjects =
-    'custom:claudia_projects' in userObj && userObj['custom:claudia_projects']
+    'custom:claudia_projects' in cognitoClaims &&
+    cognitoClaims['custom:claudia_projects']
 
   // User must have at least hub_role OR some form of workspace access (tenant_id or claudia_projects)
   if (!hasHubRole && !hasTenantId && !hasClaudiaProjects) {
@@ -31,18 +44,18 @@ export const extractCognitoUserClaims = (
   const result: CognitoUserClaims = {}
 
   if (hasHubRole) {
-    result['custom:hub_role'] = userObj['custom:hub_role'] as
+    result['custom:hub_role'] = cognitoClaims['custom:hub_role'] as
       | 'ADMIN'
       | 'CLIENT'
       | 'MANAGER'
   }
 
   if (hasTenantId) {
-    result['custom:tenant_id'] = userObj['custom:tenant_id'] as string
+    result['custom:tenant_id'] = cognitoClaims['custom:tenant_id'] as string
   }
 
   if (hasClaudiaProjects) {
-    result['custom:claudia_projects'] = userObj[
+    result['custom:claudia_projects'] = cognitoClaims[
       'custom:claudia_projects'
     ] as string
   }

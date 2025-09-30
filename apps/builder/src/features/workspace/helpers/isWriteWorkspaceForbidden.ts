@@ -10,7 +10,7 @@ export const isWriteWorkspaceForbidden = (
 ) => {
   // Primary: Check Cognito token claims if workspace name is available
   if (workspace.name && user.cognitoClaims) {
-    const cognitoClaims = extractCognitoUserClaims(user.cognitoClaims)
+    const cognitoClaims = extractCognitoUserClaims(user)
     if (cognitoClaims && hasWorkspaceAccess(cognitoClaims, workspace.name)) {
       // User has workspace access - check their role level
       if (cognitoClaims['custom:hub_role']) {
