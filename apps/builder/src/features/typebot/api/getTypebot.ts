@@ -1,5 +1,5 @@
 import prisma from '@typebot.io/lib/prisma'
-import { authenticatedProcedure } from '@/helpers/server/trpc'
+import { publicProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { typebotSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
@@ -13,7 +13,7 @@ import {
   mapCognitoRoleToWorkspaceRole,
 } from '@/features/workspace/helpers/cognitoUtils'
 
-export const getTypebot = authenticatedProcedure
+export const getTypebot = publicProcedure
   .meta({
     openapi: {
       method: 'GET',
