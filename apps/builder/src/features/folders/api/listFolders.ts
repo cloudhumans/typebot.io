@@ -5,10 +5,6 @@ import { WorkspaceRole } from '@typebot.io/prisma'
 import { folderSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
-import {
-  extractCognitoUserClaims,
-  hasWorkspaceAccess,
-} from '@/features/workspace/helpers/cognitoUtils'
 
 export const listFolders = authenticatedProcedure
   .meta({
@@ -44,21 +40,14 @@ export const listFolders = authenticatedProcedure
       })
     }
 
-    const userRole = getUserRoleInWorkspace(user.id, workspace.members)
+    const userRole = getUserRoleInWorkspace(
+      user.id,
+      workspace.members,
+      workspace.name,
+      user
+    )
 
-    // Check for Cognito-based access if user is not a database member
-    let hasAccess = userRole !== undefined && userRole !== WorkspaceRole.GUEST
-
-    if (!hasAccess) {
-      const cognitoClaims = extractCognitoUserClaims(user)
-      if (
-        cognitoClaims &&
-        workspace.name &&
-        hasWorkspaceAccess(cognitoClaims, workspace.name)
-      ) {
-        hasAccess = true
-      }
-    }
+    const hasAccess = userRole !== undefined && userRole !== WorkspaceRole.GUEST
 
     if (!hasAccess) {
       throw new TRPCError({

@@ -6,11 +6,6 @@ import { PublicTypebot, Typebot, typebotV5Schema } from '@typebot.io/schemas'
 import { omit } from '@typebot.io/lib'
 import { z } from 'zod'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
-import {
-  extractCognitoUserClaims,
-  hasWorkspaceAccess,
-  mapCognitoRoleToWorkspaceRole,
-} from '@/features/workspace/helpers/cognitoUtils'
 
 export const listTypebots = authenticatedProcedure
   .meta({
@@ -55,42 +50,29 @@ export const listTypebots = authenticatedProcedure
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' })
     }
 
-    const userRole = getUserRoleInWorkspace(user.id, workspace.members)
+    const userRole = getUserRoleInWorkspace(
+      user.id,
+      workspace.members,
+      workspace.name,
+      user
+    )
 
-    // Check for Cognito-based access if user is not a database member
-    let hasAccess = userRole !== undefined
-    let effectiveRole = userRole
-
-    if (!hasAccess) {
-      const cognitoClaims = extractCognitoUserClaims(user)
-      if (
-        cognitoClaims &&
-        workspace.name &&
-        hasWorkspaceAccess(cognitoClaims, workspace.name)
-      ) {
-        hasAccess = true
-        // Map Cognito role to workspace role for permission checks
-        effectiveRole = cognitoClaims['custom:hub_role']
-          ? mapCognitoRoleToWorkspaceRole(cognitoClaims['custom:hub_role'])
-          : WorkspaceRole.MEMBER
-      }
-    }
-
-    if (!hasAccess) {
+    if (!userRole) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' })
     }
+
     const typebots = (await prisma.typebot.findMany({
       where: {
         isArchived: { not: true },
         folderId:
-          effectiveRole === WorkspaceRole.GUEST
+          userRole === WorkspaceRole.GUEST
             ? undefined
             : folderId === 'root'
             ? null
             : folderId,
         workspaceId,
         collaborators:
-          effectiveRole === WorkspaceRole.GUEST
+          userRole === WorkspaceRole.GUEST
             ? { some: { userId: user.id } }
             : undefined,
       },
