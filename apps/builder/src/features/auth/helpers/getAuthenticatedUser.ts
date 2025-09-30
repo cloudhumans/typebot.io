@@ -5,12 +5,12 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { env } from '@typebot.io/env'
 import { mockedUser } from '@typebot.io/lib/mockedUser'
-import { UserWithCognito } from '../types/cognito'
+import { DatabaseUserWithCognito } from '../types/cognito'
 
 export const getAuthenticatedUser = async (
   req: NextApiRequest,
   res: NextApiResponse
-): Promise<UserWithCognito | undefined> => {
+): Promise<DatabaseUserWithCognito | undefined> => {
   const bearerToken = extractBearerToken(req)
   if (bearerToken) return authenticateByToken(bearerToken)
 
@@ -18,7 +18,7 @@ export const getAuthenticatedUser = async (
     ? { user: mockedUser }
     : await getServerSession(req, res, getAuthOptions({}))
 
-  const user = session?.user as UserWithCognito | undefined
+  const user = session?.user as DatabaseUserWithCognito | undefined
   if (!user || !('id' in user)) return
   Sentry.setUser({ id: user.id })
   return user
@@ -26,11 +26,11 @@ export const getAuthenticatedUser = async (
 
 const authenticateByToken = async (
   apiToken: string
-): Promise<UserWithCognito | undefined> => {
+): Promise<DatabaseUserWithCognito | undefined> => {
   if (typeof window !== 'undefined') return
   const user = (await prisma.user.findFirst({
     where: { apiTokens: { some: { token: apiToken } } },
-  })) as UserWithCognito
+  })) as DatabaseUserWithCognito
   Sentry.setUser({ id: user.id })
   return user
 }

@@ -25,8 +25,8 @@ import * as Sentry from '@sentry/nextjs'
 import { getIp } from '@typebot.io/lib/getIp'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import {
-  TokenWithCognito,
-  UserWithCognito,
+  NextAuthJWTWithCognito,
+  DatabaseUserWithCognito,
 } from '@/features/auth/types/cognito'
 import logger from '@/helpers/logger'
 
@@ -378,40 +378,48 @@ export const getAuthOptions = ({
   },
   callbacks: {
     jwt: async ({ token, user, account }) => {
-      const tokenWithCognito = token as TokenWithCognito
+      const nextAuthJWT = token as NextAuthJWTWithCognito
 
       // If user is provided (first sign in), add user info to token
       if (user && account) {
-        tokenWithCognito.userId = user.id
-        tokenWithCognito.email = user.email || undefined
-        tokenWithCognito.name = user.name || undefined
-        tokenWithCognito.image = user.image || undefined
-        tokenWithCognito.provider = account.provider
+        nextAuthJWT.userId = user.id
+        nextAuthJWT.email = user.email || undefined
+        nextAuthJWT.name = user.name || undefined
+        nextAuthJWT.image = user.image || undefined
+        nextAuthJWT.provider = account.provider
 
         // Extract Cognito claims from cloudchat-embedded provider
         if (account.provider === 'cloudchat-embedded') {
-          const userWithCognito = user as UserWithCognito
-          const cognitoClaims = userWithCognito.cognitoClaims
+          const userFromCognitoAuth = user as DatabaseUserWithCognito
+          const claimsFromCognitoToken = userFromCognitoAuth.cognitoClaims
 
-          if (cognitoClaims) {
-            logger.debug('Added claims to cognitoClaims', {
-              hasClaudiaProjects: !!cognitoClaims['custom:claudia_projects'],
-              claudiaProjectsCount:
-                typeof cognitoClaims['custom:claudia_projects'] === 'string'
-                  ? cognitoClaims['custom:claudia_projects'].split(',').length
-                  : 0,
-            })
+          if (claimsFromCognitoToken) {
+            logger.debug(
+              'Transferring claims from Cognito auth to NextAuth JWT',
+              {
+                hasClaudiaProjects:
+                  !!claimsFromCognitoToken['custom:claudia_projects'],
+                claudiaProjectsCount:
+                  typeof claimsFromCognitoToken['custom:claudia_projects'] ===
+                  'string'
+                    ? claimsFromCognitoToken['custom:claudia_projects'].split(
+                        ','
+                      ).length
+                    : 0,
+              }
+            )
 
-            tokenWithCognito.cognitoClaims = cognitoClaims
+            nextAuthJWT.cognitoClaims = claimsFromCognitoToken
             logger.debug('Final cognitoClaims set', {
-              hasHubRole: !!cognitoClaims['custom:hub_role'],
-              hasTenantId: !!cognitoClaims['custom:tenant_id'],
-              hasClaudiaProjects: !!cognitoClaims['custom:claudia_projects'],
+              hasHubRole: !!claimsFromCognitoToken['custom:hub_role'],
+              hasTenantId: !!claimsFromCognitoToken['custom:tenant_id'],
+              hasClaudiaProjects:
+                !!claimsFromCognitoToken['custom:claudia_projects'],
             })
 
             logger.info('User authenticated via Cognito token', {
-              hubRole: cognitoClaims['custom:hub_role'],
-              hasTenantId: !!cognitoClaims['custom:tenant_id'],
+              hubRole: claimsFromCognitoToken['custom:hub_role'],
+              hasTenantId: !!claimsFromCognitoToken['custom:tenant_id'],
               provider: 'cognito',
             })
           }
@@ -421,13 +429,13 @@ export const getAuthOptions = ({
           })
         }
       }
-      return tokenWithCognito as JWT & TokenWithCognito
+      return nextAuthJWT as JWT & NextAuthJWTWithCognito
     },
     session: async ({ session, token }) => {
-      const tokenWithCognito = token as TokenWithCognito
+      const nextAuthJWT = token as NextAuthJWTWithCognito
 
       // Check if we have a valid userId in the token
-      if (!tokenWithCognito?.userId) {
+      if (!nextAuthJWT?.userId) {
         logger.info(
           'Session callback: No userId in token - returning empty session'
         )
@@ -436,12 +444,12 @@ export const getAuthOptions = ({
 
       // Get user from database using token info
       const userFromDb = await prisma.user.findUnique({
-        where: { id: tokenWithCognito.userId },
+        where: { id: nextAuthJWT.userId },
       })
 
       if (!userFromDb) {
         logger.warn('Session callback: User not found in database', {
-          userId: tokenWithCognito.userId,
+          userId: nextAuthJWT.userId,
         })
         return { ...session, user: undefined }
       }
@@ -451,7 +459,7 @@ export const getAuthOptions = ({
         ...session,
         user: {
           ...userFromDb,
-          cognitoClaims: tokenWithCognito.cognitoClaims, // Pass Cognito claims to user object
+          cognitoClaims: nextAuthJWT.cognitoClaims, // Pass Cognito claims from NextAuth JWT to session user
         },
       }
 
