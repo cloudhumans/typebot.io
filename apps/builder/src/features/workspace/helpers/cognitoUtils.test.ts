@@ -1,5 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { WorkspaceRole } from '@typebot.io/prisma'
+
+// Mock the logger
+vi.mock('@/helpers/logger', () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+}))
+
 import {
   extractCognitoUserClaims,
   getUserWorkspaceNameFromCognito,
@@ -8,10 +18,12 @@ import {
 } from './cognitoUtils'
 
 describe('extractCognitoUserClaims', () => {
-  it('should extract claims from direct user object', () => {
+  it('should extract claims from user object with cognitoClaims property', () => {
     const user = {
-      'custom:hub_role': 'ADMIN',
-      'custom:tenant_id': 'shopee',
+      cognitoClaims: {
+        'custom:hub_role': 'ADMIN',
+        'custom:tenant_id': 'shopee',
+      },
     }
 
     const claims = extractCognitoUserClaims(user)
@@ -24,9 +36,11 @@ describe('extractCognitoUserClaims', () => {
 
   it('should extract claims including undefined claudia_projects when field exists', () => {
     const user = {
-      'custom:hub_role': 'ADMIN',
-      'custom:tenant_id': 'shopee',
-      'custom:claudia_projects': undefined,
+      cognitoClaims: {
+        'custom:hub_role': 'ADMIN',
+        'custom:tenant_id': 'shopee',
+        'custom:claudia_projects': undefined,
+      },
     }
 
     const claims = extractCognitoUserClaims(user)
@@ -34,7 +48,6 @@ describe('extractCognitoUserClaims', () => {
     expect(claims).toEqual({
       'custom:hub_role': 'ADMIN',
       'custom:tenant_id': 'shopee',
-      'custom:claudia_projects': undefined,
     })
   })
 
@@ -53,28 +66,81 @@ describe('extractCognitoUserClaims', () => {
     expect(claims).toBeUndefined()
   })
 
-  it('should return undefined when missing hub_role', () => {
+  it('should return undefined when cognitoClaims is missing', () => {
     const user = {
-      'custom:tenant_id': 'shopee',
+      id: 'user123',
+      email: 'test@example.com',
     }
 
     const claims = extractCognitoUserClaims(user)
     expect(claims).toBeUndefined()
   })
 
-  it('should return undefined when missing tenant_id', () => {
+  it('should return undefined when cognitoClaims is null', () => {
     const user = {
+      cognitoClaims: null,
+    }
+
+    const claims = extractCognitoUserClaims(user)
+    expect(claims).toBeUndefined()
+  })
+
+  it('should return undefined when missing hub_role and tenant_id and claudia_projects', () => {
+    const user = {
+      cognitoClaims: {
+        'other:claim': 'value',
+      },
+    }
+
+    const claims = extractCognitoUserClaims(user)
+    expect(claims).toBeUndefined()
+  })
+
+  it('should extract claims when only hub_role is present', () => {
+    const user = {
+      cognitoClaims: {
+        'custom:hub_role': 'ADMIN',
+      },
+    }
+
+    const claims = extractCognitoUserClaims(user)
+    expect(claims).toEqual({
       'custom:hub_role': 'ADMIN',
+    })
+  })
+
+  it('should extract claims when only tenant_id is present', () => {
+    const user = {
+      cognitoClaims: {
+        'custom:tenant_id': 'shopee',
+      },
     }
 
     const claims = extractCognitoUserClaims(user)
-    expect(claims).toBeUndefined()
+    expect(claims).toEqual({
+      'custom:tenant_id': 'shopee',
+    })
   })
 
-  it('should handle malformed user object gracefully', () => {
+  it('should extract claims when only claudia_projects is present', () => {
     const user = {
-      'custom:hub_role': null,
-      'custom:tenant_id': undefined,
+      cognitoClaims: {
+        'custom:claudia_projects': 'project1,project2',
+      },
+    }
+
+    const claims = extractCognitoUserClaims(user)
+    expect(claims).toEqual({
+      'custom:claudia_projects': 'project1,project2',
+    })
+  })
+
+  it('should handle malformed cognitoClaims gracefully', () => {
+    const user = {
+      cognitoClaims: {
+        'custom:hub_role': null,
+        'custom:tenant_id': undefined,
+      },
     }
 
     const claims = extractCognitoUserClaims(user)

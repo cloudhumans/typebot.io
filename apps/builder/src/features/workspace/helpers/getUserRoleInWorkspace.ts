@@ -68,7 +68,7 @@ export function getUserRoleInWorkspace(
       userWithCognito,
       workspaceName
     )
-    logger.info('cognito user', cognitoAccess.claims)
+
     if (cognitoAccess.hasAccess) {
       logger.info('User authenticated via Cognito token', {
         workspace: workspaceName,

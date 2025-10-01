@@ -127,7 +127,7 @@ export const mapCognitoRoleToWorkspaceRole = (
     case 'CLIENT':
       return WorkspaceRole.MEMBER
     default:
-      return WorkspaceRole.MEMBER
+      return WorkspaceRole.GUEST
   }
 }
 
