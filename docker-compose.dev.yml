@@ -9,9 +9,10 @@ services:
     environment:
       POSTGRES_DB: 'typebot'
       POSTGRES_PASSWORD: 'typebot'
+
   minio:
     image: minio/minio
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ':9001'
     ports:
       - '9000:9000'
       - '9001:9001'
@@ -20,19 +21,41 @@ services:
       MINIO_ROOT_PASSWORD: minio123
     volumes:
       - s3_data:/data
-  # This service just make sure a bucket with the right policies is created
+
   createbuckets:
     image: minio/mc
     depends_on:
       - minio
     entrypoint: >
-      /bin/sh -c "
-      sleep 10;
-      /usr/bin/mc config host add minio http://minio:9000 minio minio123;
-      /usr/bin/mc mb minio/typebot;
-      /usr/bin/mc anonymous set public minio/typebot/public;
-      exit 0;
-      "
+      /bin/sh -c "sleep 10; \
+      /usr/bin/mc config host add minio http://minio:9000 minio minio123; \
+      /usr/bin/mc mb minio/typebot; \
+      /usr/bin/mc anonymous set public minio/typebot/public; exit 0;"
+
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:latest
+    container_name: datadog-agent
+    environment:
+      DD_API_KEY: ${DD_API_KEY:-}
+      DD_ENV: development
+      DD_SITE: datadoghq.com
+      DD_APM_ENABLED: 'true'
+      DD_LOGS_ENABLED: 'true'
+      DD_RUNTIME_METRICS_ENABLED: 'true'
+      DD_PROCESS_AGENT_ENABLED: 'false'
+      DD_SYSTEM_PROBE_ENABLED: 'false'
+      DD_APM_RECEIVER_SOCKET: /var/run/datadog/apm.socket
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: 'true'
+      DD_HOSTNAME: typebot-dev
+    volumes:
+      - datadog_run:/var/run/datadog
+      - /var/lib/datadog-agent/run:/var/lib/datadog-agent/run
+    ports:
+      - '8126:8126'
+      - '8125:8125/udp'
+    restart: unless-stopped
+
 volumes:
   db_data:
   s3_data:
+  datadog_run:

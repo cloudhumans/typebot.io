@@ -37,6 +37,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            - name: DD_RUNTIME_METRICS_ENABLED
+              value: 'true'
             - name: DD_PROFILING_ENABLED
               value: 'true'
             - name: DD_LOGS_INJECTION
