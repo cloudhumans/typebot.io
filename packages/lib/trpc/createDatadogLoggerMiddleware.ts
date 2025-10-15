@@ -89,6 +89,31 @@ const tagUser = (span: any, user: any, debug: boolean) => {
   }
 }
 
+const tagError = (span: any, error: any, debug: boolean) => {
+  if (!span || !error || typeof span.setTag !== 'function') return
+  try {
+    // dd-trace recognizes: error (boolean or object), error.type, error.msg, error.stack
+    const errObj: any = error
+    span.setTag('error', true)
+    if (errObj?.name) span.setTag('error.type', errObj.name)
+    if (errObj?.message) span.setTag('error.msg', errObj.message)
+    if (errObj?.stack) span.setTag('error.stack', errObj.stack)
+    // Extra context for TRPC errors or http-ish codes
+    if (errObj?.code) span.setTag('error.code', errObj.code)
+    if (errObj?.statusCode) span.setTag('http.status_code', errObj.statusCode)
+    // Preserve legacy keys for any existing dashboards
+    if (errObj?.message) span.setTag('error.message', errObj.message)
+    if (debug)
+      console.log('[datadog] tagged error', {
+        name: errObj?.name,
+        code: errObj?.code,
+        statusCode: errObj?.statusCode,
+      })
+  } catch (e) {
+    if (debug) console.log('[datadog] failed to tag error', (e as any)?.message)
+  }
+}
+
 export const createDatadogLoggerMiddleware = (
   t: TRPCMiddlewareFactoryLike,
   options?: { service?: string; autoInit?: boolean }
@@ -218,15 +243,10 @@ export const createDatadogLoggerMiddleware = (
         }
       }
 
-      if (error && rootSpan && typeof rootSpan.setTag === 'function') {
-        try {
-          rootSpan.setTag('error', true)
-          const errObj: any = error
-          if (errObj?.message) rootSpan.setTag('error.message', errObj.message)
-          if (errObj?.stack) rootSpan.setTag('error.stack', errObj.stack)
-        } catch {
-          // ignore tagging error
-        }
+      if (error) {
+        // Tag either the root span we created or the currently active span we reused.
+        const target = rootSpan || span
+        tagError(target, error, debug)
       }
 
       if (
