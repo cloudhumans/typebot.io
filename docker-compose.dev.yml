@@ -36,7 +36,7 @@ services:
     image: gcr.io/datadoghq/agent:latest
     container_name: datadog-agent
     environment:
-      DD_API_KEY: ${DD_API_KEY:-}
+      DD_API_KEY: 'cb744b61c72f22561236faf3f3e0a4d8'
       DD_ENV: development
       DD_SITE: datadoghq.com
       DD_APM_ENABLED: 'true'
