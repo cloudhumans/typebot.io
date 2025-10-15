@@ -197,7 +197,7 @@ export const createDatadogLoggerMiddleware = (
           const tags: Record<string, any> = { 'trpc.path': path }
           if (finalRoute) {
             tags['http.route'] = finalRoute
-            // só sobrescreve resource.name se não houver (rootSpan) ou se criamos root span
+            // only overwrites resource.name if there is none (rootSpan) or if we created root span
             if (createdRootSpan || !span.context?._nameOverridden) {
               tags['resource.name'] = `trpc ${path}`
             }
