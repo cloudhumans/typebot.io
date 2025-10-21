@@ -4,10 +4,7 @@ import * as trpcNext from '@trpc/server/adapters/next'
 
 export async function createContext(opts: trpcNext.CreateNextContextOptions) {
   const user = await getAuthenticatedUser(opts.req, opts.res)
-
-  return {
-    user,
-  }
+  return { user, req: opts.req, res: opts.res }
 }
 
 export type Context = inferAsyncReturnType<typeof createContext>

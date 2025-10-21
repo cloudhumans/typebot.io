@@ -4,6 +4,7 @@ import {
   startChatResponseSchema,
 } from '@typebot.io/schemas/features/chat/schema'
 import { startChat as startChatFn } from '@typebot.io/bot-engine/apiHandlers/startChat'
+import { setCorrelationHeader } from '@typebot.io/lib/correlation'
 import logger from '@/helpers/logger'
 
 export const startChat = authenticatedProcedure
@@ -17,7 +18,7 @@ export const startChat = authenticatedProcedure
   })
   .input(startChatInputSchema)
   .output(startChatResponseSchema)
-  .mutation(async ({ input, ctx: { origin, res } }) => {
+  .mutation(async ({ input, ctx: { origin, res, correlationId } }) => {
     logger.info('startChat API endpoint called', {
       publicId: input.publicId,
       hasMessage: !!input.message,
@@ -33,6 +34,7 @@ export const startChat = authenticatedProcedure
       const { corsOrigin, ...response } = await startChatFn({
         ...input,
         origin,
+        correlationId,
       })
 
       logger.info('startChat API endpoint completed', {
@@ -45,6 +47,7 @@ export const startChat = authenticatedProcedure
       })
 
       if (corsOrigin) res.setHeader('Access-Control-Allow-Origin', corsOrigin)
+      if (correlationId) setCorrelationHeader(res, correlationId)
       return response
     } catch (error) {
       logger.error('Error in startChat API endpoint', {
@@ -52,6 +55,7 @@ export const startChat = authenticatedProcedure
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         origin,
+        correlationId,
       })
       throw error
     }

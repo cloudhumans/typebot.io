@@ -10,11 +10,11 @@ import { getAuthOptions } from '@/pages/api/auth/[...nextauth]'
 
 export async function createContext(opts: trpcNext.CreateNextContextOptions) {
   const user = await getAuthenticatedUser(opts.req, opts.res)
-
   return {
     user,
     origin: opts.req.headers.origin,
     res: opts.res,
+    req: opts.req,
   }
 }
 

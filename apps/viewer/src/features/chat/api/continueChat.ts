@@ -2,6 +2,7 @@ import { publicProcedure } from '@/helpers/server/trpc'
 import { continueChatResponseSchema } from '@typebot.io/schemas/features/chat/schema'
 import { z } from 'zod'
 import { continueChat as continueChatFn } from '@typebot.io/bot-engine/apiHandlers/continueChat'
+import { setCorrelationHeader } from '@typebot.io/lib/correlation'
 
 export const continueChat = publicProcedure
   .meta({
@@ -28,15 +29,17 @@ export const continueChat = publicProcedure
   .mutation(
     async ({
       input: { sessionId, message, textBubbleContentFormat },
-      ctx: { origin, res },
+      ctx: { origin, res, correlationId },
     }) => {
       const { corsOrigin, ...response } = await continueChatFn({
         origin,
         sessionId,
         message,
         textBubbleContentFormat,
+        correlationId,
       })
       if (corsOrigin) res.setHeader('Access-Control-Allow-Origin', corsOrigin)
+      if (correlationId) setCorrelationHeader(res, correlationId)
       return response
     }
   )

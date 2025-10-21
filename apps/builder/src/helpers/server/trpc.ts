@@ -5,6 +5,7 @@ import superjson from 'superjson'
 import * as Sentry from '@sentry/nextjs'
 import { ZodError } from 'zod'
 import { createDatadogLoggerMiddleware } from '@typebot.io/lib/trpc/createDatadogLoggerMiddleware'
+import { createCorrelationMiddleware } from '@typebot.io/lib/trpc/createCorrelationMiddleware'
 import { User } from '@typebot.io/prisma'
 
 const t = initTRPC
@@ -24,6 +25,7 @@ const t = initTRPC
     },
   })
 
+const correlationMiddleware = createCorrelationMiddleware(t)
 const datadogLoggerMiddleware = createDatadogLoggerMiddleware(t, {
   service: 'typebot-builder',
 })
@@ -51,11 +53,13 @@ const isAuthed = t.middleware(({ next, ctx }) => {
   })
 })
 
-const finalMiddleware = datadogLoggerMiddleware
+const finalMiddleware = correlationMiddleware
+  .unstable_pipe(datadogLoggerMiddleware)
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(injectUser)
 
-const authenticatedMiddleware = datadogLoggerMiddleware
+const authenticatedMiddleware = correlationMiddleware
+  .unstable_pipe(datadogLoggerMiddleware)
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(isAuthed)
 

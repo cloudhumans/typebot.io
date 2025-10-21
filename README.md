@@ -73,19 +73,21 @@ Once started, access the following:
 
 ## Troubleshooting
 
-- **Supabase errors?** Ensure Docker is running.
-- **Ports already in use?** Check if previous instances are still running.
-- **Redis connection issues?** Confirm Redis is running and URL is correct in `.env`.
-
----
-
 ## Useful scripts
-
-- Run Supabase migrations:
 
 ```bash
 supabase db push
 ```
+
+### Correlation ID
+
+Incoming requests can include an `X-Correlation-Id` header. When provided:
+
+- The value is captured in the request context.
+- Forwarded to internal `startChat` and `continueChat` handlers.
+- Echoed back in the response headers (`X-Correlation-Id`).
+
+Use this to trace a chat session across logs. If you omit the header, a correlation id is simply absent; the platform does not auto‑generate one yet.
 
 - Stop Supabase:
 

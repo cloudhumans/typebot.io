@@ -115,16 +115,21 @@ test('API chat execution should work on published bot', async ({ request }) => {
   })
   let chatSessionId: string
 
-  await test.step('Start the chat', async () => {
-    const { sessionId, messages, input, resultId } = await (
-      await request.post(`/api/v1/typebots/${publicId}/startChat`, {
+  await test.step('Start the chat with correlation id', async () => {
+    const correlationId = createId()
+    const startResponse = await request.post(
+      `/api/v1/typebots/${publicId}/startChat`,
+      {
+        headers: { 'X-Correlation-Id': correlationId },
         data: {
           isOnlyRegistering: false,
           isStreamEnabled: false,
           textBubbleContentFormat: 'richText',
         } satisfies Omit<StartChatInput, 'publicId'>,
-      })
-    ).json()
+      }
+    )
+    expect(startResponse.headers()['x-correlation-id']).toBe(correlationId)
+    const { sessionId, messages, input, resultId } = await startResponse.json()
     chatSessionId = sessionId
     expect(resultId).toBeDefined()
     const result = await prisma.result.findUnique({
@@ -143,12 +148,17 @@ test('API chat execution should work on published bot', async ({ request }) => {
     expect(input.type).toBe('text input')
   })
 
-  await test.step('Answer Name question', async () => {
-    const { messages, input } = await (
-      await request.post(`/api/v1/sessions/${chatSessionId}/continueChat`, {
+  await test.step('Answer Name question with same correlation id', async () => {
+    const correlationId = createId()
+    const continueResponse = await request.post(
+      `/api/v1/sessions/${chatSessionId}/continueChat`,
+      {
+        headers: { 'X-Correlation-Id': correlationId },
         data: { message: 'John' },
-      })
-    ).json()
+      }
+    )
+    expect(continueResponse.headers()['x-correlation-id']).toBe(correlationId)
+    const { messages, input } = await continueResponse.json()
     expect(messages[0].content.richText).toStrictEqual([
       {
         type: 'p',
