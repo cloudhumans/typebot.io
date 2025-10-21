@@ -13,19 +13,29 @@ type Props = {
   message?: string
   sessionId: string
   textBubbleContentFormat: 'richText' | 'markdown'
+  correlationId?: string
 }
 export const continueChat = async ({
   origin,
   sessionId,
   message,
   textBubbleContentFormat,
+  correlationId,
 }: Props) => {
-  logger.info('continueChat called', { sessionId, hasMessage: !!message, origin })
+  logger.info('continueChat called', {
+    sessionId,
+    hasMessage: !!message,
+    origin,
+    correlationId,
+  })
 
   const session = await getSession(sessionId)
 
   if (!session) {
-    logger.warn('Session not found in continueChat', { sessionId })
+    logger.warn('Session not found in continueChat', {
+      sessionId,
+      correlationId,
+    })
     throw new TRPCError({
       code: 'NOT_FOUND',
       message: 'Session not found.',
@@ -38,6 +48,7 @@ export const continueChat = async ({
     stateKeys: session.state ? Object.keys(session.state).length : 0,
     updatedAt: session.updatedAt,
     expiryTimeout: session.state.expiryTimeout,
+    correlationId,
   })
 
   const isSessionExpired =
@@ -51,6 +62,7 @@ export const continueChat = async ({
       updatedAt: session.updatedAt.getTime(),
       expiryTimeout: session.state.expiryTimeout,
       now: Date.now(),
+      correlationId,
     })
     throw new TRPCError({
       code: 'NOT_FOUND',
@@ -126,5 +138,6 @@ export const continueChat = async ({
             currentInputBlockId: input?.id,
           })
       : undefined,
+    correlationId,
   }
 }

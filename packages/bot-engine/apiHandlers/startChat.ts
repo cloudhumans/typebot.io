@@ -14,6 +14,7 @@ type Props = {
   prefilledVariables?: Record<string, unknown>
   resultId?: string
   textBubbleContentFormat: 'richText' | 'markdown'
+  correlationId?: string
 }
 
 export const startChat = async ({
@@ -25,6 +26,7 @@ export const startChat = async ({
   prefilledVariables,
   resultId: startResultId,
   textBubbleContentFormat,
+  correlationId,
 }: Props) => {
   logger.info('startChat called', {
     publicId,
@@ -35,6 +37,7 @@ export const startChat = async ({
     hasResultId: !!startResultId,
     textBubbleContentFormat,
     origin,
+    correlationId,
   })
 
   try {
@@ -61,105 +64,111 @@ export const startChat = async ({
         textBubbleContentFormat,
       },
       message,
-  })
+    })
 
-  logger.info('startSession completed', {
-    publicId,
-    typebotId: typebot.id,
-    hasMessages: !!messages && messages.length > 0,
-    hasInput: !!input,
-    hasResultId: !!resultId,
-    hasNewSessionState: !!newSessionState,
-    allowedOrigins: newSessionState.allowedOrigins,
-  })
+    logger.info('startSession completed', {
+      publicId,
+      typebotId: typebot.id,
+      hasMessages: !!messages && messages.length > 0,
+      hasInput: !!input,
+      hasResultId: !!resultId,
+      hasNewSessionState: !!newSessionState,
+      allowedOrigins: newSessionState.allowedOrigins,
+      correlationId,
+    })
 
-  let corsOrigin
+    let corsOrigin
 
-  if (
-    newSessionState.allowedOrigins &&
-    newSessionState.allowedOrigins.length > 0
-  ) {
-    if (origin && newSessionState.allowedOrigins.includes(origin))
-      corsOrigin = origin
-    else corsOrigin = newSessionState.allowedOrigins[0]
-  }
+    if (
+      newSessionState.allowedOrigins &&
+      newSessionState.allowedOrigins.length > 0
+    ) {
+      if (origin && newSessionState.allowedOrigins.includes(origin))
+        corsOrigin = origin
+      else corsOrigin = newSessionState.allowedOrigins[0]
+    }
 
-  logger.info('startChat session save mode', {
-    publicId,
-    isOnlyRegistering,
-    typebotId: typebot.id,
-    resultId,
-    corsOrigin,
-  })
+    logger.info('startChat session save mode', {
+      publicId,
+      isOnlyRegistering,
+      typebotId: typebot.id,
+      resultId,
+      corsOrigin,
+      correlationId,
+    })
 
-  const session = isOnlyRegistering
-    ? await restartSession({
-        state: newSessionState,
-      })
-    : await saveStateToDatabase({
-        session: {
+    const session = isOnlyRegistering
+      ? await restartSession({
           state: newSessionState,
-        },
-        input,
-        logs,
-        clientSideActions,
-        visitedEdges,
-        setVariableHistory,
-        hasCustomEmbedBubble: messages.some(
-          (message) => message.type === 'custom-embed'
-        ),
-      })
+        })
+      : await saveStateToDatabase({
+          session: {
+            state: newSessionState,
+          },
+          input,
+          logs,
+          clientSideActions,
+          visitedEdges,
+          setVariableHistory,
+          hasCustomEmbedBubble: messages.some(
+            (message) => message.type === 'custom-embed'
+          ),
+        })
 
-  logger.info('Session saved successfully', {
-    publicId,
-    sessionId: session.id,
-    typebotId: typebot.id,
-    resultId,
-    isOnlyRegistering,
-  })
+    logger.info('Session saved successfully', {
+      publicId,
+      sessionId: session.id,
+      typebotId: typebot.id,
+      resultId,
+      isOnlyRegistering,
+      correlationId,
+    })
 
-  logger.info('startChat session details for continueChat troubleshooting', {
-    publicId,
-    sessionId: session.id,
-    typebotId: typebot.id,
-    resultId,
-    sessionCreatedAt: new Date().toISOString(),
-    sessionStateKeys: newSessionState ? Object.keys(newSessionState).length : 0,
-    hasInput: !!input,
-    inputId: input?.id,
-    inputType: input?.type,
-  })
+    logger.info('startChat session details for continueChat troubleshooting', {
+      publicId,
+      sessionId: session.id,
+      typebotId: typebot.id,
+      resultId,
+      sessionCreatedAt: new Date().toISOString(),
+      sessionStateKeys: newSessionState
+        ? Object.keys(newSessionState).length
+        : 0,
+      hasInput: !!input,
+      inputId: input?.id,
+      inputType: input?.type,
+      correlationId,
+    })
 
-  const isEnded =
-    newSessionState.progressMetadata &&
-    !input?.id &&
-    (clientSideActions?.filter((c) => c.expectsDedicatedReply).length ?? 0) ===
-      0
+    const isEnded =
+      newSessionState.progressMetadata &&
+      !input?.id &&
+      (clientSideActions?.filter((c) => c.expectsDedicatedReply).length ??
+        0) === 0
 
-  return {
-    sessionId: session.id,
-    typebot: {
-      id: typebot.id,
-      theme: typebot.theme,
-      settings: typebot.settings,
-    },
-    messages,
-    input,
-    resultId,
-    dynamicTheme,
-    logs: logs?.filter(filterPotentiallySensitiveLogs),
-    clientSideActions,
-    corsOrigin,
-    progress: newSessionState.progressMetadata
-      ? isEnded
-        ? 100
-        : computeCurrentProgress({
-            typebotsQueue: newSessionState.typebotsQueue,
-            progressMetadata: newSessionState.progressMetadata,
-            currentInputBlockId: input?.id,
-          })
-      : undefined,
-  }
+    return {
+      sessionId: session.id,
+      typebot: {
+        id: typebot.id,
+        theme: typebot.theme,
+        settings: typebot.settings,
+      },
+      messages,
+      input,
+      resultId,
+      dynamicTheme,
+      logs: logs?.filter(filterPotentiallySensitiveLogs),
+      clientSideActions,
+      corsOrigin,
+      progress: newSessionState.progressMetadata
+        ? isEnded
+          ? 100
+          : computeCurrentProgress({
+              typebotsQueue: newSessionState.typebotsQueue,
+              progressMetadata: newSessionState.progressMetadata,
+              currentInputBlockId: input?.id,
+            })
+        : undefined,
+    }
   } catch (error) {
     logger.error('Error in startChat', {
       publicId,
@@ -167,6 +176,7 @@ export const startChat = async ({
       stack: error instanceof Error ? error.stack : undefined,
       origin,
       isOnlyRegistering,
+      correlationId,
     })
     throw error
   }

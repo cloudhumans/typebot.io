@@ -5,6 +5,7 @@ import { Context } from './context'
 import * as Sentry from '@sentry/nextjs'
 import { ZodError } from 'zod'
 import { createDatadogLoggerMiddleware } from '@typebot.io/lib/trpc/createDatadogLoggerMiddleware'
+import { createCorrelationMiddleware } from '@typebot.io/lib/trpc/createCorrelationMiddleware'
 import { User } from '@typebot.io/prisma'
 
 const t = initTRPC
@@ -30,10 +31,15 @@ const sentryMiddleware = t.middleware(
   })
 )
 
+type BaseCtx = Context & { correlationId?: string }
 const injectUser = t.middleware(({ next, ctx }) => {
+  const base = ctx as BaseCtx
   return next({
     ctx: {
-      user: ctx.user,
+      user: base.user,
+      correlationId: base.correlationId,
+      origin: base.origin,
+      res: base.res,
     },
   })
 })
@@ -47,13 +53,16 @@ const isAuthed = t.middleware(({ next, ctx }) => {
   })
 })
 
+const correlationMiddleware = createCorrelationMiddleware(t)
 const datadogLoggerMiddleware = createDatadogLoggerMiddleware(t, {
   service: 'typebot-viewer',
 })
-const finalMiddleware = datadogLoggerMiddleware
+const finalMiddleware = correlationMiddleware
+  .unstable_pipe(datadogLoggerMiddleware)
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(injectUser)
-const authenticatedMiddleware = datadogLoggerMiddleware
+const authenticatedMiddleware = correlationMiddleware
+  .unstable_pipe(datadogLoggerMiddleware)
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(isAuthed)
 
