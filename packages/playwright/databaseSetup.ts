@@ -6,8 +6,6 @@ import {
 } from '@typebot.io/prisma'
 import { encrypt } from '@typebot.io/lib/api/encryption/encrypt'
 
-const prisma = new PrismaClient()
-
 export const apiToken = 'jirowjgrwGREHE'
 
 export const userId = 'userId'
