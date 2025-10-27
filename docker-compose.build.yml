@@ -20,6 +20,8 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     env_file: .env
+    environment:
+      - SCOPE=builder
   typebot-viewer:
     build:
       context: .
@@ -29,6 +31,7 @@ services:
       - '3003:3000'
     env_file: .env
     environment:
+      - SCOPE=viewer
       - DD_LOGS_ENABLED=true
       - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
       - DD_ENV=production
