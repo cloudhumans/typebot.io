@@ -65,7 +65,7 @@ COPY --from=builder /app/node_modules/.pnpm/prisma@5.12.1/node_modules/prisma ./
 COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 RUN ./node_modules/.bin/prisma generate --schema=packages/prisma/postgresql/schema.prisma;
 
-ENTRYPOINT ["pm2-runtime", "start", "ecosystem.config.js", "--only", "${SCOPE}"]
+ENTRYPOINT ["pm2-runtime", "start", "ecosystem.config.js", "--only", "$SCOPE"]
 
 EXPOSE 3000
 ENV PORT 3000
