@@ -1,7 +1,7 @@
 import {
   GraphNavigation,
   Plan,
-  PrismaClient,
+  prisma,
   WorkspaceRole,
 } from '@typebot.io/prisma'
 import { encrypt } from '@typebot.io/lib/api/encryption/encrypt'
