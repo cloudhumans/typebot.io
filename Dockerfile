@@ -6,7 +6,7 @@ RUN apt-get -qy update \
     && apt-get -qy --no-install-recommends install \
     openssl \
     python3 \
-    python3-distutils \ 
+    python3-distutils \
     python3-venv \
     build-essential \
     && apt-get autoremove -yq \
@@ -44,7 +44,7 @@ RUN npm --global install pm2
 COPY --from=builder --chown=node:node /app/ecosystem.config.js ./
 COPY --from=builder --chown=node:node /app/apps/${SCOPE}/.next/standalone ./
 COPY --from=builder --chown=node:node /app/apps/${SCOPE}/.next/static ./apps/${SCOPE}/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/${SCOPE}/public ./apps/${SCOPE}/public
+COPY --from=builder --chown=node:node /app/apps/${SCOPE}/public ./apps/${SCOPE}/public
 
 ## Copy next-runtime-env and its dependencies for runtime public variable injection
 COPY --from=builder /app/node_modules/.pnpm/chalk@4.1.2/node_modules/chalk ./node_modules/chalk
@@ -65,7 +65,10 @@ COPY --from=builder /app/node_modules/.pnpm/prisma@5.12.1/node_modules/prisma ./
 COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 RUN ./node_modules/.bin/prisma generate --schema=packages/prisma/postgresql/schema.prisma;
 
-ENTRYPOINT ["pm2-runtime", "start", "ecosystem.config.js", "--only", "$SCOPE"]
+# Copy only the specific entrypoint like original format
+COPY scripts/${SCOPE}-entrypoint.sh ./
+RUN chmod +x ./${SCOPE}-entrypoint.sh
+ENTRYPOINT ./${SCOPE}-entrypoint.sh
 
 EXPOSE 3000
 ENV PORT 3000
