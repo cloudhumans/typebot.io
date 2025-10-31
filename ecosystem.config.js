@@ -9,6 +9,7 @@ module.exports = {
       instances: 'max',
       exec_mode: 'cluster',
       env: { PORT: 3000 },
+      time: false,
     },
   ],
 }

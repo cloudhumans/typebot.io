@@ -9,7 +9,7 @@ services:
     environment:
       - POSTGRES_DB=typebot
       - POSTGRES_PASSWORD=typebot
-    command: ["postgres","-p","5433"]
+    command: ["postgres","-p","5433", "-c", "log_line_prefix="]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d typebot -p 5433"]
       interval: 5s
