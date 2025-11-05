@@ -7,6 +7,23 @@ import { Variable } from './types'
 import ivm from 'isolated-vm'
 import { parseTransferrableValue } from './codeRunners'
 import jwt from 'jsonwebtoken'
+// Datadog tracing context capture (best effort; isolate breaks async context)
+// Using optional chaining & defensive checks to avoid runtime errors when tracer missing
+let ddTraceId: string | null = null
+let ddSpanId: string | null = null
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const tracer = require('dd-trace').tracer
+  const scope = tracer?.scope?.()
+  const span = scope?.active?.()
+  const ctx = span?.context?.()
+  if (ctx) {
+    if (typeof ctx.toTraceId === 'function') ddTraceId = ctx.toTraceId()
+    if (typeof ctx.toSpanId === 'function') ddSpanId = ctx.toSpanId()
+  }
+} catch {
+  // ignore
+}
 
 const defaultTimeout = 10 * 1000
 
@@ -86,7 +103,14 @@ export const executeFunction = async ({
 
   try {
     const output = await run(parsedBody)
-    console.log('Output', output)
+    // Structured log with Datadog correlation fields retained even after isolate context loss
+    console.log(
+      JSON.stringify({
+        event: 'sandbox_output',
+        dd: { trace_id: ddTraceId, span_id: ddSpanId },
+        output,
+      })
+    )
     return {
       output: safeStringify(output) ?? '',
       newVariables: Object.entries(updatedVariables)
@@ -102,7 +126,13 @@ export const executeFunction = async ({
         .filter(isDefined),
     }
   } catch (e) {
-    console.log('Error while executing script')
+    console.log(
+      JSON.stringify({
+        event: 'sandbox_error',
+        dd: { trace_id: ddTraceId, span_id: ddSpanId },
+        error: e instanceof Error ? e.message : String(e),
+      })
+    )
     console.error(e)
 
     const error =
