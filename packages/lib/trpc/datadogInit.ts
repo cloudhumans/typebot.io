@@ -1,5 +1,5 @@
 // Node-only dynamic access to tracer to avoid bundling dd-trace into client code.
-import { getTracer } from './datadogUtils'
+import { initDatadog, isDatadogReady } from './datadogCore'
 
 export interface DatadogInitOptions {
   service?: string
@@ -27,23 +27,15 @@ export function ensureDatadogInitialized(
   if (typeof window !== 'undefined') return false
   if (process.env.NEXT_RUNTIME === 'edge') return false
   if (opts.enabled === false) return false
-  const tracer = getTracer()
-  if (!tracer) return false
-  try {
-    if (!(tracer as any)._initialized) {
-      tracer.init?.({
-        service: opts.service || process.env.DD_SERVICE || 'typebot-app',
-        env: opts.env || process.env.DD_ENV || process.env.NODE_ENV,
-        version: opts.version || process.env.DD_VERSION,
-        logInjection: opts.logInjection ?? true,
-      })
-      didInit = true
-      return true
-    }
-  } catch {
-    // swallow
-  }
-  return false
+  const newly = initDatadog({
+    service: opts.service,
+    env: opts.env,
+    version: opts.version,
+    logInjection: opts.logInjection,
+    enabled: opts.enabled,
+  })
+  didInit = didInit || isDatadogReady()
+  return newly
 }
 
 export function isDatadogInitialized(): boolean {

@@ -7,28 +7,19 @@ import { Variable } from './types'
 import ivm from 'isolated-vm'
 import { parseTransferrableValue } from './codeRunners'
 import jwt from 'jsonwebtoken'
-// Datadog tracing context capture (best effort; isolate breaks async context)
-// Prevent client bundle from including 'dd-trace' (Node-only) by using indirect require.
-// Avoids "Module not found: Can't resolve 'fs'" errors in Next.js client builds.
-let ddTraceId: string | null = null
-let ddSpanId: string | null = null
-const isNodeRuntime =
-  typeof window === 'undefined' && typeof process !== 'undefined'
-if (isNodeRuntime) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval,@typescript-eslint/no-var-requires
-    const tracer = (Function('return require')()('dd-trace') as any)?.tracer
-    const scope = tracer?.scope?.()
-    const span = scope?.active?.()
-    const ctx = span?.context?.()
-    if (ctx) {
-      if (typeof ctx.toTraceId === 'function') ddTraceId = ctx.toTraceId()
-      if (typeof ctx.toSpanId === 'function') ddSpanId = ctx.toSpanId()
-    }
-  } catch {
-    // silent: dd-trace optional
-  }
-}
+// Datadog tracing context capture (improved): capture active span at invocation time
+// rather than at module load (previous approach yielded null IDs because no span existed yet).
+import {
+  getTracer,
+  getCorrelation,
+  withSpan,
+} from '@typebot.io/lib/trpc/datadogCore'
+// Legacy helper functions kept for backward compatibility in other modules
+import {
+  getActiveSpan,
+  tagSpan,
+  extractTraceIds,
+} from '@typebot.io/lib/trpc/datadogUtils'
 
 const defaultTimeout = 10 * 1000
 
@@ -43,6 +34,34 @@ export const executeFunction = async ({
   body,
   args: initialArgs,
 }: Props) => {
+  // Capture active span at invocation time (module load may have occurred before any request span existed)
+  const tracer = getTracer() as any
+  const parentSpan = getActiveSpan() as any
+  // Use core correlation with synthetic fallback so logs never show null IDs
+  const { traceId: initialTraceId, spanId: initialSpanId } = getCorrelation({
+    syntheticFallback: true,
+  })
+  // We'll optionally create a span; if none, reuse synthetic IDs
+  let sandboxSpan: any = null
+  let ddTraceId = initialTraceId
+  let ddSpanId = initialSpanId
+  if (tracer && typeof tracer.startSpan === 'function') {
+    try {
+      sandboxSpan = tracer.startSpan('variables.executeFunction', {
+        childOf: parentSpan || undefined,
+      })
+      tagSpan(sandboxSpan, {
+        'variables.count': variables.length,
+        'code.length': body.length,
+      })
+      // Replace synthetic IDs with real ones if available
+      const ctxIds = extractTraceIds(sandboxSpan)
+      ddTraceId = ctxIds.traceId || ddTraceId
+      ddSpanId = ctxIds.spanId || ddSpanId
+    } catch {
+      sandboxSpan = null
+    }
+  }
   const parsedBody = parseVariables(variables, {
     fieldToParse: 'id',
   })(body)
@@ -116,6 +135,11 @@ export const executeFunction = async ({
         output,
       })
     )
+    if (sandboxSpan) {
+      try {
+        tagSpan(sandboxSpan, { 'sandbox.status': 'ok' })
+      } catch {}
+    }
     return {
       output: safeStringify(output) ?? '',
       newVariables: Object.entries(updatedVariables)
@@ -139,6 +163,14 @@ export const executeFunction = async ({
       })
     )
     console.error(e)
+    if (sandboxSpan) {
+      try {
+        tagSpan(sandboxSpan, {
+          error: 1,
+          'error.msg': e instanceof Error ? e.message : String(e),
+        })
+      } catch {}
+    }
 
     const error =
       typeof e === 'string'
@@ -151,5 +183,9 @@ export const executeFunction = async ({
       error,
       output: error,
     }
+  } finally {
+    try {
+      sandboxSpan?.finish?.()
+    } catch {}
   }
 }

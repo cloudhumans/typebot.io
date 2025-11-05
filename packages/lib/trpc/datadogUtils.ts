@@ -1,56 +1,22 @@
-// Shared Datadog tracer helpers (Node runtime only). Safe no-ops if tracer unavailable.
-// Avoid importing 'dd-trace' directly in files that can be bundled for the browser.
+// Legacy compatibility layer re-exporting from datadogCore.
+// Prefer importing from datadogCore directly for new code.
+export {
+  getTracer,
+  withSpan,
+  getCorrelation as extractCorrelation,
+  isDatadogReady,
+} from './datadogCore'
 
-export interface SafeSpanContextLike {
-  toTraceId?: () => string | null
-  toSpanId?: () => string | null
-}
-export interface SafeSpanLike {
-  setTag?: (k: string, v: unknown) => void
-  context?: () => SafeSpanContextLike | undefined
-}
-export interface SafeScopeLike {
-  active?: () => SafeSpanLike | undefined
-}
-export interface SafeTracerLike {
-  scope?: () => SafeScopeLike | undefined
-  init?: (cfg: Record<string, any>) => void
-  _initialized?: boolean
-}
+// Keep old function names for existing imports.
+import { getCorrelation, getTracer, withSpan } from './datadogCore'
 
-// Node runtime detection
-const isNode = typeof window === 'undefined' && typeof process !== 'undefined'
-let cachedTracer: SafeTracerLike | null = null
-
-export function getTracer(): SafeTracerLike | null {
-  if (!isNode) return null
-  if (cachedTracer) return cachedTracer
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const mod = Function('return require')()('dd-trace') as any as
-      | SafeTracerLike
-      | undefined
-    cachedTracer = mod || null
-  } catch {
-    cachedTracer = null
-  }
-  return cachedTracer
-}
-
-export function getActiveSpan(): SafeSpanLike | null {
+export function getActiveSpan() {
   const tracer = getTracer()
-  const scopeFn = tracer?.scope
-  if (typeof scopeFn !== 'function') return null
-  try {
-    const scope = scopeFn.call(tracer) as SafeScopeLike | undefined
-    if (!scope || typeof scope.active !== 'function') return null
-    return scope.active() || null
-  } catch {
-    return null
-  }
+  const scope = tracer?.scope?.()
+  return scope?.active?.() || null
 }
 
-export function extractTraceIds(span: SafeSpanLike | null): {
+export function extractTraceIds(span: any): {
   traceId: string | null
   spanId: string | null
 } {
@@ -58,24 +24,20 @@ export function extractTraceIds(span: SafeSpanLike | null): {
     return { traceId: null, spanId: null }
   try {
     const ctx = span.context()
-    const traceId = ctx?.toTraceId?.() ?? null
-    const spanId = ctx?.toSpanId?.() ?? null
-    return { traceId, spanId }
+    return {
+      traceId: ctx?.toTraceId?.() ?? null,
+      spanId: ctx?.toSpanId?.() ?? null,
+    }
   } catch {
     return { traceId: null, spanId: null }
   }
 }
 
-export function tagSpan(
-  span: SafeSpanLike | null,
-  tags: Record<string, unknown>
-): void {
+export function tagSpan(span: any, tags: Record<string, unknown>) {
   if (!span || typeof span.setTag !== 'function') return
   for (const [k, v] of Object.entries(tags)) {
     try {
       span.setTag(k, v)
-    } catch {
-      // ignore tagging errors
-    }
+    } catch {}
   }
 }

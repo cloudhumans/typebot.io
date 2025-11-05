@@ -2,6 +2,14 @@ import axios from 'axios'
 import { promises as fs } from 'fs'
 import path from 'path'
 
+// Simple local trace/span id generation (no external tracing lib)
+// Uses timestamp + random for uniqueness; not collision-safe at huge scale but fine for local tests.
+function genId(): string {
+  return (
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+  ).padEnd(20, '0')
+}
+
 type Options = {
   url: string
   token: string | null
@@ -27,8 +35,8 @@ function parseArgs(): Options {
 
   const url =
     map.url ||
-    'http://localhost:3003/api/v1/typebots/cmgqokotu00151eo3igddmqdg/preview/startChat'
-  const token = map.token || map.auth || 'X1rUXTci8DbArxMTtMtOi1Py'
+    'http://localhost:3003/api/v1/typebots/cmhleae9i000hutxoy6wobvzq/preview/startChat'
+  const token = map.token || map.auth || 'Zpet78ukoqz99k35bpn4IG2t'
   const concurrency = parseInt(map.concurrency || map.c || '10', 10)
   const total = parseInt(map.total || map.t || '50', 10)
   const timeoutMs = parseInt(map.timeout || '60000', 10)
@@ -45,56 +53,95 @@ async function sendOne(
   timeoutMs: number,
   message: string
 ) {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  // Generate a trace id for this logical conversation and span ids per phase
+  const traceId = genId()
+  const spanStartId = genId()
+  const spanContinueId = genId()
 
-  const start = Date.now()
+  // Headers for first request (startChat)
+  const headersStart: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-trace-id': traceId,
+    'x-span-id': spanStartId,
+  }
+  if (token) headersStart['Authorization'] = `Bearer ${token}`
+
+  const t0 = Date.now()
   try {
-    // 1) startChat -> creates a sessionId
-    const startResp = await axios.post(url, {}, { headers, timeout: timeoutMs })
+    const startResp = await axios.post(
+      url,
+      {},
+      {
+        headers: headersStart,
+        timeout: timeoutMs,
+      }
+    )
     const sessionId: string | undefined = startResp?.data?.sessionId
-
     if (!sessionId) {
-      const time = Date.now() - start
+      const time = Date.now() - t0
       return {
         ok: false,
         phase: 'startChat',
         status: startResp?.status || 0,
         time,
         message: 'no sessionId in startChat response',
+        traceId,
+        spanStartId,
+        spanContinueId,
       }
     }
 
-    // build continue URL using origin
+    // Build continue URL
     let continueUrl: string
     try {
       const u = new URL(url)
       continueUrl = `${u.origin}/api/v1/sessions/${sessionId}/continueChat`
-    } catch (e) {
-      // fallback: replace known path
+    } catch {
       continueUrl = `/api/v1/sessions/${sessionId}/continueChat`
     }
 
-    // 2) continueChat with a message
+    // Headers for second request (continueChat)
+    const headersContinue: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-trace-id': traceId,
+      'x-span-id': spanContinueId,
+      'x-parent-span-id': spanStartId,
+    }
+    if (token) headersContinue['Authorization'] = `Bearer ${token}`
+
     const contResp = await axios.post(
       continueUrl,
       { message },
-      { headers, timeout: timeoutMs }
+      {
+        headers: headersContinue,
+        timeout: timeoutMs,
+      }
     )
 
-    const time = Date.now() - start
+    const time = Date.now() - t0
     return {
       ok: true,
       sessionId,
       statusStart: startResp.status,
       statusContinue: contResp.status,
       time,
+      traceId,
+      spanStartId,
+      spanContinueId,
     }
   } catch (err: any) {
-    const time = Date.now() - start
+    const time = Date.now() - t0
     const status = err?.response?.status || 0
     const messageErr = err?.message || String(err)
-    return { ok: false, status, time, message: messageErr }
+    return {
+      ok: false,
+      status,
+      time,
+      message: messageErr,
+      traceId,
+      spanStartId,
+      spanContinueId,
+    }
   }
 }
 
@@ -134,6 +181,9 @@ async function run() {
             status: r.status || null,
             time: r.time,
             message: r.message || '',
+            traceId: r.traceId || '',
+            spanStartId: r.spanStartId || '',
+            spanContinueId: r.spanContinueId || '',
           })
           completed++
           inFlight--
@@ -188,6 +238,9 @@ async function run() {
                   'status',
                   'time',
                   'message',
+                  'traceId',
+                  'spanStartId',
+                  'spanContinueId',
                 ]
 
                 const escape = (s: any) => {

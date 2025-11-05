@@ -1,0 +1,130 @@
+{
+  "version": "6",
+  "id": "cmhleae9i000hutxoy6wobvzq",
+  "name": "call to llm",
+  "events": [
+    {
+      "id": "ml00d81xe8eh1x66gqgtv1s8",
+      "outgoingEdgeId": "nk25itjvuichlf7t21l8pec2",
+      "graphCoordinates": {
+        "x": 0,
+        "y": 0
+      },
+      "type": "start"
+    }
+  ],
+  "groups": [
+    {
+      "id": "lwd68nzkaojuba5k05keal55",
+      "title": "Group #1",
+      "graphCoordinates": {
+        "x": 63,
+        "y": 158
+      },
+      "blocks": [
+        {
+          "id": "w0fzzwjt9pw0363mml91b2i5",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "olá, como posso ajudar você?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "o5u3xxyu2y2ghghwnrrpeon0",
+          "type": "text input",
+          "options": {
+            "variableId": "vpx6ilnn6kwioo9rpvj9oeoc8"
+          }
+        },
+        {
+          "id": "m4zm7cracrts5sz46q7zrsl5",
+          "type": "openai",
+          "options": {
+            "credentialsId": "cmgqpfveb004hly1dkuk4ijak",
+            "action": "Create chat completion",
+            "model": "gpt-4",
+            "messages": [
+              {
+                "role": "user",
+                "content": "{{answer}}"
+              }
+            ],
+            "responseMapping": [
+              {
+                "variableId": "vyujtk5pqkkcupbwnqeg9n12l"
+              }
+            ]
+          }
+        },
+        {
+          "id": "q15rtveqn4s582ygvxyc6kct",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "{{response}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "nk25itjvuichlf7t21l8pec2",
+      "from": {
+        "eventId": "ml00d81xe8eh1x66gqgtv1s8"
+      },
+      "to": {
+        "groupId": "lwd68nzkaojuba5k05keal55"
+      }
+    }
+  ],
+  "variables": [
+    {
+      "id": "vyujtk5pqkkcupbwnqeg9n12l",
+      "name": "response",
+      "isSessionVariable": true
+    },
+    {
+      "id": "vpx6ilnn6kwioo9rpvj9oeoc8",
+      "name": "answer",
+      "isSessionVariable": true
+    }
+  ],
+  "theme": {},
+  "selectedThemeTemplateId": null,
+  "settings": {
+    "general": {
+      "isBrandingEnabled": true
+    }
+  },
+  "createdAt": "2025-11-05T02:44:59.190Z",
+  "updatedAt": "2025-11-05T03:15:05.403Z",
+  "icon": null,
+  "folderId": null,
+  "publicId": null,
+  "customDomain": null,
+  "workspaceId": "cmfy3l6fn0001112vyszd1u9a",
+  "resultsTablePreferences": null,
+  "isArchived": false,
+  "isClosed": false,
+  "isSecondaryFlow": false,
+  "whatsAppCredentialsId": null,
+  "riskLevel": null
+}
