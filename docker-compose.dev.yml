@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: 'typebot'
       POSTGRES_PASSWORD: 'typebot'
-    # Healthcheck para garantir que o Postgres esteja aceitando conexões antes de iniciar outros processos
+  # Healthcheck to ensure Postgres accepts connections before other processes start
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d typebot || exit 1"]
       interval: 5s

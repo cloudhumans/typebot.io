@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
-  Aguarda o Postgres aceitar conexões antes de prosseguir.
-  Uso: node scripts/wait-for-postgres.mjs
-  Variáveis de ambiente suportadas:
+  Waits until Postgres accepts connections before proceeding.
+  Usage: node scripts/wait-for-postgres.mjs
+  Supported env vars:
     DATABASE_URL (default: postgres://postgres:typebot@localhost:5433/typebot)
     WAIT_FOR_DB_ATTEMPTS (default: 30)
     WAIT_FOR_DB_DELAY (ms) (default: 2000)
@@ -29,11 +29,11 @@ async function attempt(n) {
     await client.connect()
     await client.query('SELECT 1')
     await client.end()
-    console.log(`Postgres pronto (tentativa ${n}).`)
+    console.log(`Postgres ready (attempt ${n}).`)
     return true
   } catch (err) {
     console.log(
-      `Postgres ainda não respondeu (tentativa ${n}/${maxAttempts}): ${
+      `Postgres not ready yet (attempt ${n}/${maxAttempts}): ${
         (err && err.message) || err
       }`
     )
@@ -53,7 +53,7 @@ async function attempt(n) {
     await sleep(delayMs)
   }
   console.error(
-    `Falha: Postgres não ficou pronto após ${maxAttempts} tentativas (~${Math.round(
+    `Failure: Postgres not ready after ${maxAttempts} attempts (~${Math.round(
       (maxAttempts * delayMs) / 1000
     )}s).`
   )

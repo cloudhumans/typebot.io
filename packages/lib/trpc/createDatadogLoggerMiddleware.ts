@@ -1,5 +1,5 @@
-import tracer from 'dd-trace'
 import { ensureDatadogInitialized } from './datadogInit'
+import { getActiveSpan, extractTraceIds, tagSpan } from './datadogUtils'
 
 interface RequestLike {
   baseUrl?: unknown
@@ -32,96 +32,78 @@ const extractRoute = (
   return { baseUrl: b, path: p }
 }
 
-export const createDatadogLoggerMiddleware = (
+/**
+ * Configuração do middleware Datadog.
+ * - service: overrides DD_SERVICE.
+ * - autoInit: controls automatic initialization (default true).
+ * - routeTagging: disable route tagging if false.
+ * - userTagging: disable user tagging if false.
+ * - enrichTags: optional function to append extra tags (e.g. tenantId, featureFlag).
+ * - debug: forces debug logging ignoring DEBUG_DATADOG.
+ */
+export interface DatadogMiddlewareOptions<TCtx = any> {
+  service?: string
+  autoInit?: boolean
+  routeTagging?: boolean
+  userTagging?: boolean
+  enrichTags?: (ctx: TCtx) => Record<string, unknown> | void
+  debug?: boolean
+}
+
+/** Datadog tracing propagation + tagging middleware. Node-only, safe no-op on client. */
+export const createDatadogLoggerMiddleware = <TCtx = any>(
   t: TRPCMiddlewareFactoryLike,
-  options?: { service?: string; autoInit?: boolean }
+  options: DatadogMiddlewareOptions<TCtx> = {}
 ) =>
   t.middleware(
-    async ({ ctx, next, path }: { ctx: any; next: NextFn; path?: string }) => {
-      const debug = process.env.DEBUG_DATADOG === 'true'
-      if (options?.autoInit !== false) {
-        const didInit = ensureDatadogInitialized({ service: options?.service })
+    async ({ ctx, next, path }: { ctx: TCtx; next: NextFn; path?: string }) => {
+      const debug = options.debug ?? process.env.DEBUG_DATADOG === 'true'
+      if (options.autoInit !== false) {
+        const didInit = ensureDatadogInitialized({ service: options.service })
         if (debug && didInit)
-          console.log('[datadog] tracer lazy-initialized (middleware)')
+          console.log('[datadog] tracer initialized (middleware)')
       }
 
-      // Public API usage only: attempt to get active span defensively
-      let span: any = undefined
-      const scopeFn = (tracer as any)?.scope
-      if (typeof scopeFn === 'function') {
-        try {
-          const scope = scopeFn.call(tracer)
-          if (scope && typeof scope.active === 'function') {
-            span = scope.active()
-          } else if (debug) {
-            console.log('[datadog] scope.active not available')
-          }
-        } catch {
-          if (debug) console.log('[datadog] failed to access active span')
-        }
-      } else if (debug) {
-        console.log('[datadog] tracer.scope not available')
-      }
+      const span = getActiveSpan()
+      if (debug) console.log('[datadog] active span:', !!span)
+      const { traceId, spanId } = extractTraceIds(span)
 
-      if (debug) console.log('[datadog] active span at entry:', !!span)
-      let traceId: string | null = null
-      let spanId: string | null = null
-      const ddContext = span?.context?.()
-      if (ddContext) {
+      // Tagging logic
+      if (span) {
         try {
-          if (typeof ddContext.toTraceId === 'function')
-            traceId = ddContext.toTraceId()
-          if (typeof ddContext.toSpanId === 'function')
-            spanId = ddContext.toSpanId()
-        } catch {
-          // silent; keep nulls
-        }
-      }
-
-      if (span && typeof span.setTag === 'function') {
-        try {
-          const reqObj = (ctx as { req?: unknown }).req
-          const route = extractRoute(reqObj)
-          let tagged = false
-          if (route && debug) console.log('[datadog] extracted route', route)
-          if (route && route.baseUrl && route.path) {
-            const fullRoute = `${route.baseUrl}${route.path}`
-            span.setTag('http.route', fullRoute)
-            span.setTag('resource.name', `trpc ${fullRoute}`)
-            tagged = true
-            if (debug) console.log('[datadog] tagged via req route', fullRoute)
-          }
-          if (!tagged && path) {
-            const pseudo = `/api/trpc/${path}`
-            span.setTag('http.route', pseudo)
-            span.setTag('resource.name', `trpc ${path}`)
-            span.setTag('trpc.path', path)
-            if (debug) console.log('[datadog] tagged via path fallback', path)
-          }
-          const maybeUser = ctx?.user
-          if (maybeUser && typeof maybeUser === 'object') {
-            try {
-              if ('email' in maybeUser)
-                span.setTag('user.email', (maybeUser as any).email)
-              if ('id' in maybeUser)
-                span.setTag('user.id', (maybeUser as any).id)
-              if (debug)
-                console.log(
-                  '[datadog] tagged user info',
-                  (maybeUser as any).email,
-                  (maybeUser as any).id
-                )
-            } catch {
-              // swallow user tagging errors
+          const tags: Record<string, unknown> = {}
+          if (options.routeTagging !== false) {
+            const reqObj = (ctx as any)?.req
+            const route = extractRoute(reqObj)
+            if (route?.baseUrl && route?.path) {
+              const fullRoute = `${route.baseUrl}${route.path}`
+              tags['http.route'] = fullRoute
+              tags['resource.name'] = `trpc ${fullRoute}`
+            } else if (path) {
+              tags['http.route'] = `/api/trpc/${path}`
+              tags['resource.name'] = `trpc ${path}`
+              tags['trpc.path'] = path
             }
           }
-        } catch {
-          if (debug) console.error('[datadog] tagging failed')
+          if (options.userTagging !== false) {
+            const maybeUser = (ctx as any)?.user
+            if (maybeUser && typeof maybeUser === 'object') {
+              if ('email' in maybeUser)
+                tags['user.email'] = (maybeUser as any).email
+              if ('id' in maybeUser) tags['user.id'] = (maybeUser as any).id
+            }
+          }
+          const extra = options.enrichTags?.(ctx)
+          if (extra && typeof extra === 'object') Object.assign(tags, extra)
+          tagSpan(span, tags)
+          if (debug) console.log('[datadog] tagged span', tags)
+        } catch (e) {
+          if (debug) console.error('[datadog] tagging error', e)
         }
       }
 
       const result = await next({
-        ctx: { ...(ctx as object), datadog: { traceId, spanId } },
+        ctx: { ...(ctx as any), datadog: { traceId, spanId } },
       })
       if (debug) console.log('[datadog] propagated ids', { traceId, spanId })
       return result

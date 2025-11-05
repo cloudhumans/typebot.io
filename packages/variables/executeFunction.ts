@@ -8,21 +8,26 @@ import ivm from 'isolated-vm'
 import { parseTransferrableValue } from './codeRunners'
 import jwt from 'jsonwebtoken'
 // Datadog tracing context capture (best effort; isolate breaks async context)
-// Using optional chaining & defensive checks to avoid runtime errors when tracer missing
+// Prevent client bundle from including 'dd-trace' (Node-only) by using indirect require.
+// Avoids "Module not found: Can't resolve 'fs'" errors in Next.js client builds.
 let ddTraceId: string | null = null
 let ddSpanId: string | null = null
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const tracer = require('dd-trace').tracer
-  const scope = tracer?.scope?.()
-  const span = scope?.active?.()
-  const ctx = span?.context?.()
-  if (ctx) {
-    if (typeof ctx.toTraceId === 'function') ddTraceId = ctx.toTraceId()
-    if (typeof ctx.toSpanId === 'function') ddSpanId = ctx.toSpanId()
+const isNodeRuntime =
+  typeof window === 'undefined' && typeof process !== 'undefined'
+if (isNodeRuntime) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval,@typescript-eslint/no-var-requires
+    const tracer = (Function('return require')()('dd-trace') as any)?.tracer
+    const scope = tracer?.scope?.()
+    const span = scope?.active?.()
+    const ctx = span?.context?.()
+    if (ctx) {
+      if (typeof ctx.toTraceId === 'function') ddTraceId = ctx.toTraceId()
+      if (typeof ctx.toSpanId === 'function') ddSpanId = ctx.toSpanId()
+    }
+  } catch {
+    // silent: dd-trace optional
   }
-} catch {
-  // ignore
 }
 
 const defaultTimeout = 10 * 1000
