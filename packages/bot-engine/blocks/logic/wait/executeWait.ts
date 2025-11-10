@@ -25,9 +25,7 @@ export const executeWait = async (
   }
 
   if (parsedSecondsToWaitFor > 0) {
-    console.log(`⏳ aguardando ${parsedSecondsToWaitFor}s no servidor...`)
     await sleep(parsedSecondsToWaitFor)
-    console.log('✅ continuação do fluxo após espera')
   }
 
   return {
