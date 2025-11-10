@@ -24,8 +24,10 @@ export const executeWait = async (
     return { outgoingEdgeId: block.outgoingEdgeId }
   }
 
-  if (parsedSecondsToWaitFor > 0) {
-    await sleep(parsedSecondsToWaitFor)
+  const secondsToWait = Math.min(parsedSecondsToWaitFor, 30)
+
+  if (secondsToWait > 0) {
+    await sleep(secondsToWait)
   }
 
   return {

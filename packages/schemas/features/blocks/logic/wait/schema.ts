@@ -3,7 +3,14 @@ import { blockBaseSchema } from '../../shared'
 import { LogicBlockType } from '../constants'
 
 export const waitOptionsSchema = z.object({
-  secondsToWaitFor: z.string().optional(),
+  secondsToWaitFor: z
+    .string()
+    .transform((val) => {
+      const parsed = parseFloat(val)
+      if (isNaN(parsed)) return undefined
+      return Math.min(parsed, 30).toString()
+    })
+    .optional(),
   shouldPause: z.boolean().optional(),
 })
 
