@@ -3,6 +3,15 @@ import React from 'react'
 import { TextInput } from '@/components/inputs'
 import { WaitBlock } from '@typebot.io/schemas'
 
+// Derive max wait seconds from env (client-side variable must be NEXT_PUBLIC_*)
+const rawMax =
+  process.env.NEXT_PUBLIC_WAIT_BLOCK_MAX_SECONDS ||
+  process.env.WAIT_BLOCK_MAX_SECONDS ||
+  '30'
+const parsedMax = parseInt(rawMax, 10)
+const MAX_WAIT_SECONDS =
+  Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : 30
+
 type Props = {
   options: WaitBlock['options']
   onOptionsChange: (options: WaitBlock['options']) => void
@@ -21,12 +30,12 @@ export const WaitSettings = ({ options, onOptionsChange }: Props) => {
 
     if (isNaN(parsed)) return
 
-    const clamped = Math.min(parsed, 30)
+    const clamped = Math.min(parsed, MAX_WAIT_SECONDS)
 
-    if (parsed > 30) {
+    if (parsed > MAX_WAIT_SECONDS) {
       toast({
         title: 'Maximum limit reached',
-        description: 'The maximum waiting time allowed is 30 seconds.',
+        description: `The maximum waiting time allowed is ${MAX_WAIT_SECONDS} seconds.`,
         status: 'warning',
         duration: 3000,
         isClosable: true,
@@ -38,7 +47,7 @@ export const WaitSettings = ({ options, onOptionsChange }: Props) => {
   return (
     <Stack spacing={4}>
       <TextInput
-        label="Seconds to wait for (max 30s):"
+        label={`Seconds to wait for (max ${MAX_WAIT_SECONDS}s):`}
         defaultValue={options?.secondsToWaitFor}
         onChange={handleSecondsChange}
       />

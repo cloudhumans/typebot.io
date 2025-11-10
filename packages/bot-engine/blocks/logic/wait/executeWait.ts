@@ -24,7 +24,15 @@ export const executeWait = async (
     return { outgoingEdgeId: block.outgoingEdgeId }
   }
 
-  const secondsToWait = Math.min(parsedSecondsToWaitFor, 30)
+  // Max seconds configurable via env var WAIT_BLOCK_MAX_SECONDS (default 30)
+  const rawMax =
+    process.env.WAIT_BLOCK_MAX_SECONDS ||
+    process.env.NEXT_PUBLIC_WAIT_BLOCK_MAX_SECONDS ||
+    '30'
+  const parsedMax = parseInt(rawMax, 10)
+  const maxSeconds =
+    Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : 30
+  const secondsToWait = Math.min(parsedSecondsToWaitFor, maxSeconds)
 
   if (secondsToWait > 0) {
     await sleep(secondsToWait)
