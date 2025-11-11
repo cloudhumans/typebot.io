@@ -117,7 +117,7 @@ lifecycle:
     exec:
       command:
         [
-          '\n          /bin/sh',
+          '/bin/sh',
           '-c',
           'curl -fs -X POST http://localhost:3000/drain || true',
         ]
