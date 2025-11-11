@@ -57,9 +57,6 @@ export function initGraceful(opts?: GracefulOptions) {
 export function triggerDrain(): void {
   if (state.draining) return
   state.draining = true
-  ;(
-    global as unknown as { __TYPEBOT_DRAINING__?: boolean }
-  ).__TYPEBOT_DRAINING__ = true
   state.drainStartedAt = Date.now()
   if (!state.forcedExitTimer) {
     state.forcedExitTimer = setTimeout(() => {
