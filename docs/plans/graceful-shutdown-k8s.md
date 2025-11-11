@@ -141,7 +141,7 @@ Funções:
 
 Env Vars:
 
-- `GRACEFUL_TIMEOUT_MS` (default 180000).
+- `GRACEFUL_TIMEOUT_MS` (default 170000).
 - `GRACEFUL_FORCED_EXIT_BUFFER_MS` (default 5000).
 
 Export consolidado via `packages/lib/index.ts`.

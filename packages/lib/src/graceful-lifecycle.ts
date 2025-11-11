@@ -25,7 +25,7 @@ interface GracefulState {
   activeRequests: number
 }
 
-const defaultTotal = parseInt(process.env.GRACEFUL_TIMEOUT_MS || '180000', 10)
+const defaultTotal = parseInt(process.env.GRACEFUL_TIMEOUT_MS || '170000', 10)
 const defaultBuffer = parseInt(
   process.env.GRACEFUL_FORCED_EXIT_BUFFER_MS || '5000',
   10
@@ -73,9 +73,7 @@ export function triggerDrain(): void {
     }, state.forcedExitMs)
     // Permite que o processo encerre naturalmente se todas as operações terminarem antes do timeout.
     // Em Node, timers "ref" mantêm o event loop vivo; unref() libera se nada mais estiver pendente.
-    if (typeof (state.forcedExitTimer as any).unref === 'function') {
-      ;(state.forcedExitTimer as any).unref()
-    }
+    state.forcedExitTimer?.unref?.()
   }
   // eslint-disable-next-line no-console
   console.log({
