@@ -69,12 +69,35 @@ export function triggerDrain(): void {
       })
       process.exit(0)
     }, state.forcedExitMs)
+    // Permite que o processo encerre naturalmente se todas as operações terminarem antes do timeout.
+    // Em Node, timers "ref" mantêm o event loop vivo; unref() libera se nada mais estiver pendente.
+    if (typeof (state.forcedExitTimer as any).unref === 'function') {
+      ;(state.forcedExitTimer as any).unref()
+    }
   }
   // eslint-disable-next-line no-console
   console.log({
     event: 'drain_start',
     ts: new Date().toISOString(),
     forcedExitInMs: state.forcedExitMs,
+    component: state.component,
+  })
+}
+
+// Opcional: registrar conclusão graciosa antes do forced exit (chamar após server.close e nenhuma conexão ativa)
+export function finalizeDrain() {
+  if (!state.draining) return
+  if (state.forcedExitTimer) {
+    clearTimeout(state.forcedExitTimer)
+    state.forcedExitTimer = null
+  }
+  // eslint-disable-next-line no-console
+  console.log({
+    event: 'drain_complete',
+    ts: new Date().toISOString(),
+    durationMs: state.drainStartedAt
+      ? Date.now() - state.drainStartedAt
+      : undefined,
     component: state.component,
   })
 }
