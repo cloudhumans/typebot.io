@@ -48,7 +48,9 @@ const isAuthed = t.middleware(({ next, ctx }) => {
   })
 })
 
-// Middleware para contabilizar requisições ativas (graceful shutdown observability)
+// Tracks active tRPC procedure execution only (business logic time).
+// It does not include raw HTTP socket lifetime or streaming after resolver returns.
+// Sufficient for graceful drain; add HTTP-level middleware if end-to-end timing required.
 const gracefulActiveRequestsMiddleware = t.middleware(async ({ next }) => {
   const end = beginRequest()
   try {

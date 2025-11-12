@@ -25,7 +25,9 @@ const t = initTRPC
     },
   })
 
-// Middleware para contabilizar requisições ativas (graceful shutdown observability)
+// Tracks active tRPC procedure execution only (business logic time).
+// It does not cover raw HTTP socket duration or long-lived streams.
+// Good enough for graceful drain decisions; extend at HTTP layer if full request lifecycle is needed.
 const gracefulActiveRequestsMiddleware = t.middleware(async ({ next }) => {
   const end = beginRequest()
   try {
