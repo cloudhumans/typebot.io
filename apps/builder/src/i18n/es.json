@@ -574,5 +574,8 @@
   "preview.flowHistory.item.restoredBy": "por",
   "blocks.logic.wait.configure.label": "Configurar...",
   "blocks.logic.wait.prefix": "Esperar",
-  "blocks.logic.wait.seconds": "segundos"
+  "blocks.logic.wait.seconds": "segundos",
+  "blocks.logic.wait.settings.input.label": "Segundos de espera (máx {max}s):",
+  "blocks.logic.wait.settings.toast.maxReached.title": "Límite máximo alcanzado",
+  "blocks.logic.wait.settings.toast.maxReached.description": "El tiempo máximo de espera permitido es {max} segundos."
 }

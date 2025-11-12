@@ -2,6 +2,7 @@ import { Stack, useToast } from '@chakra-ui/react'
 import React from 'react'
 import { TextInput } from '@/components/inputs'
 import { WaitBlock } from '@typebot.io/schemas'
+import { useTranslate } from '@tolgee/react'
 
 // Derive max wait seconds from env (client-side variable must be NEXT_PUBLIC_*)
 const rawMax =
@@ -19,6 +20,7 @@ type Props = {
 
 export const WaitSettings = ({ options, onOptionsChange }: Props) => {
   const toast = useToast()
+  const { t } = useTranslate()
 
   const handleSecondsChange = (value: string | undefined) => {
     if (!value) {
@@ -40,8 +42,11 @@ export const WaitSettings = ({ options, onOptionsChange }: Props) => {
 
     if (parsed > MAX_WAIT_SECONDS) {
       toast({
-        title: 'Maximum limit reached',
-        description: `The maximum waiting time allowed is ${MAX_WAIT_SECONDS} seconds.`,
+        title: t('blocks.logic.wait.settings.toast.maxReached.title'),
+        description: t(
+          'blocks.logic.wait.settings.toast.maxReached.description',
+          { max: MAX_WAIT_SECONDS }
+        ),
         status: 'warning',
         duration: 3000,
         isClosable: true,
@@ -53,7 +58,9 @@ export const WaitSettings = ({ options, onOptionsChange }: Props) => {
   return (
     <Stack spacing={4}>
       <TextInput
-        label={`Seconds to wait for (max ${MAX_WAIT_SECONDS}s):`}
+        label={t('blocks.logic.wait.settings.input.label', {
+          max: MAX_WAIT_SECONDS,
+        })}
         defaultValue={options?.secondsToWaitFor}
         onChange={handleSecondsChange}
       />

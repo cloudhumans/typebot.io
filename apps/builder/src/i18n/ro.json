@@ -255,5 +255,8 @@
   "workspace.settings.name.label": "Nume:",
   "blocks.logic.wait.configure.label": "Configurează...",
   "blocks.logic.wait.prefix": "Așteaptă",
-  "blocks.logic.wait.seconds": "secunde"
+  "blocks.logic.wait.seconds": "secunde",
+  "blocks.logic.wait.settings.input.label": "Secunde de așteptare (max {max}s):",
+  "blocks.logic.wait.settings.toast.maxReached.title": "Limită maximă atinsă",
+  "blocks.logic.wait.settings.toast.maxReached.description": "Timpul maxim de așteptare permis este {max} secunde."
 }
