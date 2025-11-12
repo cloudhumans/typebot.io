@@ -2,12 +2,11 @@ FROM node:18-bullseye-slim AS base
 WORKDIR /app
 ARG SCOPE
 ENV SCOPE=${SCOPE}
-# Install required base packages (openssl + curl + git for preStop drain hook and build)
+# Install required base packages (openssl + curl for preStop drain hook and build)
 RUN apt-get -qy update \
     && apt-get -qy --no-install-recommends install \
     openssl \
     curl \
-    git \
     && apt-get autoremove -yq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
