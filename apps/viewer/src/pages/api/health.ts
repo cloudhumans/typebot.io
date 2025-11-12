@@ -9,7 +9,7 @@ import {
 initGraceful({ component: 'viewer' })
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const end = beginRequest()
+  const end = beginRequest({ kind: 'probe', track: false })
   res.setHeader('Cache-Control', 'no-store')
   if (isDraining()) {
     const snap = healthSnapshot()

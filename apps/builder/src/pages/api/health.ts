@@ -10,7 +10,7 @@ import {
 initGraceful({ component: 'builder' })
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const end = beginRequest()
+  const end = beginRequest({ kind: 'probe', track: false })
   // Prevent any intermediary caching; health must reflect real-time state.
   res.setHeader('Cache-Control', 'no-store')
   if (isDraining()) {

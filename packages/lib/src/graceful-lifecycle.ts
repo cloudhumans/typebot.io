@@ -22,7 +22,8 @@ interface GracefulState {
   totalMs: number
   forcedExitMs: number
   component?: string
-  activeRequests: number
+  activeRequests: number // business requests only
+  probeRequests: number // health/readiness/liveness probes (not counted as active business requests)
 }
 
 const defaultTotal = parseInt(process.env.GRACEFUL_TIMEOUT_MS || '170000', 10)
@@ -39,6 +40,7 @@ const state: GracefulState = {
   forcedExitMs: Math.max(1000, defaultTotal - defaultBuffer),
   component: undefined,
   activeRequests: 0,
+  probeRequests: 0,
 }
 
 export function initGraceful(opts?: GracefulOptions) {
@@ -113,33 +115,50 @@ export function healthSnapshot() {
       sinceMs: state.drainStartedAt ? Date.now() - state.drainStartedAt : 0,
       mem: { rss: mem.rss, heapUsed: mem.heapUsed },
       activeRequests: state.activeRequests,
+      probeRequests: state.probeRequests,
     }
   }
   return {
     status: 'ready' as const,
     mem: { rss: mem.rss, heapUsed: mem.heapUsed },
     activeRequests: state.activeRequests,
+    probeRequests: state.probeRequests,
   }
 }
 
-// Public helpers to track request lifecycle in apps (API routes / middlewares)
-export function beginRequest() {
-  state.activeRequests++
+interface BeginRequestOptions {
+  kind?: 'business' | 'probe'
+  track?: boolean // if false, skip counting entirely
+}
+
+// Track lifecycle for business requests; probes optionally excluded.
+export function beginRequest(opts?: BeginRequestOptions) {
+  const isProbe = opts?.kind === 'probe'
+  const shouldTrack = opts?.track !== false && !isProbe
+  if (isProbe) {
+    state.probeRequests++
+  } else if (shouldTrack) {
+    state.activeRequests++
+  }
   const startedAt = Date.now()
   return function endRequest() {
-    // Saturating decrement: never let activeRequests go negative.
-    state.activeRequests = Math.max(0, state.activeRequests - 1)
-    // Optional: log slow requests during drain
-    if (state.draining) {
-      const duration = Date.now() - startedAt
-      if (duration > 5000) {
-        // eslint-disable-next-line no-console
-        console.log({
-          event: 'drain_request_slow',
-          ms: duration,
-          component: state.component,
-          activeRequests: state.activeRequests,
-        })
+    if (isProbe) {
+      // No decrement for probeRequests; they are instantaneous samples.
+      return
+    }
+    if (shouldTrack) {
+      state.activeRequests = Math.max(0, state.activeRequests - 1)
+      if (state.draining) {
+        const duration = Date.now() - startedAt
+        if (duration > 5000) {
+          // eslint-disable-next-line no-console
+          console.log({
+            event: 'drain_request_slow',
+            ms: duration,
+            component: state.component,
+            activeRequests: state.activeRequests,
+          })
+        }
       }
     }
   }
