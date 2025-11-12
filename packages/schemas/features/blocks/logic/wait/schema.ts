@@ -16,7 +16,7 @@ export const waitOptionsSchema = z.object({
     .string()
     .refine(
       (val) =>
-        (val.trim().startsWith('{{') && val.trim().endsWith('}}')) ||
+        ((val.trim().startsWith('{{') && val.trim().endsWith('}}') && val.trim().length > 4)) ||
         !isNaN(parseFloat(val)),
       {
         message: 'Must be a number or a variable in {{}}',
