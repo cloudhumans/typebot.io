@@ -1,14 +1,3 @@
-/*
-  Shared graceful lifecycle module.
-  Provides a singleton state inside a Node.js process for drain coordination.
-
-  API:
-    initGraceful(options?): Initialize timers & capture config.
-    triggerDrain(): Begin draining (sets isDraining, schedules forced exit) idempotent.
-    isDraining(): boolean
-    healthSnapshot(): { status: 'ready' | 'draining', mem: { rss: number, heapUsed: number }, sinceMs?: number }
-*/
-
 interface GracefulOptions {
   totalMs?: number // Total grace window in ms
   forcedExitBufferMs?: number // Time before end to force exit
@@ -67,11 +56,17 @@ export function triggerDrain(): void {
         event: 'forced_exit',
         ts: new Date().toISOString(),
         component: state.component,
+        activeRequests: state.activeRequests,
+        configuredExitMs: state.forcedExitMs,
+        totalWindowMs: state.totalMs,
+        drainDurationMs: state.drainStartedAt
+          ? Date.now() - state.drainStartedAt
+          : undefined,
       })
       process.exit(0)
     }, state.forcedExitMs)
-    // Permite que o processo encerre naturalmente se todas as operações terminarem antes do timeout.
-    // Em Node, timers "ref" mantêm o event loop vivo; unref() libera se nada mais estiver pendente.
+    // Allows the process to exit naturally if all operations finish before the timeout.
+    // In Node.js, "ref" timers keep the event loop alive; unref() allows exit if nothing else is pending.
     state.forcedExitTimer?.unref?.()
   }
   // eslint-disable-next-line no-console
