@@ -127,7 +127,8 @@ export function beginRequest() {
   state.activeRequests++
   const startedAt = Date.now()
   return function endRequest() {
-    if (state.activeRequests > 0) state.activeRequests--
+    // Saturating decrement: never let activeRequests go negative.
+    state.activeRequests = Math.max(0, state.activeRequests - 1)
     // Optional: log slow requests during drain
     if (state.draining) {
       const duration = Date.now() - startedAt
