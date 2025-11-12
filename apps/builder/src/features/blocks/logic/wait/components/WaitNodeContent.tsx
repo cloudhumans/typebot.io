@@ -1,6 +1,7 @@
 import { chakra, Text } from '@chakra-ui/react'
 import { WaitBlock } from '@typebot.io/schemas'
 import React, { useMemo } from 'react'
+import { useTranslate } from '@tolgee/react'
 
 type Props = {
   options: WaitBlock['options']
@@ -20,11 +21,13 @@ export const WaitNodeContent = ({ options }: Props) => {
       : { isVariable: false, variableName: '' }
   }, [secondsToWaitFor])
 
+  const { t } = useTranslate()
+
   // Unconfigured state
   if (!secondsToWaitFor) {
     return (
       <Text color="gray.500" noOfLines={1}>
-        Configure...
+        {t('blocks.logic.wait.configure.label')}
       </Text>
     )
   }
@@ -33,7 +36,7 @@ export const WaitNodeContent = ({ options }: Props) => {
   if (isVariable) {
     return (
       <Text noOfLines={1}>
-        Wait for{' '}
+        {t('blocks.logic.wait.prefix')}{' '}
         <chakra.span
           bgColor="orange.400"
           color="white"
@@ -43,11 +46,16 @@ export const WaitNodeContent = ({ options }: Props) => {
         >
           {variableName}
         </chakra.span>{' '}
-        seconds
+        {t('blocks.logic.wait.seconds')}
       </Text>
     )
   }
 
   // Static seconds value
-  return <Text noOfLines={1}>{`Wait for ${secondsToWaitFor} seconds`}</Text>
+  return (
+    <Text noOfLines={1}>
+      {t('blocks.logic.wait.prefix')} {secondsToWaitFor}{' '}
+      {t('blocks.logic.wait.seconds')}
+    </Text>
+  )
 }

@@ -247,5 +247,8 @@
   "workspace.settings.modal.menu.settings.label": "Einstellungen",
   "workspace.settings.modal.menu.version.label": "Version: {version}",
   "workspace.settings.modal.menu.workspace.label": "Workspace",
-  "workspace.settings.name.label": "Name:"
+  "workspace.settings.name.label": "Name:",
+  "blocks.logic.wait.configure.label": "Konfigurieren...",
+  "blocks.logic.wait.prefix": "Warte",
+  "blocks.logic.wait.seconds": "Sekunden"
 }

@@ -571,5 +571,8 @@
   "preview.flowHistory.summary.oldest": "Oldest:",
   "preview.flowHistory.summary.newest": "Newest:",
   "preview.flowHistory.item.fromPreviousVersion": "from previous version",
-  "preview.flowHistory.item.restoredBy": "by"
+  "preview.flowHistory.item.restoredBy": "by",
+  "blocks.logic.wait.configure.label": "Configure...",
+  "blocks.logic.wait.prefix": "Wait for",
+  "blocks.logic.wait.seconds": "seconds"
 }
