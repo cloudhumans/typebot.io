@@ -16,9 +16,13 @@ export const WaitNodeContent = ({ options }: Props) => {
   const { isVariable, variableName } = useMemo(() => {
     if (!secondsToWaitFor) return { isVariable: false, variableName: '' }
     const match = secondsToWaitFor.match(VARIABLE_REGEX)
-    return match
-      ? { isVariable: true, variableName: match[1] }
-      : { isVariable: false, variableName: '' }
+    if (match) {
+      const extractedName = match[1]?.trim() ?? ''
+      if (extractedName.length > 0) {
+        return { isVariable: true, variableName: extractedName }
+      }
+    }
+    return { isVariable: false, variableName: '' }
   }, [secondsToWaitFor])
 
   const { t } = useTranslate()
