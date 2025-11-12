@@ -24,7 +24,7 @@ export const waitOptionsSchema = z.object({
     )
     .transform((val) => {
       if (val.trim().startsWith('{{') && val.trim().endsWith('}}')) {
-        return val
+        return val.trim()
       }
       const parsed = parseFloat(val)
       if (isNaN(parsed)) return undefined
