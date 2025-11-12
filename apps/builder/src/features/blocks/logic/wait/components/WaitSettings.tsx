@@ -31,6 +31,8 @@ export const WaitSettings = ({ options, onOptionsChange }: Props) => {
     const trimmed = value.trim()
 
     if (trimmed.startsWith('{{') && trimmed.endsWith('}}')) {
+      const varName = trimmed.slice(2, -2).trim()
+      if (varName.length === 0) return
       onOptionsChange({ ...options, secondsToWaitFor: trimmed })
       return
     }
