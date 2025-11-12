@@ -26,8 +26,14 @@ export const WaitSettings = ({ options, onOptionsChange }: Props) => {
       return
     }
 
-    const parsed = parseFloat(value)
+    const trimmed = value.trim()
 
+    if (trimmed.startsWith('{{') && trimmed.endsWith('}}')) {
+      onOptionsChange({ ...options, secondsToWaitFor: trimmed })
+      return
+    }
+
+    const parsed = parseFloat(trimmed)
     if (isNaN(parsed)) return
 
     const clamped = Math.min(parsed, MAX_WAIT_SECONDS)
