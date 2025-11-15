@@ -207,6 +207,10 @@ const nextConfig = {
             source: '/health',
             destination: '/api/health',
           },
+          {
+            source: '/drain',
+            destination: '/api/drain',
+          },
         ])
         .concat(
           process.env.NEXTAUTH_URL
