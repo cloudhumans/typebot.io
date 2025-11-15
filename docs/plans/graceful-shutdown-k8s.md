@@ -192,7 +192,7 @@ spec:
 | Caso                                  | Risco                        | Mitigação                                                                                    |
 | ------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
 | Requisição longa > gracePeriod        | Forçado a fechar cedo        | Aumentar gracePeriod / logs para tuning                                                      |
-| `/drain` falha no preStop             | Sem transição de readiness   | SIGTERM ainda segue; liveness mata se falhar; adicionar retry curl com `sleep 1 && curl ...` |
+| `/drain` falha no preStop             | Sem transição de readiness   | SIGTERM ainda segue; liveness mata se falhar; retry curl com for loop (3 tentativas com sleep 1s entre elas) |
 | Pico de memória súbito                | OOM antes drain              | Pré-drain por threshold + logs métricas                                                      |
 | Race: drain + novo deploy             | Pod antigo e novo competindo | Readiness 503 rápido no antigo                                                               |
 | Forçado sem PM2 kill_timeout alinhado | Encerramento abrupto         | Documentar necessidade de env var padronizado                                                |
