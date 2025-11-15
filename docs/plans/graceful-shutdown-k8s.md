@@ -2,19 +2,21 @@
 
 ## 1. Objetivo
 
-Garantir que as aplicações `typebot-builder` e `typebot-viewer` desliguem de forma **gradual**, sem perda de requisições ativas, evitando interrupções de sessão do usuário e reduzindo erros durante rollouts e autoscaling.
+Garantir que as aplicações `typebot-builder` e `typebot-viewer` desliguem de forma **gradual**, sem perda de requisições ativas, evitando interrupções de sessão do usuário e reduzindo erros durante rampa de aumento de memória.
+
+**Nota importante:** O Kubernetes, mesmo com HPA e terminationGracePeriod, não é capaz de garantir sozinho que um pod será removido do balanceamento antes de atingir OOM (Out Of Memory) por uso excessivo de memória. O controle de readiness e o início do drain precisam ser feitos pelo próprio pod, monitorando seu uso de memória e sinalizando readiness 503 quando necessário. O HPA apenas escala réplicas, mas não impede que um pod individual seja morto abruptamente por OOM.
 
 ## 2. Escopo
 
 Inclui:
 
-- Reutilização do endpoint existente `/health` (readiness/liveness) com resposta dinâmica retornando 200 (ready) ou 503 (draining).
+- Reutilização do endpoint existente `/health` (readiness/liveness) com resposta dinâmica retornando 200 (ready) ou 503 (draining), incluindo lógica de auto-drain por memória.
 - Criação do endpoint `/drain` (POST) para iniciar o processo de desligamento gracioso.
 - Ajustes nos Deployments: lifecycle `preStop` chamando `/drain` e aumento de `terminationGracePeriodSeconds` para **180s** (janela confirmada para atender requisições potencialmente long-lived / encerrar conexões persistentes com segurança).
-- Implementação de módulo compartilhado `graceful-lifecycle` (`packages/lib/graceful-lifecycle.ts`).
+- Implementação de módulo compartilhado `graceful-lifecycle` (`packages/lib/graceful-lifecycle.ts`) com monitoramento de memória e readiness.
 - Headers `Cache-Control: no-store` em `/health` para evitar caching e refletir estado atual.
 - Exclusão explícita do endpoint `/healthsql` do fluxo de drain (mantido apenas para checar conectividade DB).
-- Integração do HPA v2 com métricas de CPU e memória, permitindo escalonamento automático baseado em uso real dos pods.
+- Integração do HPA v2 com métricas de CPU e memória, permitindo escalonamento automático baseado em uso real dos pods (mas não suficiente para evitar OOM individual).
 
 Não inclui (fora do escopo imediato):
 
@@ -27,20 +29,21 @@ Não inclui (fora do escopo imediato):
 - Antes da mudança não havia `/drain`; desligamento dependia apenas do SIGTERM e `terminationGracePeriodSeconds=30`.
 - HPA agora utiliza métricas de CPU e memória (autoscaling/v2), escalando réplicas conforme uso agregado dos pods.
 - O ciclo de shutdown combina: HPA escala, preStop chama `/drain`, `/health` retorna 503, pod removido do balance, e há um período de 180s para finalizar requisições.
+- **Controle de memória é feito pelo próprio pod:** ao detectar uso de memória acima do threshold (ex: 1GB), o pod aciona drain, readiness 503 e inicia shutdown controlado. O HPA não previne OOM individual.
 - Estado de drain em memória via módulo compartilhado; forced exit timer configurável.
 
 ## 4. Mudanças Propostas (Visão Geral)
 
-| Item                                    | Ação                                                 | Resultado                        |
-| --------------------------------------- | ---------------------------------------------------- | -------------------------------- |
-| Endpoint `/health`                      | Tornar resposta dinâmica (READY → DRAINING 503)      | Probes mais precisas             |
-| Endpoint `/drain`                       | Marca estado interno `isDraining=true` e retorna 202 | Início de graceful shutdown      |
-| PreStop hook                            | `curl -fs -X POST http://localhost:<PORT>/drain`     | Transição antes do SIGTERM       |
-| Readiness dinâmica                      | Retornar HTTP 503 imediato após drain                | Pod removido rápido do balance   |
-| Aumento terminationGracePeriod          | Ajustar para 180s                                    | Janela para concluir requisições |
-| Timeout interno forced exit             | kill_timeout - buffer (ex: 180s - 5s)                | Evita travamento                 |
-| Métrica memória (fase 2)                | Expor uso RSS/limite                                 | Base futura para HPA memória     |
-| Degradar readiness por memória (fase 2) | readiness 503 acima de threshold (>85%)              | Proteção contra OOM              |
+| Item                                          | Ação                                                                                   | Resultado                                 |
+| --------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Endpoint `/health`                            | Tornar resposta dinâmica (READY → DRAINING 503) e acionar drain automático por memória | Probes mais precisas, proteção contra OOM |
+| Endpoint `/drain`                             | Marca estado interno `isDraining=true` e retorna 202                                   | Início de graceful shutdown               |
+| PreStop hook                                  | `curl -fs -X POST http://localhost:<PORT>/drain`                                       | Transição antes do SIGTERM                |
+| Readiness dinâmica                            | Retornar HTTP 503 imediato após drain                                                  | Pod removido rápido do balance            |
+| Aumento terminationGracePeriod                | Ajustar para 180s                                                                      | Janela para concluir requisições          |
+| Timeout interno forced exit                   | kill_timeout - buffer (ex: 180s - 5s)                                                  | Evita travamento                          |
+| Métrica memória (fase 2)                      | Expor uso RSS/limite                                                                   | Base futura para HPA memória              |
+| Degradar readiness por memória (implementado) | readiness 503 acima de threshold (ex: 1GB)                                             | Proteção contra OOM                       |
 
 ## 4.1 Opções de Estratégia de Drain Consideradas
 
@@ -56,12 +59,13 @@ Não inclui (fora do escopo imediato):
 
 ### Decisão Final
 
-Adotaremos a Opção A (reutilizar rota `/health` retornando 503 durante drain + rota `/drain` invocada no `preStop`). Motivos:
+Adotaremos a Opção A (reutilizar rota `/health` retornando 503 durante drain + rota `/drain` invocada no `preStop`), **complementada por lógica de auto-drain por memória no próprio pod**. Motivos:
 
 - Menor dif (apenas duas rotas simples e flag in-memory).
 - Visibilidade clara via HTTP e logs (estado `ready` vs `draining`).
 - Compatível com futuras extensões (memória, latência, métricas expostas no JSON de health).
 - Funciona mesmo sem Kong; Kong permanece opcional como camada complementar para ajuste de peso/slow-start.
+- **Única forma de garantir que pods com uso excessivo de memória sejam removidos do balanceamento antes do OOM, já que o Kubernetes não faz isso sozinho.**
 
 Kong poderá ser usado posteriormente para: (i) slow start (rampa de peso), (ii) antecipar retirada de tráfego (set weight=0 antes do 503) e (iii) métricas adicionais de latência por target.
 
@@ -184,19 +188,20 @@ spec:
           averageUtilization: 75
 ```
 
-- O ciclo de shutdown é orquestrado: HPA escala, preStop chama `/drain`, `/health` marca 503, pod removido do balance, e há 180s para finalizar trabalhos.
+- O HPA **não** é suficiente para evitar OOM individual: ele apenas escala réplicas, mas não remove pods do balanceamento quando atingem uso excessivo de memória. Por isso, a lógica de auto-drain no pod é indispensável.
+- O ciclo de shutdown é orquestrado: HPA escala, preStop chama `/drain`, `/health` marca 503 (por drain manual ou auto-drain por memória), pod removido do balance, e há 180s para finalizar trabalhos.
 - Alternativa avançada: Custom metric (tempo médio de resposta ou fila interna) para escalar antecipadamente.
 
 ## 12. Edge Cases & Mitigações
 
-| Caso                                  | Risco                        | Mitigação                                                                                    |
-| ------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
-| Requisição longa > gracePeriod        | Forçado a fechar cedo        | Aumentar gracePeriod / logs para tuning                                                      |
+| Caso                                  | Risco                        | Mitigação                                                                                                    |
+| ------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Requisição longa > gracePeriod        | Forçado a fechar cedo        | Aumentar gracePeriod / logs para tuning                                                                      |
 | `/drain` falha no preStop             | Sem transição de readiness   | SIGTERM ainda segue; liveness mata se falhar; retry curl com for loop (3 tentativas com sleep 1s entre elas) |
-| Pico de memória súbito                | OOM antes drain              | Pré-drain por threshold + logs métricas                                                      |
-| Race: drain + novo deploy             | Pod antigo e novo competindo | Readiness 503 rápido no antigo                                                               |
-| Forçado sem PM2 kill_timeout alinhado | Encerramento abrupto         | Documentar necessidade de env var padronizado                                                |
-| Cache / proxy armazenando `/health`   | Status stale                 | Header `Cache-Control: no-store`                                                             |
+| Pico de memória súbito                | OOM antes drain              | Pré-drain por threshold + logs métricas                                                                      |
+| Race: drain + novo deploy             | Pod antigo e novo competindo | Readiness 503 rápido no antigo                                                                               |
+| Forçado sem PM2 kill_timeout alinhado | Encerramento abrupto         | Documentar necessidade de env var padronizado                                                                |
+| Cache / proxy armazenando `/health`   | Status stale                 | Header `Cache-Control: no-store`                                                                             |
 
 ## 13. Cronograma (Fases)
 
