@@ -14,20 +14,20 @@ Inclui:
 - Implementação de módulo compartilhado `graceful-lifecycle` (`packages/lib/graceful-lifecycle.ts`).
 - Headers `Cache-Control: no-store` em `/health` para evitar caching e refletir estado atual.
 - Exclusão explícita do endpoint `/healthsql` do fluxo de drain (mantido apenas para checar conectividade DB).
+- Integração do HPA v2 com métricas de CPU e memória, permitindo escalonamento automático baseado em uso real dos pods.
 
 Não inclui (fora do escopo imediato):
 
-- Integração de métricas de memória no HPA (fase futura).
 - Refatoração completa de logging ou tracing.
 - Remoção de PM2 (compatível, mas adiada).
-- Estratégia de pré-drain por memória (fase 2).
 
 ## 3. Arquitetura Atual (Resumo)
 
 - Probes usam `/health` para readiness e liveness.
 - Antes da mudança não havia `/drain`; desligamento dependia apenas do SIGTERM e `terminationGracePeriodSeconds=30`.
-- HPA baseado somente em CPU.
-- Agora: estado de drain em memória via módulo compartilhado; forced exit timer configurável.
+- HPA agora utiliza métricas de CPU e memória (autoscaling/v2), escalando réplicas conforme uso agregado dos pods.
+- O ciclo de shutdown combina: HPA escala, preStop chama `/drain`, `/health` retorna 503, pod removido do balance, e há um período de 180s para finalizar requisições.
+- Estado de drain em memória via módulo compartilhado; forced exit timer configurável.
 
 ## 4. Mudanças Propostas (Visão Geral)
 
@@ -97,12 +97,13 @@ Kong poderá ser usado posteriormente para: (i) slow start (rampa de peso), (ii)
 
 ## 6. Ciclo de Vida de Shutdown
 
-1. Kubernetes executa `preStop` -> POST `/drain`.
-2. Aplicação define `isDraining=true` e passa a retornar 503 em `/health`.
-3. Readiness falha (503) → Pod removido do Service/Endpoints.
-4. Requisições já em andamento continuam até completar ou até o timer interno disparar.
-5. Recebe SIGTERM dentro da janela (`terminationGracePeriodSeconds=180`). Recursos/servidor fecham (`server.close()` / conexões persistentes devem ser liberadas).
-6. Forced exit: processo encerra caso ultrapasse o limite configurado (para evitar travamentos).
+1. O HPA detecta aumento de uso de CPU/memória e pode escalar novas réplicas.
+2. Quando um pod precisa ser removido (por rollout, downscale ou pressão de recursos), o Kubernetes executa o hook `preStop`, que faz POST para `/drain`.
+3. A aplicação define `isDraining=true` e passa a retornar 503 em `/health`.
+4. Readiness falha (503) → Pod removido do Service/Endpoints e não recebe novas requisições.
+5. Requisições já em andamento continuam até completar ou até o timer interno disparar.
+6. O pod recebe SIGTERM dentro da janela (`terminationGracePeriodSeconds=180`). Recursos/servidor fecham (`server.close()` / conexões persistentes devem ser liberadas).
+7. Forced exit: processo encerra caso ultrapasse o limite configurado (para evitar travamentos).
 
 ## 7. Ajustes Kubernetes (Deployments)
 
@@ -119,7 +120,7 @@ lifecycle:
         [
           '/bin/sh',
           '-c',
-          'curl -fs -X POST http://localhost:3000/drain || true',
+          'for i in 1 2 3; do curl -fs -X POST http://localhost:3000/drain && break || sleep 1; done; true',
         ]
 ```
 
@@ -162,19 +163,40 @@ Decisão inicial: A) (simplificar – 503 imediato) conforme seção 4.1. Reaval
 
 ## 11. Integração com HPA (Fase 2)
 
-- Adicionar resource metric de memória: `type: Resource` / `name: memory` / `targetAverageUtilization` (ex: 75%).
+- HPAs migrados para `autoscaling/v2` com métricas de CPU e memória:
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+spec:
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 125
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+```
+
+- O ciclo de shutdown é orquestrado: HPA escala, preStop chama `/drain`, `/health` marca 503, pod removido do balance, e há 180s para finalizar trabalhos.
 - Alternativa avançada: Custom metric (tempo médio de resposta ou fila interna) para escalar antecipadamente.
 
 ## 12. Edge Cases & Mitigações
 
-| Caso                                  | Risco                        | Mitigação                                                                |
-| ------------------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
-| Requisição longa > gracePeriod        | Forçado a fechar cedo        | Aumentar gracePeriod / logs para tuning                                  |
+| Caso                                  | Risco                        | Mitigação                                                                                    |
+| ------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
+| Requisição longa > gracePeriod        | Forçado a fechar cedo        | Aumentar gracePeriod / logs para tuning                                                      |
 | `/drain` falha no preStop             | Sem transição de readiness   | SIGTERM ainda segue; liveness mata se falhar; adicionar retry curl com `sleep 1 && curl ...` |
-| Pico de memória súbito                | OOM antes drain              | Pré-drain por threshold + logs métricas                                  |
-| Race: drain + novo deploy             | Pod antigo e novo competindo | Readiness 503 rápido no antigo                                           |
-| Forçado sem PM2 kill_timeout alinhado | Encerramento abrupto         | Documentar necessidade de env var padronizado                            |
-| Cache / proxy armazenando `/health`   | Status stale                 | Header `Cache-Control: no-store`                                         |
+| Pico de memória súbito                | OOM antes drain              | Pré-drain por threshold + logs métricas                                                      |
+| Race: drain + novo deploy             | Pod antigo e novo competindo | Readiness 503 rápido no antigo                                                               |
+| Forçado sem PM2 kill_timeout alinhado | Encerramento abrupto         | Documentar necessidade de env var padronizado                                                |
+| Cache / proxy armazenando `/health`   | Status stale                 | Header `Cache-Control: no-store`                                                             |
 
 ## 13. Cronograma (Fases)
 

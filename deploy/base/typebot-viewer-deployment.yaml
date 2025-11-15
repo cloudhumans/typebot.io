@@ -90,7 +90,7 @@ spec:
                 command:
                   - /bin/sh
                   - -c
-                  - 'curl -fs -X POST http://localhost:3001/drain || true'
+                  - 'for i in 1 2 3; do curl -fs -X POST http://localhost:3001/drain && break || sleep 1; done; true'
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
