@@ -10,14 +10,19 @@ export const createCodeRunner = ({ variables }: { variables: Variable[] }) => {
   variables.forEach((v) => {
     jail.setSync(v.id, parseTransferrableValue(parseGuessedValueType(v.value)))
   })
-  return (code: string) =>
-    context.evalClosureSync(
-      `return (function() {
+  return (code: string) => {
+    try {
+      return context.evalClosureSync(
+        `return (function() {
     return new Function($0)();
   }())`,
-      [code],
-      { result: { copy: true }, timeout: 10000 }
-    )
+        [code],
+        { result: { copy: true }, timeout: 10000 }
+      )
+    } finally {
+      isolate.dispose()
+    }
+  }
 }
 
 export const createHttpReqResponseMappingRunner = (response: any) => {
@@ -26,7 +31,7 @@ export const createHttpReqResponseMappingRunner = (response: any) => {
   const jail = context.global
   jail.setSync('global', jail.derefInto())
   jail.setSync('response', new ivm.ExternalCopy(response).copyInto())
-  return (expression: string) => {
+  const runner = (expression: string) => {
     return context.evalClosureSync(
       `globalThis.evaluateExpression = function(expression) {
         try {
@@ -45,6 +50,8 @@ export const createHttpReqResponseMappingRunner = (response: any) => {
       }
     )
   }
+  ;(runner as any).dispose = () => isolate.dispose()
+  return runner
 }
 
 export const parseTransferrableValue = (value: unknown) => {

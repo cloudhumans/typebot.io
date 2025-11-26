@@ -50,7 +50,7 @@ export const resumeWebhookExecution = ({
           }
     )
 
-  let run: (varMapping: string) => unknown
+  let run: ((varMapping: string) => unknown) | undefined = undefined
   if (block.options?.responseVariableMapping) {
     run = createHttpReqResponseMappingRunner(response)
   }
@@ -77,12 +77,19 @@ export const resumeWebhookExecution = ({
       state,
       currentBlockId: block.id,
     })
+    if (run && (run as any).dispose) {
+      ;(run as any).dispose()
+    }
     return {
       outgoingEdgeId: block.outgoingEdgeId,
       newSessionState: updatedState,
       newSetVariableHistory,
       logs,
     }
+  }
+
+  if (run && (run as any).dispose) {
+    ;(run as any).dispose()
   }
 
   return {
