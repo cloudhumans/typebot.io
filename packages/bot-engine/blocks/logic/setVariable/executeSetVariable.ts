@@ -99,9 +99,11 @@ const evaluateSetVariableExpression =
     try {
       const body = parseVariables(variables, { fieldToParse: 'id' })(str)
       const runner = createCodeRunner({ variables })
-      const result = runner(body.includes('return ') ? body : `return ${body}`)
-      ;(runner as any).dispose()
-      return result
+      try {
+        return runner(body.includes('return ') ? body : `return ${body}`)
+      } finally {
+        ;(runner as any).dispose()
+      }
     } catch (err) {
       return parseVariables(variables)(str)
     }

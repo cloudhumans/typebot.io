@@ -54,46 +54,45 @@ export const resumeWebhookExecution = ({
   if (block.options?.responseVariableMapping) {
     run = createHttpReqResponseMappingRunner(response)
   }
-  const newVariables = block.options?.responseVariableMapping?.reduce<
-    VariableWithUnknowValue[]
-  >((newVariables, varMapping) => {
-    if (!varMapping?.bodyPath || !varMapping.variableId || !run)
-      return newVariables
-    const existingVariable = typebot.variables.find(byId(varMapping.variableId))
-    if (!existingVariable) return newVariables
+  try {
+    const newVariables = block.options?.responseVariableMapping?.reduce<
+      VariableWithUnknowValue[]
+    >((newVariables, varMapping) => {
+      if (!varMapping?.bodyPath || !varMapping.variableId || !run)
+        return newVariables
+      const existingVariable = typebot.variables.find(byId(varMapping.variableId))
+      if (!existingVariable) return newVariables
 
-    try {
-      const value: unknown = run(
-        parseVariables(typebot.variables)(varMapping?.bodyPath)
-      )
-      return [...newVariables, { ...existingVariable, value }]
-    } catch (err) {
-      return newVariables
+      try {
+        const value: unknown = run(
+          parseVariables(typebot.variables)(varMapping?.bodyPath)
+        )
+        return [...newVariables, { ...existingVariable, value }]
+      } catch (err) {
+        return newVariables
+      }
+    }, [])
+    if (newVariables && newVariables.length > 0) {
+      const { updatedState, newSetVariableHistory } = updateVariablesInSession({
+        newVariables,
+        state,
+        currentBlockId: block.id,
+      })
+      return {
+        outgoingEdgeId: block.outgoingEdgeId,
+        newSessionState: updatedState,
+        newSetVariableHistory,
+        logs,
+      }
     }
-  }, [])
-  if (newVariables && newVariables.length > 0) {
-    const { updatedState, newSetVariableHistory } = updateVariablesInSession({
-      newVariables,
-      state,
-      currentBlockId: block.id,
-    })
+
+    return {
+      outgoingEdgeId: block.outgoingEdgeId,
+      logs,
+    }
+  } finally {
     if (run && (run as any).dispose) {
       ;(run as any).dispose()
     }
-    return {
-      outgoingEdgeId: block.outgoingEdgeId,
-      newSessionState: updatedState,
-      newSetVariableHistory,
-      logs,
-    }
-  }
-
-  if (run && (run as any).dispose) {
-    ;(run as any).dispose()
-  }
-
-  return {
-    outgoingEdgeId: block.outgoingEdgeId,
-    logs,
   }
 }
