@@ -10,19 +10,17 @@ export const createCodeRunner = ({ variables }: { variables: Variable[] }) => {
   variables.forEach((v) => {
     jail.setSync(v.id, parseTransferrableValue(parseGuessedValueType(v.value)))
   })
-  return (code: string) => {
-    try {
-      return context.evalClosureSync(
-        `return (function() {
+  const runner = (code: string) => {
+    return context.evalClosureSync(
+      `return (function() {
     return new Function($0)();
   }())`,
-        [code],
-        { result: { copy: true }, timeout: 10000 }
-      )
-    } finally {
-      isolate.dispose()
-    }
+      [code],
+      { result: { copy: true }, timeout: 10000 }
+    )
   }
+  ;(runner as any).dispose = () => isolate.dispose()
+  return runner
 }
 
 export const createHttpReqResponseMappingRunner = (response: any) => {

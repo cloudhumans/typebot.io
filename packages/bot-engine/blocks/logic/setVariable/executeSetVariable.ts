@@ -98,9 +98,10 @@ const evaluateSetVariableExpression =
     if (!isNaN(str as unknown as number) && /0[^.].+/.test(str)) return str
     try {
       const body = parseVariables(variables, { fieldToParse: 'id' })(str)
-      return createCodeRunner({ variables })(
-        body.includes('return ') ? body : `return ${body}`
-      )
+      const runner = createCodeRunner({ variables })
+      const result = runner(body.includes('return ') ? body : `return ${body}`)
+      ;(runner as any).dispose()
+      return result
     } catch (err) {
       return parseVariables(variables)(str)
     }
