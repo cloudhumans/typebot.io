@@ -32,7 +32,7 @@ VALUES (
   'claudia-workspace-id',
   'eddie-default',
   '6',
-  '[{"id": "p17dxk2589q9kakiz4n1yml8", "title": "Group #1", "blocks": [{"id": "ebjca0rpwyzgpaezrg1yqx1v", "type": "text", "content": {"richText": [{"type": "p", "children": [{"text": "Hello from typebot!"}]}]}, "outgoingEdgeId": "der9u2befjm13mgdd4gul4w9"}], "graphCoordinates": {"x": 568, "y": 255}}, {"id": "yx2tckxezerelmjndugrpw1d", "title": "Group #2", "blocks": [{"id": "g420n50vye1m0j3k5m757c9s", "type": "claudia", "options": {"action": "End Flow [N1]"}}], "graphCoordinates": {"x": 1178, "y": 580}}]'::jsonb,
+  '[{"id": "p17dxk2589q9kakiz4n1yml8", "title": "Group #1", "blocks": [{"id": "ebjca0rpwyzgpaezrg1yqx1v", "type": "text", "content": {"richText": [{"type": "p", "children": [{"text": "Hello from typebot!"}]}]}, "outgoingEdgeId": "der9u2befjm13mgdd4gul4w9"}], "graphCoordinates": {"x": 568, "y": 255}}, {"id": "yx2tckxezerelmjndugrpw1d", "title": "Group #2", "blocks": [{"id": "g420n50vye1m0j3k5m757c9s", "type": "claudia", "options": {"action": "End Flow [N1]", "topic": ""}}], "graphCoordinates": {"x": 1178, "y": 580}}]'::jsonb,
   '[{"id": "der9u2befjm13mgdd4gul4w9", "to": {"groupId": "yx2tckxezerelmjndugrpw1d"}, "from": {"blockId": "ebjca0rpwyzgpaezrg1yqx1v"}}, {"id": "o0yzfoahvwbn8wqdzyuz5m7n", "to": {"groupId": "p17dxk2589q9kakiz4n1yml8"}, "from": {"eventId": "qmbhi0mk1lewbe0ez5nx45fb"}}]'::jsonb,
   '[]'::jsonb,
   '{}'::jsonb,
@@ -51,15 +51,17 @@ ON CONFLICT (id) DO UPDATE SET
   events = EXCLUDED.events;
 
 -- 5. Create or update published version with exact structure from working UI-created typebot
-INSERT INTO "PublicTypebot" (id, "typebotId", groups, edges, variables, theme, settings)
+INSERT INTO "PublicTypebot" (id, "typebotId", version, groups, edges, variables, theme, settings, events)
 VALUES (
   'claudia-published-id',
   'claudia-typebot-id',
-  '[{"id": "p17dxk2589q9kakiz4n1yml8", "title": "Group #1", "blocks": [{"id": "ebjca0rpwyzgpaezrg1yqx1v", "type": "text", "content": {"richText": [{"type": "p", "children": [{"text": "Hello from typebot!"}]}]}, "outgoingEdgeId": "der9u2befjm13mgdd4gul4w9"}], "graphCoordinates": {"x": 568, "y": 255}}, {"id": "yx2tckxezerelmjndugrpw1d", "title": "Group #2", "blocks": [{"id": "g420n50vye1m0j3k5m757c9s", "type": "claudia", "options": {"action": "End Flow [N1]"}}], "graphCoordinates": {"x": 1178, "y": 580}}]'::jsonb,
+  '6',
+  '[{"id": "p17dxk2589q9kakiz4n1yml8", "title": "Group #1", "blocks": [{"id": "ebjca0rpwyzgpaezrg1yqx1v", "type": "text", "content": {"richText": [{"type": "p", "children": [{"text": "Hello from typebot!"}]}]}, "outgoingEdgeId": "der9u2befjm13mgdd4gul4w9"}], "graphCoordinates": {"x": 568, "y": 255}}, {"id": "yx2tckxezerelmjndugrpw1d", "title": "Group #2", "blocks": [{"id": "g420n50vye1m0j3k5m757c9s", "type": "claudia", "options": {"action": "End Flow [N1]", "topic": ""}}], "graphCoordinates": {"x": 1178, "y": 580}}]'::jsonb,
   '[{"id": "der9u2befjm13mgdd4gul4w9", "to": {"groupId": "yx2tckxezerelmjndugrpw1d"}, "from": {"blockId": "ebjca0rpwyzgpaezrg1yqx1v"}}, {"id": "o0yzfoahvwbn8wqdzyuz5m7n", "to": {"groupId": "p17dxk2589q9kakiz4n1yml8"}, "from": {"eventId": "qmbhi0mk1lewbe0ez5nx45fb"}}]'::jsonb,
   '[]'::jsonb,
   '{}'::jsonb,
-  '{"general": {"isBrandingEnabled": true}}'::jsonb
+  '{"general": {"isBrandingEnabled": true}}'::jsonb,
+  '[{"id": "qmbhi0mk1lewbe0ez5nx45fb", "type": "start", "outgoingEdgeId": "o0yzfoahvwbn8wqdzyuz5m7n", "graphCoordinates": {"x": 0, "y": 0}}]'::jsonb
 )
 ON CONFLICT (id) DO UPDATE SET
   "typebotId" = EXCLUDED."typebotId",
