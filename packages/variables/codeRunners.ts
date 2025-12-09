@@ -2,7 +2,16 @@ import { Variable } from './types'
 import ivm from 'isolated-vm'
 import { parseGuessedValueType } from './parseGuessedValueType'
 
-export const createCodeRunner = ({ variables }: { variables: Variable[] }) => {
+export interface DisposableRunner {
+  (code: string): unknown
+  dispose: () => void
+}
+
+export const createCodeRunner = ({
+  variables,
+}: {
+  variables: Variable[]
+}): DisposableRunner => {
   const isolate = new ivm.Isolate()
   const context = isolate.createContextSync()
   const jail = context.global
@@ -19,11 +28,13 @@ export const createCodeRunner = ({ variables }: { variables: Variable[] }) => {
       { result: { copy: true }, timeout: 10000 }
     )
   }
-  ;(runner as any).dispose = () => isolate.dispose()
-  return runner
+    ; (runner as any).dispose = () => isolate.dispose()
+  return runner as DisposableRunner
 }
 
-export const createHttpReqResponseMappingRunner = (response: any) => {
+export const createHttpReqResponseMappingRunner = (
+  response: any
+): DisposableRunner => {
   const isolate = new ivm.Isolate()
   const context = isolate.createContextSync()
   const jail = context.global
@@ -48,8 +59,8 @@ export const createHttpReqResponseMappingRunner = (response: any) => {
       }
     )
   }
-  ;(runner as any).dispose = () => isolate.dispose()
-  return runner
+    ; (runner as any).dispose = () => isolate.dispose()
+  return runner as DisposableRunner
 }
 
 export const parseTransferrableValue = (value: unknown) => {
