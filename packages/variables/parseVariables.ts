@@ -1,7 +1,7 @@
 import { safeStringify } from '@typebot.io/lib/safeStringify'
 import { isDefined, isNotDefined } from '@typebot.io/lib/utils'
 import { Variable, VariableWithValue } from './types'
-import { createCodeRunner } from './codeRunners'
+import { createCodeRunner, DisposableRunner } from './codeRunners'
 
 export type ParseVariablesOptions = {
   fieldToParse?: 'value' | 'id'
@@ -34,7 +34,10 @@ export const parseVariables =
         inlineCodeRegex,
         (_full, inlineCodeToEvaluate) => {
           const value = evaluateInlineCode(inlineCodeToEvaluate, { variables })
-          return safeStringify(value) ?? value
+          return (
+            safeStringify(value) ??
+            (typeof value === 'string' ? value : `${value}`)
+          )
         }
       )
 
@@ -125,8 +128,13 @@ export const getVariablesToParseInfoInText = (
   })
   const textWithInlineCodeParsed = text.replace(
     inlineCodeRegex,
-    (_full, inlineCodeToEvaluate) =>
-      evaluateInlineCode(inlineCodeToEvaluate, { variables })
+    (_full, inlineCodeToEvaluate) => {
+      const value = evaluateInlineCode(inlineCodeToEvaluate, { variables })
+      return (
+        safeStringify(value) ??
+        (typeof value === 'string' ? value : `${value}`)
+      )
+    }
   )
   const variableMatches = [...textWithInlineCodeParsed.matchAll(variableRegex)]
   variableMatches.forEach((match) => {
