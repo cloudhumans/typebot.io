@@ -7,6 +7,7 @@ import { Variable } from './types'
 import ivm from 'isolated-vm'
 import { parseTransferrableValue } from './codeRunners'
 import jwt from 'jsonwebtoken'
+import logger from '@typebot.io/lib/logger'
 
 const defaultTimeout = 10 * 1000
 
@@ -14,12 +15,19 @@ type Props = {
   variables: Variable[]
   body: string
   args?: Record<string, unknown>
+  metadata?: {
+    typebotId?: string
+    blockId?: string
+    resultId?: string
+    origin?: 'viewer' | 'builder' | 'api'
+  }
 }
 
 export const executeFunction = async ({
   variables,
   body,
   args: initialArgs,
+  metadata,
 }: Props) => {
   const parsedBody = parseVariables(variables, {
     fieldToParse: 'id',
@@ -72,21 +80,46 @@ export const executeFunction = async ({
       ]
     )
 
+    // Provide safe helpers to avoid crashes in user scripts
+    context.evalSync(`
+      globalThis.toStringSafe = function (value) {
+        try { return String(value ?? ''); } catch { return ''; }
+      };
+      globalThis.splitSafe = function (value, sep) {
+        try { return String(value ?? '').split(sep ?? ','); } catch { return []; }
+      };
+    `)
+
     args.forEach(({ id, value }) => {
       jail.setSync(id, parseTransferrableValue(value))
     })
-    const run = (code: string) =>
-      context.evalClosure(
+    const run = (code: string) => {
+      const wrappedCode =
+        `\n\n/* typebot:executeFunction:start */\n` +
+        code +
+        `\n/* typebot:executeFunction:end */`
+      return context.evalClosure(
         `return (async function() {
       const AsyncFunction = async function () {}.constructor;
-      return new AsyncFunction($0)();
+      const Fn = new AsyncFunction($0);
+      return Fn();
     }())`,
-        [code],
+        [wrappedCode],
         { result: { copy: true, promise: true }, timeout: defaultTimeout }
       )
+    }
 
     const output = await run(parsedBody)
-    console.log('Output', output)
+    logger.info('executeFunction output', {
+      origin: metadata?.origin ?? 'viewer',
+      typebotId: metadata?.typebotId,
+      blockId: metadata?.blockId,
+      resultId: metadata?.resultId,
+      outputPreview:
+        typeof output === 'string'
+          ? output.slice(0, 200)
+          : safeStringify(output)?.slice(0, 200),
+    })
     return {
       output: safeStringify(output) ?? '',
       newVariables: Object.entries(updatedVariables)
@@ -102,15 +135,32 @@ export const executeFunction = async ({
         .filter(isDefined),
     }
   } catch (e) {
-    console.log('Error while executing script')
-    console.error(e)
+    logger.error('Error while executing script', {
+      origin: metadata?.origin ?? 'viewer',
+      typebotId: metadata?.typebotId,
+      blockId: metadata?.blockId,
+      resultId: metadata?.resultId,
+      codePreview: parsedBody.slice(0, 400),
+      variables: variables.map((v) => ({
+        id: v.id,
+        name: v.name,
+        type: typeof v.value,
+      })),
+      hasSplitPattern: /\.split\(/.test(parsedBody),
+      error:
+        typeof e === 'string'
+          ? e
+          : e instanceof Error
+          ? { message: e.message, stack: e.stack }
+          : e,
+    })
 
     const error =
       typeof e === 'string'
         ? e
         : e instanceof Error
-          ? e.message
-          : JSON.stringify(e)
+        ? e.message
+        : JSON.stringify(e)
 
     return {
       error,
