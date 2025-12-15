@@ -91,7 +91,7 @@ jobs:
         with:
           version_file: version
           format: '{base}-{sha7}'            
-          templates_glob: deploy-k8s/**/*.yaml  
+          templates_glob: manifests/deploy-k8s/**/*.yaml  
 
       - name: Create & merge PR in manifests repository with new image
         env:
