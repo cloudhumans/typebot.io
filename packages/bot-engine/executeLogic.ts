@@ -6,6 +6,9 @@ import { executeJumpBlock } from './blocks/logic/jump/executeJumpBlock'
 import { executeRedirect } from './blocks/logic/redirect/executeRedirect'
 import { executeConditionBlock } from './blocks/logic/condition/executeConditionBlock'
 import { executeSetVariable } from './blocks/logic/setVariable/executeSetVariable'
+import { executeValidateCpf } from './blocks/logic/validateCpf/executeValidateCpf'
+import { executeValidateCnpj } from './blocks/logic/validateCnpj/executeValidateCnpj'
+import { executeNativeVariables } from './blocks/logic/nativeVariables/executeNativeVariables'
 import { executeTypebotLink } from './blocks/logic/typebotLink/executeTypebotLink'
 import { executeAbTest } from './blocks/logic/abTest/executeAbTest'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
@@ -16,6 +19,10 @@ export const executeLogic =
     switch (block.type) {
       case LogicBlockType.SET_VARIABLE:
         return executeSetVariable(state, block)
+      case LogicBlockType.VALIDATE_CPF:
+        return executeValidateCpf(state, block)
+      case LogicBlockType.VALIDATE_CNPJ:
+        return executeValidateCnpj(state, block)
       case LogicBlockType.CONDITION:
         return executeConditionBlock(state, block)
       case LogicBlockType.REDIRECT:
@@ -30,5 +37,7 @@ export const executeLogic =
         return executeJumpBlock(state, block.options)
       case LogicBlockType.AB_TEST:
         return executeAbTest(state, block)
+      case LogicBlockType.NATIVE_VARIABLES:
+        return executeNativeVariables(state, block)
     }
   }

@@ -21,6 +21,7 @@ import { injectVariableValuesInButtonsInputBlock } from './blocks/inputs/buttons
 import { injectVariableValuesInPictureChoiceBlock } from './blocks/inputs/pictureChoice/injectVariableValuesInPictureChoiceBlock'
 import { getPrefilledInputValue } from './getPrefilledValue'
 import { parseDateInput } from './blocks/inputs/date/parseDateInput'
+import { parseNativeVariablesInput } from './blocks/inputs/nativeVariables/parseNativeVariablesInput'
 import { deepParseVariables } from '@typebot.io/variables/deepParseVariables'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
 import { VisitedEdge } from '@typebot.io/prisma'
@@ -307,6 +308,9 @@ export const parseInput =
       }
       case InputBlockType.DATE: {
         return parseDateInput(state)(block)
+      }
+      case InputBlockType.NATIVE_VARIABLES: {
+        return parseNativeVariablesInput(state)(block)
       }
       case InputBlockType.RATING: {
         const parsedBlock = deepParseVariables(

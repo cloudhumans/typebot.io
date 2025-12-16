@@ -49,6 +49,8 @@ export const BlockLabel = ({ type }: Props): JSX.Element => {
       return <Text fontSize="sm">{t('editor.sidebarBlock.rating.label')}</Text>
     case InputBlockType.FILE:
       return <Text fontSize="sm">{t('editor.sidebarBlock.file.label')}</Text>
+    case InputBlockType.NATIVE_VARIABLES:
+      return <Text fontSize="sm">Variáveis Nativas</Text>
     case LogicBlockType.SET_VARIABLE:
       return (
         <Text fontSize="sm">{t('editor.sidebarBlock.setVariable.label')}</Text>
@@ -71,6 +73,10 @@ export const BlockLabel = ({ type }: Props): JSX.Element => {
       return <Text fontSize="sm">{t('editor.sidebarBlock.jump.label')}</Text>
     case LogicBlockType.AB_TEST:
       return <Text fontSize="sm">{t('editor.sidebarBlock.abTest.label')}</Text>
+    case LogicBlockType.VALIDATE_CPF:
+      return <Text fontSize="sm">Validar CPF</Text>
+    case LogicBlockType.VALIDATE_CNPJ:
+      return <Text fontSize="sm">Validar CNPJ</Text>
     case IntegrationBlockType.GOOGLE_SHEETS:
       return <Text fontSize="sm">{t('editor.sidebarBlock.sheets.label')}</Text>
     case IntegrationBlockType.GOOGLE_ANALYTICS:

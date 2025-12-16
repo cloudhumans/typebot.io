@@ -12,6 +12,7 @@ import { DateNodeContent } from '@/features/blocks/inputs/date/components/DateNo
 import { EmailInputNodeContent } from '@/features/blocks/inputs/emailInput/components/EmailInputNodeContent'
 import { FileInputContent } from '@/features/blocks/inputs/fileUpload/components/FileInputContent'
 import { NumberNodeContent } from '@/features/blocks/inputs/number/components/NumberNodeContent'
+import { NativeVariablesNode } from '@/features/blocks/inputs/nativeVariables/components/NativeVariablesNode'
 import { PaymentInputContent } from '@/features/blocks/inputs/payment/components/PaymentInputContent'
 import { PhoneNodeContent } from '@/features/blocks/inputs/phone/components/PhoneNodeContent'
 import { RatingInputContent } from '@/features/blocks/inputs/rating/components/RatingInputContent'
@@ -25,6 +26,8 @@ import { WebhookContent } from '@/features/blocks/integrations/webhook/component
 import { ZapierContent } from '@/features/blocks/integrations/zapier/components/ZapierContent'
 import { RedirectNodeContent } from '@/features/blocks/logic/redirect/components/RedirectNodeContent'
 import { SetVariableContent } from '@/features/blocks/logic/setVariable/components/SetVariableContent'
+import { ValidateCpfContent } from '@/features/blocks/logic/validateCpf/components/ValidateCpfContent'
+import { ValidateCnpjContent } from '@/features/blocks/logic/validateCnpj/components/ValidateCnpjContent'
 import { TypebotLinkNode } from '@/features/blocks/logic/typebotLink/components/TypebotLinkNode'
 import { ItemNodesList } from '../item/ItemNodesList'
 import { GoogleAnalyticsNodeBody } from '@/features/blocks/integrations/googleAnalytics/components/GoogleAnalyticsNodeBody'
@@ -99,8 +102,17 @@ export const BlockNodeContent = ({
     case InputBlockType.FILE: {
       return <FileInputContent options={block.options} />
     }
+    case InputBlockType.NATIVE_VARIABLES: {
+      return <NativeVariablesNode block={block} />
+    }
     case LogicBlockType.SET_VARIABLE: {
       return <SetVariableContent block={block} />
+    }
+    case LogicBlockType.VALIDATE_CPF: {
+      return <ValidateCpfContent block={block} />
+    }
+    case LogicBlockType.VALIDATE_CNPJ: {
+      return <ValidateCnpjContent block={block} />
     }
     case LogicBlockType.REDIRECT: {
       return <RedirectNodeContent url={block.options?.url} />
