@@ -108,9 +108,17 @@ jobs:
           # Update manifests (base only)
           ###############################################
           pushd deploy-k8s/base
+          
           "$KUSTOMIZE_PATH" edit set image typebot-viewer-image="$ECR_REGISTRY/$ECR_VIEWER_REPOSITORY:$IMAGE_VERSION"
           "$KUSTOMIZE_PATH" edit set image typebot-builder-image="$ECR_REGISTRY/$ECR_BUILDER_REPOSITORY:$IMAGE_VERSION"
+
+          sed -i "s/DD_VERSION: ['\"][^'\"]*['\"]/DD_VERSION: '$APP_VERSION'/g" typebot-builder-deployment.yaml || true
+          sed -i "s/DD_VERSION: ['\"][^'\"]*['\"]/DD_VERSION: '$APP_VERSION'/g" typebot-viewer-deployment.yaml || true
+
+          sed -i "s/tags\.datadoghq\.com\/version: ['\"][^'\"]*['\"]/tags.datadoghq.com\/version: '$APP_VERSION'/g" typebot-builder-deployment.yaml || true
+          sed -i "s/tags\.datadoghq\.com\/version: ['\"][^'\"]*['\"]/tags.datadoghq.com\/version: '$APP_VERSION'/g" typebot-viewer-deployment.yaml || true
           popd
+          
 
           ###############################################
           # Commit changes to a version branch & open PR
