@@ -769,6 +769,11 @@ export const postTypebotValidation = publicProcedure
   })
   .input(
     z.object({
+      typebotId: z
+        .string()
+        .describe(
+          'Typebot id to be validated (used only if typebot object not provided)'
+        ),
       typebot: z
         .object({
           variables: z.array(variableSchema),
