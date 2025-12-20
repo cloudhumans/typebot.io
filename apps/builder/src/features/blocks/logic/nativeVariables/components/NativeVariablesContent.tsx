@@ -2,7 +2,7 @@ import { Text } from '@chakra-ui/react'
 import {
   NativeVariablesBlock,
   nativeVariableTypes,
-} from '@typebot.io/schemas/features/blocks/logic/nativeVariables'
+} from '@typebot.io/schemas/features/blocks/inputs/nativeVariables'
 
 type Props = {
   block: NativeVariablesBlock

@@ -8,7 +8,6 @@ import { executeConditionBlock } from './blocks/logic/condition/executeCondition
 import { executeSetVariable } from './blocks/logic/setVariable/executeSetVariable'
 import { executeValidateCpf } from './blocks/logic/validateCpf/executeValidateCpf'
 import { executeValidateCnpj } from './blocks/logic/validateCnpj/executeValidateCnpj'
-import { executeNativeVariables } from './blocks/logic/nativeVariables/executeNativeVariables'
 import { executeTypebotLink } from './blocks/logic/typebotLink/executeTypebotLink'
 import { executeAbTest } from './blocks/logic/abTest/executeAbTest'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
@@ -37,7 +36,6 @@ export const executeLogic =
         return executeJumpBlock(state, block.options)
       case LogicBlockType.AB_TEST:
         return executeAbTest(state, block)
-      case LogicBlockType.NATIVE_VARIABLES:
-        return executeNativeVariables(state, block)
+      // NATIVE_VARIABLES foi movido para InputBlocks
     }
   }

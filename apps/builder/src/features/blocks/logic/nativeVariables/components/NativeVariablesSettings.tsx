@@ -3,7 +3,7 @@ import { Stack, Text, Select } from '@chakra-ui/react'
 import {
   NativeVariablesOptions,
   nativeVariableTypes,
-} from '@typebot.io/schemas/features/blocks/logic/nativeVariables'
+} from '@typebot.io/schemas/features/blocks/inputs/nativeVariables'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { createId } from '@paralleldrive/cuid2'
 

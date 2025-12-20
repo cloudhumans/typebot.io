@@ -16,3 +16,9 @@ export const nativeVariableTypes = [
 ] as const
 
 export type NativeVariableType = (typeof nativeVariableTypes)[number]['value']
+
+export const defaultNativeVariablesBlock: NativeVariablesBlock = {
+  id: '',
+  type: InputBlockType.NATIVE_VARIABLES,
+  options: defaultNativeVariablesOptions,
+}

@@ -18,6 +18,7 @@ export const NativeVariablesSettings = ({
 }: Props) => {
   const { typebot, createVariable } = useTypebot()
   const variables = typebot?.variables ?? []
+
   const handleNativeTypeChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
