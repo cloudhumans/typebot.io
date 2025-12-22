@@ -78,19 +78,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const answers = resultValues
       ? resultValues.answers.map((answer: any) => ({
-        key:
-          (answer.variableId
-            ? typebot.variables.find(
-              (variable) => variable.id === answer.variableId
-            )?.name
-            : typebot.groups.find((group) =>
-              group.blocks.find((block) => block.id === answer.blockId)
-            )?.title) ?? '',
-        value: answer.content,
-      }))
+          key:
+            (answer.variableId
+              ? typebot.variables.find(
+                  (variable) => variable.id === answer.variableId
+                )?.name
+              : typebot.groups.find((group) =>
+                  group.blocks.find((block) => block.id === answer.blockId)
+                )?.title) ?? '',
+          value: answer.content,
+        }))
       : arrayify(
-        await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
-      )
+          await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
+        )
 
     const parsedWebhook = await parseWebhookAttributes({
       webhook,

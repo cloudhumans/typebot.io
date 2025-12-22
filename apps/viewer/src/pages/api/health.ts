@@ -14,7 +14,10 @@ import { EventType } from '@typebot.io/schemas/features/events/constants'
 
 initGraceful({ component: 'viewer' })
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const end = beginRequest({ kind: 'probe', track: false })
   res.setHeader('Cache-Control', 'no-store')
   if (isDraining()) {
@@ -54,7 +57,9 @@ const checkResponsiveness = async () => {
             id: 'block2',
             type: BubbleBlockType.TEXT,
             content: {
-              richText: [{ type: 'p', children: [{ text: 'Health Check OK' }] }],
+              richText: [
+                { type: 'p', children: [{ text: 'Health Check OK' }] },
+              ],
             },
           },
         ],
