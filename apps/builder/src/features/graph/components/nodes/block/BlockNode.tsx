@@ -39,6 +39,7 @@ import {
   useDragDistance,
 } from '@/features/graph/providers/GraphDndProvider'
 import { useGraph } from '@/features/graph/providers/GraphProvider'
+import { useFlowSearch } from '@/features/graph/providers/FlowSearchProvider'
 import { ParentModalProvider } from '@/features/graph/providers/ParentModalProvider'
 import { hasDefaultConnector } from '@/features/typebot/helpers/hasDefaultConnector'
 import { setMultipleRefs } from '@/helpers/setMultipleRefs'
@@ -73,6 +74,10 @@ export const BlockNode = ({
   const previewingBorderColor = useColorModeValue('blue.400', 'blue.300')
   const borderColor = useColorModeValue('gray.200', 'gray.800')
   const noteBorderColor = useColorModeValue('yellow.400', 'yellow.600')
+  const searchHighlightBorderColor = useColorModeValue(
+    'orange.400',
+    'orange.300'
+  )
   const { pathname, query } = useRouter()
   const {
     setConnectingIds,
@@ -86,6 +91,7 @@ export const BlockNode = ({
     previewingBlock,
   } = useGraph()
   const { mouseOverBlock, setMouseOverBlock } = useBlockDnd()
+  const { highlightedBlockId } = useFlowSearch()
   const { typebot, updateBlock } = useTypebot()
   const [isConnecting, setIsConnecting] = useState(false)
   const blockRef = useRef<HTMLDivElement | null>(null)
@@ -94,6 +100,8 @@ export const BlockNode = ({
     isConnecting ||
     previewingEdge?.to.blockId === block.id ||
     previewingBlock?.id === block.id
+
+  const isSearchHighlighted = highlightedBlockId === block.id
 
   const groupId = typebot?.groups.at(indices.groupIndex)?.id
 
@@ -287,16 +295,24 @@ export const BlockNode = ({
                 userSelect="none"
                 p="3"
                 borderWidth={
-                  isContextMenuOpened || isPreviewing ? '2px' : '1px'
+                  isContextMenuOpened || isPreviewing || isSearchHighlighted
+                    ? '2px'
+                    : '1px'
                 }
                 borderColor={
-                  isContextMenuOpened || isPreviewing
+                  isSearchHighlighted
+                    ? searchHighlightBorderColor
+                    : isContextMenuOpened || isPreviewing
                     ? previewingBorderColor
                     : isNoteBlock(block)
                     ? noteBorderColor
                     : borderColor
                 }
-                margin={isContextMenuOpened || isPreviewing ? '-1px' : 0}
+                margin={
+                  isContextMenuOpened || isPreviewing || isSearchHighlighted
+                    ? '-1px'
+                    : 0
+                }
                 rounded="lg"
                 cursor={'pointer'}
                 bg={isNoteBlock(block) ? noteBg : bg}
