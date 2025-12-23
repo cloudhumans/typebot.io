@@ -27,6 +27,8 @@ export const BlockLabel = ({ type }: Props): JSX.Element => {
       return <Text fontSize="sm">{t('editor.sidebarBlock.embed.label')}</Text>
     case BubbleBlockType.AUDIO:
       return <Text fontSize="sm">{t('editor.sidebarBlock.audio.label')}</Text>
+    case BubbleBlockType.NOTE:
+      return <Text fontSize="sm">Note</Text>
     case InputBlockType.NUMBER:
       return <Text fontSize="sm">{t('editor.sidebarBlock.number.label')}</Text>
     case InputBlockType.EMAIL:

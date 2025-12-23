@@ -8,6 +8,7 @@ import { EmbedBubbleContent } from '@/features/blocks/bubbles/embed/components/E
 import { ImageBubbleContent } from '@/features/blocks/bubbles/image/components/ImageBubbleContent'
 import { TextBubbleContent } from '@/features/blocks/bubbles/textBubble/components/TextBubbleContent'
 import { VideoBubbleContent } from '@/features/blocks/bubbles/video/components/VideoBubbleContent'
+import { NoteContent } from '@/features/blocks/bubbles/note/components/NoteContent'
 import { DateNodeContent } from '@/features/blocks/inputs/date/components/DateNodeContent'
 import { EmailInputNodeContent } from '@/features/blocks/inputs/emailInput/components/EmailInputNodeContent'
 import { FileInputContent } from '@/features/blocks/inputs/fileUpload/components/FileInputContent'
@@ -65,6 +66,9 @@ export const BlockNodeContent = ({
     }
     case BubbleBlockType.AUDIO: {
       return <AudioBubbleNode url={block.content?.url} />
+    }
+    case BubbleBlockType.NOTE: {
+      return <NoteContent block={block} />
     }
     case InputBlockType.TEXT: {
       return <TextInputNodeContent options={block.options} />

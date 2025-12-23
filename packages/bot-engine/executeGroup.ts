@@ -13,6 +13,7 @@ import {
   isIntegrationBlock,
   isLogicBlock,
 } from '@typebot.io/schemas/helpers'
+import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
 import { getNextGroup } from './getNextGroup'
 import { executeLogic } from './executeLogic'
 import { executeIntegration } from './executeIntegration'
@@ -92,6 +93,9 @@ export const executeGroup = async (
 
     index++
     nextEdgeId = block.outgoingEdgeId
+
+    // Skip NOTE blocks during execution
+    if (block.type === BubbleBlockType.NOTE) continue
 
     if (isBubbleBlock(block)) {
       if (!block.content || (firstBubbleWasStreamed && index === 0)) continue
