@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslate } from '@tolgee/react'
 import { Stack, Text } from '@chakra-ui/react'
 import { ValidateCnpjOptions } from '@typebot.io/schemas/features/blocks/logic/validateCnpj'
 import { VariableSearchInput } from '@/components/inputs/VariableSearchInput'
@@ -12,14 +13,23 @@ type Props = {
 }
 
 export const ValidateCnpjSettings = ({ options, onOptionsChange }: Props) => {
+  const { t } = useTranslate()
   const { typebot } = useTypebot()
 
   const handleInputVariableChange = (variable?: Variable) => {
-    onOptionsChange({ ...options, inputVariableId: variable?.id })
+    onOptionsChange({
+      ...options,
+      inputVariableId: variable?.id,
+      removeFormatting: options?.removeFormatting ?? true,
+    })
   }
 
   const handleOutputVariableChange = (variable?: Variable) => {
-    onOptionsChange({ ...options, outputVariableId: variable?.id })
+    onOptionsChange({
+      ...options,
+      outputVariableId: variable?.id,
+      removeFormatting: options?.removeFormatting ?? true,
+    })
   }
 
   const handleRemoveFormattingChange = (removeFormatting: boolean) => {
@@ -36,10 +46,14 @@ export const ValidateCnpjSettings = ({ options, onOptionsChange }: Props) => {
 
   return (
     <Stack spacing={4}>
-      <Text fontWeight="semibold">Configurações de Validação de CNPJ</Text>
+      <Text fontWeight="semibold">
+        {t('blocks.logic.validateCnpj.configure.label')}
+      </Text>
 
       <Stack>
-        <Text fontSize="sm">Variável com CNPJ para validar:</Text>
+        <Text fontSize="sm">
+          {t('blocks.logic.validateCnpj.inputVariable.label')}
+        </Text>
         <VariableSearchInput
           initialVariableId={options?.inputVariableId}
           onSelectVariable={handleInputVariableChange}
@@ -50,11 +64,11 @@ export const ValidateCnpjSettings = ({ options, onOptionsChange }: Props) => {
       {resultVariableName && (
         <Stack>
           <Text fontSize="sm" color="orange.600">
-            ⚠️ Você deve criar manualmente a variável:{' '}
+            {t('blocks.logic.validateCnpj.manualVariableWarning')}{' '}
             <strong>{resultVariableName}</strong>
           </Text>
           <Text fontSize="xs" color="gray.500">
-            Esta variável receberá true (CNPJ válido) ou false (CNPJ inválido)
+            {t('blocks.logic.validateCnpj.manualVariableDescription')}
           </Text>
         </Stack>
       )}

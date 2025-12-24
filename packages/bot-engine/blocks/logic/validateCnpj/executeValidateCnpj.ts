@@ -34,7 +34,7 @@ export const executeValidateCnpj = (
         {
           status: 'error',
           description:
-            '⚠️ Este parece ser um CPF (11 dígitos). Use o bloco "Validar CPF" para validar CPFs.',
+            `⚠️ This appears to be a CNPJ (14 digits). Use the “Validate CNPJ” block to validate CNPJs.`,
         },
       ],
     }

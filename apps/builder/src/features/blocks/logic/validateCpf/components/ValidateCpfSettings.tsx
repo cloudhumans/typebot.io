@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslate } from '@tolgee/react'
 import { Stack, Text } from '@chakra-ui/react'
 import { ValidateCpfOptions } from '@typebot.io/schemas/features/blocks/logic/validateCpf'
 import { VariableSearchInput } from '@/components/inputs/VariableSearchInput'
@@ -12,6 +13,7 @@ type Props = {
 }
 
 export const ValidateCpfSettings = ({ options, onOptionsChange }: Props) => {
+  const { t } = useTranslate()
   const { typebot } = useTypebot()
 
   const handleInputVariableChange = (variable?: Variable) => {
@@ -44,10 +46,14 @@ export const ValidateCpfSettings = ({ options, onOptionsChange }: Props) => {
 
   return (
     <Stack spacing={4}>
-      <Text fontWeight="semibold">Configurações de Validação de CPF</Text>
+      <Text fontWeight="semibold">
+        {t('blocks.logic.validateCpf.configure.label')}
+      </Text>
 
       <Stack>
-        <Text fontSize="sm">Variável com CPF para validar:</Text>
+        <Text fontSize="sm">
+          {t('blocks.logic.validateCpf.inputVariable.label')}
+        </Text>
         <VariableSearchInput
           initialVariableId={options?.inputVariableId}
           onSelectVariable={handleInputVariableChange}
@@ -58,11 +64,11 @@ export const ValidateCpfSettings = ({ options, onOptionsChange }: Props) => {
       {resultVariableName && (
         <Stack>
           <Text fontSize="sm" color="orange.600">
-            ⚠️ Você deve criar manualmente a variável:{' '}
+            ⚠️ {t('blocks.logic.validateCpf.manualVariableCreationWarning')}{' '}
             <strong>{resultVariableName}</strong>
           </Text>
           <Text fontSize="xs" color="gray.500">
-            Esta variável receberá true (CPF válido) ou false (CPF inválido)
+            {t('blocks.logic.validateCpf.variableDescription')}
           </Text>
         </Stack>
       )}

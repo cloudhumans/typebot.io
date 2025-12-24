@@ -1,4 +1,5 @@
 import { Text } from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
 import { ValidateCpfBlock } from '@typebot.io/schemas/features/blocks/logic/validateCpf'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { byId } from '@typebot.io/lib'
@@ -8,6 +9,7 @@ type Props = {
 }
 
 export const ValidateCpfContent = ({ block }: Props) => {
+  const { t } = useTranslate()
   const { typebot } = useTypebot()
   const inputVarName =
     typebot?.variables.find(byId(block.options?.inputVariableId))?.name ?? ''
@@ -15,7 +17,7 @@ export const ValidateCpfContent = ({ block }: Props) => {
   if (!inputVarName) {
     return (
       <Text color={'gray.500'} fontSize="sm">
-        Configurar validação CPF
+        {t('blocks.logic.validateCpf.configure.label')}
       </Text>
     )
   }
@@ -24,7 +26,7 @@ export const ValidateCpfContent = ({ block }: Props) => {
 
   return (
     <Text color={'gray.500'} fontSize="sm">
-      Validar CPF: {inputVarName} → {resultVarName}
+      {t('blocks.logic.validateCpf.label')}: {inputVarName} → {resultVarName}
     </Text>
   )
 }

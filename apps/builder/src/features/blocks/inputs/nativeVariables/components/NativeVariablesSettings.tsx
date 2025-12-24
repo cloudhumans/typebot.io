@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslate } from '@tolgee/react'
 import { Stack, Text, Select } from '@chakra-ui/react'
 import {
   NativeVariablesOptions,
@@ -16,6 +17,7 @@ export const NativeVariablesSettings = ({
   options,
   onOptionsChange,
 }: Props) => {
+  const { t } = useTranslate()
   const { typebot, createVariable } = useTypebot()
   const variables = typebot?.variables ?? []
 
@@ -63,10 +65,14 @@ export const NativeVariablesSettings = ({
 
   return (
     <Stack spacing={4}>
-      <Text fontWeight="semibold">Configurações de Variáveis Nativas</Text>
+      <Text fontWeight="semibold">
+        {t('blocks.inputs.nativeVariables.settings.title')}
+      </Text>
 
       <Stack>
-        <Text fontSize="sm">Tipo de variável nativa:</Text>
+        <Text fontSize="sm">
+          {t('blocks.inputs.nativeVariables.settings.typeLabel')}
+        </Text>
         <Select
           value={options?.nativeType || 'helpdeskId'}
           onChange={handleNativeTypeChange}
@@ -83,7 +89,8 @@ export const NativeVariablesSettings = ({
       {options?.nativeType && (
         <Stack>
           <Text fontSize="sm" color="gray.600">
-            📌 Variável criada: <strong>{`{${options.nativeType}}`}</strong>
+            {t('blocks.inputs.nativeVariables.settings.variableCreated')}{' '}
+            <strong>{`{${options.nativeType}}`}</strong>
           </Text>
           <Text fontSize="xs" color="gray.500">
             Fonte:{' '}

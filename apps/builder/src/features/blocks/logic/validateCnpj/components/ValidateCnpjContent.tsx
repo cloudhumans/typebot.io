@@ -1,4 +1,5 @@
 import { Text } from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
 import { ValidateCnpjBlock } from '@typebot.io/schemas/features/blocks/logic/validateCnpj'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { byId } from '@typebot.io/lib'
@@ -8,6 +9,7 @@ type Props = {
 }
 
 export const ValidateCnpjContent = ({ block }: Props) => {
+  const { t } = useTranslate()
   const { typebot } = useTypebot()
   const inputVarName =
     typebot?.variables.find(byId(block.options?.inputVariableId))?.name ?? ''
@@ -15,7 +17,7 @@ export const ValidateCnpjContent = ({ block }: Props) => {
   if (!inputVarName) {
     return (
       <Text color={'gray.500'} fontSize="sm">
-        Configurar validação CNPJ
+        {t('blocks.logic.validateCnpj.configure.label')}
       </Text>
     )
   }
@@ -24,7 +26,7 @@ export const ValidateCnpjContent = ({ block }: Props) => {
 
   return (
     <Text color={'gray.500'} fontSize="sm">
-      Validar CNPJ: {inputVarName} → {resultVarName}
+      {t('blocks.logic.validateCnpj.label')} {inputVarName} → {resultVarName}
     </Text>
   )
 }

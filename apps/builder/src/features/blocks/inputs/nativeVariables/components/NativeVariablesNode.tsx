@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslate } from '@tolgee/react'
 import { Text, HStack, Tag } from '@chakra-ui/react'
 import { NativeVariablesBlock } from '@typebot.io/schemas'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export const NativeVariablesNode = ({ block }: Props) => {
+  const { t } = useTranslate()
   const { typebot } = useTypebot()
 
   const selectedVariable = typebot?.variables.find(
@@ -20,7 +22,7 @@ export const NativeVariablesNode = ({ block }: Props) => {
   return (
     <HStack>
       <Text fontSize="sm" fontWeight="medium" color="gray.600">
-        Native:
+        {t('blocks.inputs.nativeVariables.native.label')}
       </Text>
       {nativeType && (
         <Tag size="sm" colorScheme="orange">

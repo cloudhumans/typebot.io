@@ -1,4 +1,5 @@
 import { Text } from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
 import {
   NativeVariablesBlock,
   nativeVariableTypes,
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export const NativeVariablesContent = ({ block }: Props) => {
+  const { t } = useTranslate()
   const nativeType = nativeVariableTypes.find(
     (type) => type.value === block.options?.nativeType
   )
@@ -16,7 +18,7 @@ export const NativeVariablesContent = ({ block }: Props) => {
   if (!nativeType) {
     return (
       <Text color={'gray.500'} fontSize="sm">
-        Configurar variável nativa
+        {t('blocks.inputs.nativeVariables.configure.label')}
       </Text>
     )
   }
