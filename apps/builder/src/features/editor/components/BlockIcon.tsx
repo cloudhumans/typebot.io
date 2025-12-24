@@ -9,6 +9,7 @@ import { EmbedBubbleIcon } from '@/features/blocks/bubbles/embed/components/Embe
 import { ImageBubbleIcon } from '@/features/blocks/bubbles/image/components/ImageBubbleIcon'
 import { TextBubbleIcon } from '@/features/blocks/bubbles/textBubble/components/TextBubbleIcon'
 import { VideoBubbleIcon } from '@/features/blocks/bubbles/video/components/VideoBubbleIcon'
+import { NoteIcon } from '@/features/blocks/bubbles/note/components/NoteIcon'
 import { ButtonsInputIcon } from '@/features/blocks/inputs/buttons/components/ButtonsIcon'
 import { DateInputIcon } from '@/features/blocks/inputs/date/components/DateInputIcon'
 import { EmailInputIcon } from '@/features/blocks/inputs/emailInput/components/EmailInputIcon'
@@ -30,6 +31,9 @@ import { RedirectIcon } from '@/features/blocks/logic/redirect/components/Redire
 import { SetVariableIcon } from '@/features/blocks/logic/setVariable/components/SetVariableIcon'
 import { TypebotLinkIcon } from '@/features/blocks/logic/typebotLink/components/TypebotLinkIcon'
 import { AbTestIcon } from '@/features/blocks/logic/abTest/components/AbTestIcon'
+import { ValidateCpfIcon } from '@/features/blocks/logic/validateCpf/components/ValidateCpfIcon'
+import { ValidateCnpjIcon } from '@/features/blocks/logic/validateCnpj/components/ValidateCnpjIcon'
+import { NativeVariablesIcon } from '@/features/blocks/inputs/nativeVariables/components/NativeVariablesIcon'
 import { PictureChoiceIcon } from '@/features/blocks/inputs/pictureChoice/components/PictureChoiceIcon'
 import { PixelLogo } from '@/features/blocks/integrations/pixel/components/PixelLogo'
 import { ZemanticAiLogo } from '@/features/blocks/integrations/zemanticAi/ZemanticAiLogo'
@@ -48,6 +52,7 @@ export const BlockIcon = ({ type, mt }: BlockIconProps): JSX.Element => {
   const orange = useColorModeValue('orange.500', 'orange.300')
   const purple = useColorModeValue('purple.500', 'purple.300')
   const openAIColor = useColorModeValue('black', 'white')
+  const burntYellow = useColorModeValue('yellow.600', 'yellow.400')
 
   switch (type) {
     case BubbleBlockType.TEXT:
@@ -60,6 +65,8 @@ export const BlockIcon = ({ type, mt }: BlockIconProps): JSX.Element => {
       return <EmbedBubbleIcon color={blue} mt={mt} />
     case BubbleBlockType.AUDIO:
       return <AudioBubbleIcon color={blue} mt={mt} />
+    case BubbleBlockType.NOTE:
+      return <NoteIcon color={burntYellow} mt={mt} />
     case InputBlockType.TEXT:
       return <TextInputIcon color={orange} mt={mt} />
     case InputBlockType.NUMBER:
@@ -82,6 +89,8 @@ export const BlockIcon = ({ type, mt }: BlockIconProps): JSX.Element => {
       return <RatingInputIcon color={orange} mt={mt} />
     case InputBlockType.FILE:
       return <FileInputIcon color={orange} mt={mt} />
+    case InputBlockType.NATIVE_VARIABLES:
+      return <NativeVariablesIcon color={orange} mt={mt} />
     case LogicBlockType.SET_VARIABLE:
       return <SetVariableIcon color={purple} mt={mt} />
     case LogicBlockType.CONDITION:
@@ -98,6 +107,10 @@ export const BlockIcon = ({ type, mt }: BlockIconProps): JSX.Element => {
       return <TypebotLinkIcon color={purple} mt={mt} />
     case LogicBlockType.AB_TEST:
       return <AbTestIcon color={purple} mt={mt} />
+    case LogicBlockType.VALIDATE_CPF:
+      return <ValidateCpfIcon color={purple} mt={mt} />
+    case LogicBlockType.VALIDATE_CNPJ:
+      return <ValidateCnpjIcon color={purple} mt={mt} />
     case IntegrationBlockType.GOOGLE_SHEETS:
       return <GoogleSheetsLogo mt={mt} />
     case IntegrationBlockType.GOOGLE_ANALYTICS:

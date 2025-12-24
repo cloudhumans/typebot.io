@@ -421,6 +421,7 @@ const getOutgoingEdgeId =
     reply: string | undefined
   ): { edgeId: string | undefined; isOffDefaultPath: boolean } => {
     const variables = state.typebotsQueue[0].typebot.variables
+
     if (
       block.type === InputBlockType.CHOICE &&
       !(
@@ -437,6 +438,7 @@ const getOutgoingEdgeId =
       if (matchedItem?.outgoingEdgeId)
         return { edgeId: matchedItem.outgoingEdgeId, isOffDefaultPath: true }
     }
+
     if (
       block.type === InputBlockType.PICTURE_CHOICE &&
       !(
@@ -453,6 +455,33 @@ const getOutgoingEdgeId =
       if (matchedItem?.outgoingEdgeId)
         return { edgeId: matchedItem.outgoingEdgeId, isOffDefaultPath: true }
     }
+
+    // NativeVariables conditional routing
+    if (
+      block.type === InputBlockType.NATIVE_VARIABLES &&
+      block.options?.variableId &&
+      'items' in block &&
+      Array.isArray((block as any).items)
+    ) {
+      const items = (block as { items: Array<{ content?: { isSet?: boolean }; outgoingEdgeId?: string }> }).items;
+      const targetVariable = variables.find(
+        (v) => v.id === block.options?.variableId
+      )
+      const hasValue =
+        targetVariable?.value != null &&
+        targetVariable?.value !== '' &&
+        targetVariable?.value !== undefined
+
+      // Encontrar o item correto baseado na condição
+      const targetItem = items.find(
+        (item: { content?: { isSet?: boolean }; outgoingEdgeId?: string }) => item.content?.isSet === hasValue
+      )
+
+      if (targetItem?.outgoingEdgeId) {
+        return { edgeId: targetItem.outgoingEdgeId, isOffDefaultPath: true }
+      }
+    }
+    
     return { edgeId: block.outgoingEdgeId, isOffDefaultPath: false }
   }
 
@@ -554,7 +583,13 @@ const parseReply =
         if (!reply) return { status: 'fail' }
         return { status: 'success', reply: reply }
       }
+      case InputBlockType.NATIVE_VARIABLES: {
+        // NATIVE_VARIABLES é processado automaticamente, não precisa de input do usuário
+        return { status: 'skip' }
+      }
     }
+    // Return statement padrão para casos não cobertos
+    return { status: 'fail' }
   }
 
 export const safeJsonParse = (value: string): unknown => {
