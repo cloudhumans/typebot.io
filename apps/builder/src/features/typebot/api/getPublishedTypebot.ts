@@ -373,7 +373,7 @@ export const getPublishedTypebotVariables = authenticatedProcedure
         cache.set(cacheKey, typebotData)
       }
 
-      if (!typebotData || !typebotData.publishedTypebot) {
+      if (!typebotData?.publishedTypebot) {
         return {
           publishedTypebot: null,
         }

@@ -27,7 +27,10 @@ export default async function handler(
   }
   if (req.query.mode === 'deep') {
     const isHealthy = await checkResponsiveness()
-    if (!isHealthy) return res.status(503).json({ status: 'unhealthy' })
+    if (!isHealthy) {
+      end()
+      return res.status(503).json({ status: 'unhealthy' })
+    }
   }
 
   const snap = healthSnapshot()

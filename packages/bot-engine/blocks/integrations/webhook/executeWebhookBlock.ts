@@ -283,7 +283,7 @@ export const executeWebhook = async (
         statusCode: 408,
         data: {
           message: `Request timed out. (${(request.timeout ? request.timeout : 0) / 1000
-            }ms)`,
+            }s)`,
         },
       }
       logs.push({
