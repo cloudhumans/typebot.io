@@ -99,8 +99,8 @@ export const getPublishedTypebot = authenticatedProcedure
       try {
         const parsedTypebot = migrateToLatestVersion
           ? await migratePublicTypebot(
-            publicTypebotSchema.parse(existingTypebot.publishedTypebot)
-          )
+              publicTypebotSchema.parse(existingTypebot.publishedTypebot)
+            )
           : publicTypebotSchema.parse(existingTypebot.publishedTypebot)
 
         return {
@@ -224,8 +224,8 @@ export const getPublishedTypebotCached = authenticatedProcedure
 
         const parsedTypebot = migrateToLatestVersion
           ? await migratePublicTypebot(
-            publicTypebotSchema.parse(existingTypebot.publishedTypebot)
-          )
+              publicTypebotSchema.parse(existingTypebot.publishedTypebot)
+            )
           : publicTypebotSchema.parse(existingTypebot.publishedTypebot)
 
         const result = {
@@ -270,33 +270,35 @@ export const getPublishedTypebotVariables = authenticatedProcedure
   )
   .output(
     z.object({
-      publishedTypebot: z.object({
-        groups: z.array(
-          z.object({
-            blocks: z.array(
-              z.object({
-                type: z.string(),
-                options: z
-                  .object({
-                    labels: z
-                      .object({
-                        placeholder: z.string().optional(),
-                      })
-                      .optional(),
-                    variableId: z.string().optional(),
-                  })
-                  .optional(),
-              })
-            ),
-          })
-        ),
-        variables: z.array(
-          z.object({
-            id: z.string(),
-            name: z.string(),
-          })
-        ),
-      }).nullable(),
+      publishedTypebot: z
+        .object({
+          groups: z.array(
+            z.object({
+              blocks: z.array(
+                z.object({
+                  type: z.string(),
+                  options: z
+                    .object({
+                      labels: z
+                        .object({
+                          placeholder: z.string().optional(),
+                        })
+                        .optional(),
+                      variableId: z.string().optional(),
+                    })
+                    .optional(),
+                })
+              ),
+            })
+          ),
+          variables: z.array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+            })
+          ),
+        })
+        .nullable(),
     })
   )
   .query(async ({ input: { typebotId }, ctx: { user } }) => {
@@ -304,9 +306,9 @@ export const getPublishedTypebotVariables = authenticatedProcedure
       const cacheKey = `publishedTypebot:${typebotId}`
       const cachedData = cache.get(cacheKey) as
         | {
-          publishedTypebot: PublicTypebot | Typebot | null
-          version: Typebot['version'] | undefined
-        }
+            publishedTypebot: PublicTypebot | Typebot | null
+            version: Typebot['version'] | undefined
+          }
         | undefined
 
       let typebotData = cachedData
@@ -391,13 +393,13 @@ export const getPublishedTypebotVariables = authenticatedProcedure
             type: block.type,
             options: options
               ? {
-                labels: options.labels
-                  ? {
-                    placeholder: options.labels.placeholder,
-                  }
-                  : undefined,
-                variableId: options.variableId,
-              }
+                  labels: options.labels
+                    ? {
+                        placeholder: options.labels.placeholder,
+                      }
+                    : undefined,
+                  variableId: options.variableId,
+                }
               : undefined,
           }
         }),
