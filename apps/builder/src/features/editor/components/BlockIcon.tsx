@@ -9,7 +9,12 @@ import { EmbedBubbleIcon } from '@/features/blocks/bubbles/embed/components/Embe
 import { ImageBubbleIcon } from '@/features/blocks/bubbles/image/components/ImageBubbleIcon'
 import { TextBubbleIcon } from '@/features/blocks/bubbles/textBubble/components/TextBubbleIcon'
 import { VideoBubbleIcon } from '@/features/blocks/bubbles/video/components/VideoBubbleIcon'
-import { NoteIcon } from '@/features/blocks/bubbles/note/components/NoteIcon'
+import {
+  NoteIcon,
+  ValidateCnpjIcon,
+  ValidateCpfIcon,
+  NativeVariablesIcon,
+} from '@/components/icons'
 import { ButtonsInputIcon } from '@/features/blocks/inputs/buttons/components/ButtonsIcon'
 import { DateInputIcon } from '@/features/blocks/inputs/date/components/DateInputIcon'
 import { EmailInputIcon } from '@/features/blocks/inputs/emailInput/components/EmailInputIcon'
@@ -31,9 +36,6 @@ import { RedirectIcon } from '@/features/blocks/logic/redirect/components/Redire
 import { SetVariableIcon } from '@/features/blocks/logic/setVariable/components/SetVariableIcon'
 import { TypebotLinkIcon } from '@/features/blocks/logic/typebotLink/components/TypebotLinkIcon'
 import { AbTestIcon } from '@/features/blocks/logic/abTest/components/AbTestIcon'
-import { ValidateCpfIcon } from '@/features/blocks/logic/validateCpf/components/ValidateCpfIcon'
-import { ValidateCnpjIcon } from '@/features/blocks/logic/validateCnpj/components/ValidateCnpjIcon'
-import { NativeVariablesIcon } from '@/features/blocks/inputs/nativeVariables/components/NativeVariablesIcon'
 import { PictureChoiceIcon } from '@/features/blocks/inputs/pictureChoice/components/PictureChoiceIcon'
 import { PixelLogo } from '@/features/blocks/integrations/pixel/components/PixelLogo'
 import { ZemanticAiLogo } from '@/features/blocks/integrations/zemanticAi/ZemanticAiLogo'

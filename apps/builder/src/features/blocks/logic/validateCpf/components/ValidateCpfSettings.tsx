@@ -57,7 +57,7 @@ export const ValidateCpfSettings = ({ options, onOptionsChange }: Props) => {
         <VariableSearchInput
           initialVariableId={options?.inputVariableId}
           onSelectVariable={handleInputVariableChange}
-          placeholder="Selecione a variável..."
+          placeholder={t('blocks.logic.validateCpf.inputPlaceholder')}
         />
       </Stack>
 
@@ -74,16 +74,18 @@ export const ValidateCpfSettings = ({ options, onOptionsChange }: Props) => {
       )}
 
       <Stack>
-        <Text fontSize="sm">Salvar CPF limpo em:</Text>
+        <Text fontSize="sm">
+          {t('blocks.logic.validateCpf.outputVariable.label')}
+        </Text>
         <VariableSearchInput
           initialVariableId={options?.outputVariableId}
           onSelectVariable={handleOutputVariableChange}
-          placeholder="Escolha onde salvar CPF limpo..."
+          placeholder={t('blocks.logic.validateCpf.outputPlaceholder')}
         />
       </Stack>
 
       <SwitchWithLabel
-        label="Remover formatação (pontos e hífen)"
+        label={t('blocks.logic.validateCpf.removeFormatting.label')}
         initialValue={options?.removeFormatting ?? true}
         onCheckChange={handleRemoveFormattingChange}
       />

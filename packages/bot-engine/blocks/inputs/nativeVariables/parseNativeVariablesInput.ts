@@ -4,11 +4,14 @@ import {
   Variable,
 } from '@typebot.io/schemas'
 import { deepParseVariables } from '@typebot.io/variables/deepParseVariables'
+import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesInSession'
+import { createId } from '@typebot.io/lib/createId'
 import { getPrefilledInputValue } from '../../../getPrefilledValue'
 
 export const parseNativeVariablesInput =
   (state: SessionState) => (block: NativeVariablesBlock) => {
-    const variables = state.typebotsQueue[0].typebot.variables
+    let updatedState = state
+    const variables = updatedState.typebotsQueue[0].typebot.variables
 
     if (!block.options?.nativeType || !block.options?.variableId) {
       return deepParseVariables(variables, { removeEmptyStrings: true })({
@@ -18,17 +21,18 @@ export const parseNativeVariablesInput =
     }
 
     // Coletar o valor nativo automaticamente
-    const nativeValue = getNativeValue(state, block.options.nativeType)
+    const nativeValue = getNativeValue(updatedState, block.options.nativeType)
 
-    // Encontrar e atualizar a variável diretamente
-    const targetVariable = variables.find(
-      (v) => v.id === block.options?.variableId
-    )
-    if (targetVariable) {
-      targetVariable.value = nativeValue
-    }
+    // Criar uma nova lista de variáveis com o valor nativo atualizado (sem alterar o estado)
+    const variaveisAtualizadas = block.options?.variableId
+      ? variables.map((v) =>
+          v.id === block.options?.variableId ? { ...v, value: nativeValue } : v
+        )
+      : variables
 
-    return deepParseVariables(variables, { removeEmptyStrings: true })({
+    return deepParseVariables(variaveisAtualizadas, {
+      removeEmptyStrings: true,
+    })({
       ...block,
       prefilledValue: nativeValue,
     })
@@ -38,29 +42,47 @@ export const parseNativeVariablesInput =
 const getNativeValue = (state: SessionState, nativeType: string): string => {
   switch (nativeType) {
     case 'helpdeskId':
-      // Busca helpdesk ID nos headers ou na sessão
-      return state.whatsApp?.contact?.phoneNumber || 'web-user-' + Date.now()
+      // Verifica se há contacto WhatsApp válido, senão retorna ID único para usuário web
+      if (state.whatsApp?.contact?.phoneNumber) {
+        return state.whatsApp.contact.phoneNumber
+      }
+      return 'web-user-' + createId()
+
     case 'cloudChatId':
-      // Busca cloud chat ID na sessão
-      return (
-        state.whatsApp?.contact?.name || state.currentBlockId || 'anonymous'
-      )
+      // Prioriza nome do contacto WhatsApp, depois block ID atual, senão anônimo
+      if (state.whatsApp?.contact?.name) {
+        return state.whatsApp.contact.name
+      }
+      if (state.currentBlockId) {
+        return state.currentBlockId
+      }
+      return 'anonymous'
+
     case 'activeIntent':
-      // Busca intent ativo baseado na última resposta
+      // Busca intent ativo baseado na última resposta válida
       const lastAnswer = state.typebotsQueue[0]?.answers?.slice(-1)[0]
       return lastAnswer?.key || 'no-intent'
+
     case 'channelType':
+      // Determina canal baseado na presença de dados WhatsApp
       return state.whatsApp ? 'whatsapp' : 'web'
+
     case 'createdAt':
+      // Retorna timestamp ISO atual
       return new Date().toISOString()
+
     case 'lastUserMessages':
-      // Busca as últimas mensagens das respostas
+      // Busca últimas 3 mensagens válidas ou array vazio
       const lastAnswers = state.typebotsQueue[0]?.answers?.slice(-3) || []
-      return JSON.stringify(lastAnswers.map((a) => a.value))
+      const validLastAnswers = lastAnswers.filter((answer) => answer?.value)
+      return JSON.stringify(validLastAnswers.map((a) => a.value))
+
     case 'messages':
-      // Busca todas as mensagens/respostas da sessão
+      // Busca todas as mensagens válidas da sessão
       const allAnswers = state.typebotsQueue[0]?.answers || []
-      return JSON.stringify(allAnswers.map((a) => a.value))
+      const validAnswers = allAnswers.filter((answer) => answer?.value)
+      return JSON.stringify(validAnswers.map((a) => a.value))
+
     default:
       return 'unknown'
   }

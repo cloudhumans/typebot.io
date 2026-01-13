@@ -29,7 +29,7 @@ export const getBlockTypeLabel = (
     case BubbleBlockType.AUDIO:
       return t('editor.sidebarBlock.audio.label')
     case BubbleBlockType.NOTE:
-      return 'Note'
+      return t('editor.sidebarBlock.note.label')
     case InputBlockType.NUMBER:
       return t('editor.sidebarBlock.number.label')
     case InputBlockType.EMAIL:

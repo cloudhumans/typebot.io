@@ -70,10 +70,10 @@ export const BlockNode = ({
   onMouseDown?: (blockNodePosition: NodePosition, block: BlockV6) => void
 }) => {
   const bg = useColorModeValue('gray.50', 'gray.850')
-  const noteBg = useColorModeValue('yellow.50', 'yellow.900')
+  const noteBg = useColorModeValue('gray.50', 'gray.850')
   const previewingBorderColor = useColorModeValue('blue.400', 'blue.300')
   const borderColor = useColorModeValue('gray.200', 'gray.800')
-  const noteBorderColor = useColorModeValue('yellow.400', 'yellow.600')
+  const noteBorderColor = useColorModeValue('gray.200', 'gray.800')
   const searchHighlightBorderColor = useColorModeValue(
     'orange.400',
     'orange.300'

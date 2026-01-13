@@ -33,8 +33,7 @@ export const executeValidateCnpj = (
       logs: [
         {
           status: 'error',
-          description:
-            `⚠️ This appears to be a CNPJ (14 digits). Use the “Validate CNPJ” block to validate CNPJs.`,
+          description: `⚠️ This appears to be a CPF (11 digits). Use the "Validate CPF" block to validate CPFs.`,
         },
       ],
     }
@@ -69,11 +68,22 @@ export const executeValidateCnpj = (
   let newSessionState = state
 
   if (variablesToUpdate.length > 0) {
+    const validVariables = variablesToUpdate
+      .map((v) => {
+        const variable = variables.find(byId(v.id))
+        if (!variable) return null
+        return {
+          ...variable,
+          value: v.value,
+        }
+      })
+      .filter(
+        (variable): variable is NonNullable<typeof variable> =>
+          variable !== null
+      )
+
     const updateResults = updateVariablesInSession({
-      newVariables: variablesToUpdate.map((v) => ({
-        ...variables.find(byId(v.id))!,
-        value: v.value,
-      })),
+      newVariables: validVariables,
       state,
       currentBlockId: block.id,
     })
