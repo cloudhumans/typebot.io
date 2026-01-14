@@ -80,9 +80,13 @@ export const BlockLabel = ({ type }: Props): JSX.Element => {
     case LogicBlockType.AB_TEST:
       return <Text fontSize="sm">{t('editor.sidebarBlock.abTest.label')}</Text>
     case LogicBlockType.VALIDATE_CPF:
-      return <Text fontSize="sm">Formatar CPF</Text>
+      return (
+        <Text fontSize="sm">{t('editor.sidebarBlock.validateCpf.label')}</Text>
+      )
     case LogicBlockType.VALIDATE_CNPJ:
-      return <Text fontSize="sm">Formatar CNPJ</Text>
+      return (
+        <Text fontSize="sm">{t('editor.sidebarBlock.validateCnpj.label')}</Text>
+      )
     case IntegrationBlockType.GOOGLE_SHEETS:
       return <Text fontSize="sm">{t('editor.sidebarBlock.sheets.label')}</Text>
     case IntegrationBlockType.GOOGLE_ANALYTICS:
