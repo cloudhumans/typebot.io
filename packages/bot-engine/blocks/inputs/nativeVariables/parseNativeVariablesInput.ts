@@ -24,13 +24,13 @@ export const parseNativeVariablesInput =
     const nativeValue = getNativeValue(updatedState, block.options.nativeType)
 
     // Criar uma nova lista de variáveis com o valor nativo atualizado (sem alterar o estado)
-    const variaveisAtualizadas = block.options?.variableId
+    const updatedVariables = block.options?.variableId
       ? variables.map((v) =>
           v.id === block.options?.variableId ? { ...v, value: nativeValue } : v
         )
       : variables
 
-    return deepParseVariables(variaveisAtualizadas, {
+    return deepParseVariables(updatedVariables, {
       removeEmptyStrings: true,
     })({
       ...block,
