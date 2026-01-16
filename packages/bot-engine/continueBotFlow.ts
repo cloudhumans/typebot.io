@@ -46,6 +46,25 @@ import { uploadFileToBucket } from '@typebot.io/lib/s3/uploadFileToBucket'
 import { isURL } from '@typebot.io/lib/validators/isURL'
 import { isForgedBlockType } from '@typebot.io/schemas/features/blocks/forged/helpers'
 
+interface NativeVariableItem {
+  content?: { isSet?: boolean }
+  outgoingEdgeId?: string
+}
+
+// Tipo helper para blocos NATIVE_VARIABLES com tipagem adequada
+type NativeVariableBlock = Block & {
+  type: InputBlockType.NATIVE_VARIABLES
+  items: NativeVariableItem[]
+  options?: {
+    variableId?: string
+  }
+}
+
+// Type guard para verificar se é um bloco NATIVE_VARIABLES
+const isNativeVariableBlock = (block: Block): block is NativeVariableBlock => {
+  return block.type === InputBlockType.NATIVE_VARIABLES && 'items' in block
+}
+
 type Params = {
   version: 1 | 2
   state: SessionState
@@ -460,18 +479,9 @@ const getOutgoingEdgeId =
     if (
       block.type === InputBlockType.NATIVE_VARIABLES &&
       block.options?.variableId &&
-      'items' in block &&
-      //  TODO FORMATAR ESSE UNKNOWN EM UMA CLASSE PADRÃO
-      Array.isArray((block as { items?: unknown[] }).items)
+      isNativeVariableBlock(block)
     ) {
-      const items = (
-        block as {
-          items: Array<{
-            content?: { isSet?: boolean }
-            outgoingEdgeId?: string
-          }>
-        }
-      ).items
+      const items = block.items
       const targetVariable = variables.find(
         (v) => v.id === block.options?.variableId
       )
@@ -481,10 +491,7 @@ const getOutgoingEdgeId =
         targetVariable?.value !== undefined
 
       // Encontrar o item correto baseado na condição
-      const targetItem = items.find(
-        (item: { content?: { isSet?: boolean }; outgoingEdgeId?: string }) =>
-          item.content?.isSet === hasValue
-      )
+      const targetItem = items.find((item) => item.content?.isSet === hasValue)
 
       if (targetItem?.outgoingEdgeId) {
         return { edgeId: targetItem.outgoingEdgeId, isOffDefaultPath: true }

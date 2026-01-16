@@ -3,6 +3,7 @@ import { ExecuteLogicResponse } from '../../../types'
 import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesInSession'
 import { byId } from '@typebot.io/lib'
 import { createId } from '@paralleldrive/cuid2'
+import { VALIDATION_RESULT_VARIABLES } from '../validation/constants'
 
 export const executeValidateCnpj = (
   state: SessionState,
@@ -48,16 +49,15 @@ export const executeValidateCnpj = (
   }[] = []
 
   // Use a fixed variable name for validation result
-  //  TODO TRANSFORMAR ESSA VARIAVEL EM UMA CONSTANTE GLOBAL
-  const resultVariableName = 'cnpj_valido'
-  let resultVariable = variables.find((v) => v.name === resultVariableName)
-  console.log('resultVariable', resultVariable)
+  let resultVariable = variables.find(
+    (v) => v.name === VALIDATION_RESULT_VARIABLES.CNPJ
+  )
 
   // Se não encontrou a variável, criar uma nova
   if (!resultVariable) {
     resultVariable = {
       id: createId(),
-      name: resultVariableName,
+      name: VALIDATION_RESULT_VARIABLES.CNPJ,
       value: isValid.toString(),
     } as Variable
   }
@@ -81,7 +81,7 @@ export const executeValidateCnpj = (
   let newSessionState = state
 
   // Se criamos uma nova variável, adicioná-la ao estado primeiro
-  if (!variables.find((v) => v.name === resultVariableName)) {
+  if (!variables.find((v) => v.name === VALIDATION_RESULT_VARIABLES.CNPJ)) {
     newSessionState = {
       ...state,
       typebotsQueue: [
