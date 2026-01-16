@@ -13,6 +13,7 @@ import {
   isIntegrationBlock,
   isLogicBlock,
 } from '@typebot.io/schemas/helpers'
+import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
 import { getNextGroup } from './getNextGroup'
 import { executeLogic } from './executeLogic'
 import { executeIntegration } from './executeIntegration'
@@ -21,6 +22,7 @@ import { injectVariableValuesInButtonsInputBlock } from './blocks/inputs/buttons
 import { injectVariableValuesInPictureChoiceBlock } from './blocks/inputs/pictureChoice/injectVariableValuesInPictureChoiceBlock'
 import { getPrefilledInputValue } from './getPrefilledValue'
 import { parseDateInput } from './blocks/inputs/date/parseDateInput'
+import { parseNativeVariablesInput } from './blocks/inputs/nativeVariables/parseNativeVariablesInput'
 import { deepParseVariables } from '@typebot.io/variables/deepParseVariables'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
 import { VisitedEdge } from '@typebot.io/prisma'
@@ -92,6 +94,9 @@ export const executeGroup = async (
 
     index++
     nextEdgeId = block.outgoingEdgeId
+
+    // Skip NOTE blocks during execution
+    if (block.type === BubbleBlockType.NOTE) continue
 
     if (isBubbleBlock(block)) {
       if (!block.content || (firstBubbleWasStreamed && index === 0)) continue
@@ -307,6 +312,9 @@ export const parseInput =
       }
       case InputBlockType.DATE: {
         return parseDateInput(state)(block)
+      }
+      case InputBlockType.NATIVE_VARIABLES: {
+        return parseNativeVariablesInput(state)(block)
       }
       case InputBlockType.RATING: {
         const parsedBlock = deepParseVariables(
