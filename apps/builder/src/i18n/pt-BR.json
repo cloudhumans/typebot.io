@@ -252,7 +252,12 @@
   "editor.blocks.start.text": "Início",
   "editor.gettingStartedModal.editorBasics.heading": "Fundamentos do Editor",
   "editor.gettingStartedModal.editorBasics.list.four.label": "Pré-visualize o seu bot ao clicar no botão de visualizar no canto superior direito",
-  "editor.gettingStartedModal.editorBasics.list.label": "Sinta-se à vontade para usar o chat no canto inferior direito para entrar em contato se tiver alguma dúvida. Normalmente, respondo nas próximas 24 horas.",
+  "editor.gettingStartedModal.editorBasics.list.paragraph": "Bem-vindo ao Editor do Eddie! 🎉🎉",
+  "editor.gettingStartedModal.editorBasics.list.paragraph2": "Aqui você pode criar e personalizar fluxos de conversa inteligentes para o seu bot. O Eddie é projetado para ser intuitivo, permitindo que você adicione blocos de mensagens, integrações e lógicas de forma simples e visual.",
+  "editor.gettingStartedModal.editorBasics.list.paragraph3": "O Eddie se integra perfeitamente à ClaudIA, nossa IA de atendimento ao cliente. Isso significa que você pode combinar fluxos automatizados com respostas inteligentes geradas pela IA, garantindo uma experiência fluida e eficiente para os seus clientes.",
+  "editor.gettingStartedModal.editorBasics.list.paragraph4": "Para aprender mais sobre como o Eddie funciona, sua comunicação com a ClaudIA, interações avançadas e dicas de uso, confira nossa FAQ completa:",
+  "editor.gettingStartedModal.editorBasics.list.faq": "https://cloudchat.cloudhumans.com/hc/eddie-claudia-backoffice/pt_BR/categories/conhecendo-o-eddie",
+  "editor.gettingStartedModal.editorBasics.list.imageEddie": "ClaudIA e Eddie felizes em um bosque florido",
   "editor.gettingStartedModal.editorBasics.list.one.label": "A barra lateral esquerda contém blocos que podem ser arrastados e soltos no quadro.",
   "editor.gettingStartedModal.editorBasics.list.three.label": "Conecte os grupos entre eles",
   "editor.gettingStartedModal.editorBasics.list.two.label": "Você pode agrupar blocos juntos, colocando-os abaixo ou acima dos outros",
@@ -578,5 +583,9 @@
   "blocks.logic.wait.settings.input.label": "Segundos de espera (máx {max}s):",
   "blocks.logic.wait.settings.toast.maxReached.title": "Limite máximo atingido",
   "blocks.logic.wait.settings.toast.maxReached.description": "O tempo máximo de espera permitido é {max} segundos.",
-  "blocks.logic.wait.validation.secondsOrVariable": "Deve ser um número ou uma variável em {{}}"
+  "blocks.logic.wait.validation.secondsOrVariable": "Deve ser um número ou uma variável em {{}}",
+  "editor.graph.search.title": "Pesquisar",
+  "editor.graph.search.placeholder": "Pesquisar grupos...",
+  "editor.graph.search.description": "Digite qualquer texto para buscar os títulos dos grupos.",
+  "editor.graph.search.noResults": "Nenhum resultado"
 }
