@@ -1,4 +1,4 @@
-import { ValidateCpfBlock, SessionState } from '@typebot.io/schemas'
+import { ValidateCpfBlock, SessionState, Variable } from '@typebot.io/schemas'
 import { ExecuteLogicResponse } from '../../../types'
 import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesInSession'
 import { byId } from '@typebot.io/lib'
@@ -33,8 +33,7 @@ export const executeValidateCpf = (
       logs: [
         {
           status: 'error',
-          description:
-            `⚠️ This appears to be a CPF (11 digits). Use the “Validate CPF” block to validate CPFs.`,
+          description: `⚠️ This appears to be a CNPJ (14 digits). Use the "Validate CNPJ" block to validate CNPJs.`,
         },
       ],
     }
@@ -43,18 +42,28 @@ export const executeValidateCpf = (
   // Validação do CPF
   const isValid = validateCpfNumber(cleanCpf)
 
-  const variablesToUpdate: { id: string; value: any }[] = []
+  const variablesToUpdate: { id: string; value: boolean | string }[] = []
 
-  // Procurar variável de resultado baseada no nome da variável de entrada
-  const inputVariableName = inputVariable?.name || 'CPF'
-  const resultVariableName = `${inputVariableName}_valido`
+  // Use a fixed variable name for validation result
+  //  TODO TRANSFORMAR ESSA VARIAVEL EM UMA CONSTANTE GLOBAL
+
+  const resultVariableName = 'cpf_valido'
   let resultVariable = variables.find((v) => v.name === resultVariableName)
 
-  // Se encontrou a variável, atualizar com o resultado
+  // Se não encontrou a variável, criar uma nova
+  if (!resultVariable) {
+    resultVariable = {
+      id: createId(),
+      name: resultVariableName,
+      value: isValid.toString(),
+    } as Variable
+  }
+
+  // Atualizar variável de resultado com o resultado da validação
   if (resultVariable) {
     variablesToUpdate.push({
       id: resultVariable.id,
-      value: isValid,
+      value: isValid.toString(),
     })
   }
 
@@ -68,13 +77,42 @@ export const executeValidateCpf = (
 
   let newSessionState = state
 
+  // Se criamos uma nova variável, adicioná-la ao estado primeiro
+  if (!variables.find((v) => v.name === resultVariableName)) {
+    newSessionState = {
+      ...state,
+      typebotsQueue: [
+        {
+          ...state.typebotsQueue[0],
+          typebot: {
+            ...state.typebotsQueue[0].typebot,
+            variables: [...variables, resultVariable!],
+          },
+        },
+        ...state.typebotsQueue.slice(1),
+      ],
+    }
+  }
+
   if (variablesToUpdate.length > 0) {
+    const validVariables = variablesToUpdate
+      .map((v) => {
+        const variable =
+          newSessionState.typebotsQueue[0].typebot.variables.find(byId(v.id))
+        if (!variable) return null
+        return {
+          ...variable,
+          value: v.value,
+        }
+      })
+      .filter(
+        (variable): variable is NonNullable<typeof variable> =>
+          variable !== null
+      )
+
     const updateResults = updateVariablesInSession({
-      newVariables: variablesToUpdate.map((v) => ({
-        ...variables.find(byId(v.id))!,
-        value: v.value,
-      })),
-      state,
+      newVariables: validVariables,
+      state: newSessionState,
       currentBlockId: block.id,
     })
 

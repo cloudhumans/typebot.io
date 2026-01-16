@@ -461,9 +461,17 @@ const getOutgoingEdgeId =
       block.type === InputBlockType.NATIVE_VARIABLES &&
       block.options?.variableId &&
       'items' in block &&
-      Array.isArray((block as any).items)
+      //  TODO FORMATAR ESSE UNKNOWN EM UMA CLASSE PADRÃO
+      Array.isArray((block as { items?: unknown[] }).items)
     ) {
-      const items = (block as { items: Array<{ content?: { isSet?: boolean }; outgoingEdgeId?: string }> }).items;
+      const items = (
+        block as {
+          items: Array<{
+            content?: { isSet?: boolean }
+            outgoingEdgeId?: string
+          }>
+        }
+      ).items
       const targetVariable = variables.find(
         (v) => v.id === block.options?.variableId
       )
@@ -474,14 +482,15 @@ const getOutgoingEdgeId =
 
       // Encontrar o item correto baseado na condição
       const targetItem = items.find(
-        (item: { content?: { isSet?: boolean }; outgoingEdgeId?: string }) => item.content?.isSet === hasValue
+        (item: { content?: { isSet?: boolean }; outgoingEdgeId?: string }) =>
+          item.content?.isSet === hasValue
       )
 
       if (targetItem?.outgoingEdgeId) {
         return { edgeId: targetItem.outgoingEdgeId, isOffDefaultPath: true }
       }
     }
-    
+
     return { edgeId: block.outgoingEdgeId, isOffDefaultPath: false }
   }
 

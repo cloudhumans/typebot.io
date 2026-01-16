@@ -21,7 +21,7 @@ export const ValidateCnpjContent = ({ block }: Props) => {
       </Text>
     )
   }
-
+  //  TODO TRANSFORMAR ESSA VARIAVEL EM UMA CONSTANTE GLOBAL
   const resultVarName = `${inputVarName}_valido`
 
   return (

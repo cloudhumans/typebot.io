@@ -1,4 +1,4 @@
-import { ValidateCnpjBlock, SessionState } from '@typebot.io/schemas'
+import { ValidateCnpjBlock, SessionState, Variable } from '@typebot.io/schemas'
 import { ExecuteLogicResponse } from '../../../types'
 import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesInSession'
 import { byId } from '@typebot.io/lib'
@@ -42,18 +42,31 @@ export const executeValidateCnpj = (
   // Validação do CNPJ
   const isValid = validateCnpjNumber(cleanCnpj)
 
-  const variablesToUpdate: { id: string; value: any }[] = []
+  const variablesToUpdate: {
+    id: string
+    value: boolean | string
+  }[] = []
 
-  // Procurar variável de resultado baseada no nome da variável de entrada
-  const inputVariableName = inputVariable?.name || 'CNPJ'
-  const resultVariableName = `${inputVariableName}_valido`
+  // Use a fixed variable name for validation result
+  //  TODO TRANSFORMAR ESSA VARIAVEL EM UMA CONSTANTE GLOBAL
+  const resultVariableName = 'cnpj_valido'
   let resultVariable = variables.find((v) => v.name === resultVariableName)
+  console.log('resultVariable', resultVariable)
 
-  // Se encontrou a variável, atualizar com o resultado
+  // Se não encontrou a variável, criar uma nova
+  if (!resultVariable) {
+    resultVariable = {
+      id: createId(),
+      name: resultVariableName,
+      value: isValid.toString(),
+    } as Variable
+  }
+
+  // Atualizar variável de resultado com o resultado da validação
   if (resultVariable) {
     variablesToUpdate.push({
       id: resultVariable.id,
-      value: isValid,
+      value: isValid.toString(),
     })
   }
 
@@ -67,10 +80,28 @@ export const executeValidateCnpj = (
 
   let newSessionState = state
 
+  // Se criamos uma nova variável, adicioná-la ao estado primeiro
+  if (!variables.find((v) => v.name === resultVariableName)) {
+    newSessionState = {
+      ...state,
+      typebotsQueue: [
+        {
+          ...state.typebotsQueue[0],
+          typebot: {
+            ...state.typebotsQueue[0].typebot,
+            variables: [...variables, resultVariable!],
+          },
+        },
+        ...state.typebotsQueue.slice(1),
+      ],
+    }
+  }
+
   if (variablesToUpdate.length > 0) {
     const validVariables = variablesToUpdate
       .map((v) => {
-        const variable = variables.find(byId(v.id))
+        const variable =
+          newSessionState.typebotsQueue[0].typebot.variables.find(byId(v.id))
         if (!variable) return null
         return {
           ...variable,
@@ -84,7 +115,7 @@ export const executeValidateCnpj = (
 
     const updateResults = updateVariablesInSession({
       newVariables: validVariables,
-      state,
+      state: newSessionState,
       currentBlockId: block.id,
     })
 
