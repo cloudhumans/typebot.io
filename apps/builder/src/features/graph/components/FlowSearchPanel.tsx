@@ -49,7 +49,7 @@ export const FlowSearchPanel = () => {
     closeSearch,
   } = useFlowSearch()
 
-  // Focar no input quando abrir
+  // Focus on input when opening
   useEffect(() => {
     if (isSearchOpen && inputRef.current) {
       inputRef.current.focus()
@@ -68,29 +68,29 @@ export const FlowSearchPanel = () => {
   }
 
   const getBlockColorScheme = (type: string): string => {
-    // Bubbles - azul
+    // Bubbles - blue
     if (Object.values(BubbleBlockType).includes(type as BubbleBlockType)) {
       return 'blue'
     }
-    // Inputs - laranja
+    // Inputs - orange
     if (Object.values(InputBlockType).includes(type as InputBlockType)) {
       return 'orange'
     }
-    // Logic - roxo
+    // Logic - purple
     if (Object.values(LogicBlockType).includes(type as LogicBlockType)) {
       return 'purple'
     }
-    // Integrations - verde
+    // Integrations - green
     if (
       Object.values(IntegrationBlockType).includes(type as IntegrationBlockType)
     ) {
       return 'green'
     }
-    // Grupo - roxo
+    // Group - purple
     if (type === 'group') {
       return 'purple'
     }
-    // Default - cinza
+    // Default - gray
     return 'gray'
   }
 
@@ -111,7 +111,7 @@ export const FlowSearchPanel = () => {
         maxW="500px"
         w="40%"
       >
-        {/* Barra de busca */}
+        {/* Search bar */}
         <HStack p={2} spacing={1}>
           <InputGroup size="sm">
             <InputLeftElement>
@@ -136,7 +136,7 @@ export const FlowSearchPanel = () => {
           </InputGroup>
 
           <IconButton
-            aria-label="Resultado anterior"
+            aria-label={t('editor.search.previousResult')}
             icon={<ChevronUpIcon />}
             size="sm"
             variant="ghost"
@@ -144,7 +144,7 @@ export const FlowSearchPanel = () => {
             isDisabled={searchResults.length === 0}
           />
           <IconButton
-            aria-label="Próximo resultado"
+            aria-label={t('editor.search.nextResult')}
             icon={<ChevronDownIcon />}
             size="sm"
             variant="ghost"
@@ -152,7 +152,7 @@ export const FlowSearchPanel = () => {
             isDisabled={searchResults.length === 0}
           />
           <IconButton
-            aria-label="Fechar busca"
+            aria-label={t('editor.search.closeSearch')}
             icon={<CloseIcon />}
             size="sm"
             variant="ghost"
@@ -160,7 +160,7 @@ export const FlowSearchPanel = () => {
           />
         </HStack>
 
-        {/* Lista de resultados */}
+        {/* Results list */}
         {searchQuery.trim().length > 0 && (
           <VStack
             align="stretch"

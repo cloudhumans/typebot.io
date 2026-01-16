@@ -76,7 +76,9 @@ export const NativeVariablesSettings = ({
         <Select
           value={options?.nativeType || 'helpdeskId'}
           onChange={handleNativeTypeChange}
-          placeholder="Selecione o tipo..."
+          placeholder={t(
+            'blocks.inputs.nativeVariables.settings.selectTypePlaceholder'
+          )}
         >
           {nativeVariableTypes.map((type) => (
             <option key={type.value} value={type.value}>
@@ -93,7 +95,7 @@ export const NativeVariablesSettings = ({
             <strong>{`{${options.nativeType}}`}</strong>
           </Text>
           <Text fontSize="xs" color="gray.500">
-            Fonte:{' '}
+            {t('blocks.inputs.nativeVariables.settings.sourceLabel')}:{' '}
             {
               nativeVariableTypes.find((t) => t.value === options.nativeType)
                 ?.label

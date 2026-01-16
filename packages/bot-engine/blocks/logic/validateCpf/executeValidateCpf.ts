@@ -4,6 +4,7 @@ import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesI
 import { byId } from '@typebot.io/lib'
 import { createId } from '@paralleldrive/cuid2'
 import { VALIDATION_RESULT_VARIABLES } from '../validation/constants'
+import { validateCpfNumber } from '../validation/utils'
 
 export const executeValidateCpf = (
   state: SessionState,
@@ -30,7 +31,7 @@ export const executeValidateCpf = (
   // Verifica se é um CNPJ (14 dígitos) no bloco de CPF
   if (cleanCpf.length === 14) {
     return {
-      outgoingEdgeId: undefined,
+      outgoingEdgeId: block.outgoingEdgeId,
       logs: [
         {
           status: 'error',
@@ -60,12 +61,10 @@ export const executeValidateCpf = (
   }
 
   // Atualizar variável de resultado com o resultado da validação
-  if (resultVariable) {
-    variablesToUpdate.push({
-      id: resultVariable.id,
-      value: isValid.toString(),
-    })
-  }
+  variablesToUpdate.push({
+    id: resultVariable.id,
+    value: isValid.toString(),
+  })
 
   // Atualizar variável de saída com CPF limpo (se configurada e remoção ativada)
   if (block.options.outputVariableId && block.options.removeFormatting) {
@@ -125,34 +124,4 @@ export const executeValidateCpf = (
     outgoingEdgeId: block.outgoingEdgeId,
     newSessionState,
   }
-}
-
-function validateCpfNumber(cpf: string): boolean {
-  // Remove formatação
-  cpf = cpf.replace(/[^\d]/g, '')
-
-  // Verifica se tem 11 dígitos
-  if (cpf.length !== 11) return false
-
-  // Verifica se todos os dígitos são iguais
-  if (/^(\d)\1{10}$/.test(cpf)) return false
-
-  // Calcula os dígitos verificadores
-  let sum = 0
-  for (let i = 0; i < 9; i++) {
-    sum += parseInt(cpf.charAt(i)) * (10 - i)
-  }
-  let remainder = 11 - (sum % 11)
-  let digit1 = remainder >= 10 ? 0 : remainder
-
-  if (parseInt(cpf.charAt(9)) !== digit1) return false
-
-  sum = 0
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(cpf.charAt(i)) * (11 - i)
-  }
-  remainder = 11 - (sum % 11)
-  let digit2 = remainder >= 10 ? 0 : remainder
-
-  return parseInt(cpf.charAt(10)) === digit2
 }

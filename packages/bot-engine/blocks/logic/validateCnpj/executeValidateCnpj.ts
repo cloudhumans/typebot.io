@@ -4,6 +4,7 @@ import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesI
 import { byId } from '@typebot.io/lib'
 import { createId } from '@paralleldrive/cuid2'
 import { VALIDATION_RESULT_VARIABLES } from '../validation/constants'
+import { validateCnpjNumber } from '../validation/utils'
 
 export const executeValidateCnpj = (
   state: SessionState,
@@ -30,7 +31,7 @@ export const executeValidateCnpj = (
   // Verifica se é um CPF (11 dígitos) no bloco de CNPJ
   if (cleanCnpj.length === 11) {
     return {
-      outgoingEdgeId: undefined,
+      outgoingEdgeId: block.outgoingEdgeId,
       logs: [
         {
           status: 'error',
@@ -63,12 +64,10 @@ export const executeValidateCnpj = (
   }
 
   // Atualizar variável de resultado com o resultado da validação
-  if (resultVariable) {
-    variablesToUpdate.push({
-      id: resultVariable.id,
-      value: isValid.toString(),
-    })
-  }
+  variablesToUpdate.push({
+    id: resultVariable.id,
+    value: isValid.toString(),
+  })
 
   // Atualizar variável de saída com CNPJ limpo (se configurada e remoção ativada)
   if (block.options.outputVariableId && block.options.removeFormatting) {
@@ -128,37 +127,4 @@ export const executeValidateCnpj = (
     outgoingEdgeId: block.outgoingEdgeId,
     newSessionState,
   }
-}
-
-function validateCnpjNumber(cnpj: string): boolean {
-  // Remove formatação
-  cnpj = cnpj.replace(/[^\d]/g, '')
-
-  // Verifica se tem 14 dígitos
-  if (cnpj.length !== 14) return false
-
-  // Verifica se todos os dígitos são iguais
-  if (/^(\d)\1{13}$/.test(cnpj)) return false
-
-  // Calcula o primeiro dígito verificador
-  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-  let sum = 0
-  for (let i = 0; i < 12; i++) {
-    sum += parseInt(cnpj.charAt(i)) * weights1[i]
-  }
-  let remainder = sum % 11
-  let digit1 = remainder < 2 ? 0 : 11 - remainder
-
-  if (parseInt(cnpj.charAt(12)) !== digit1) return false
-
-  // Calcula o segundo dígito verificador
-  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-  sum = 0
-  for (let i = 0; i < 13; i++) {
-    sum += parseInt(cnpj.charAt(i)) * weights2[i]
-  }
-  remainder = sum % 11
-  let digit2 = remainder < 2 ? 0 : 11 - remainder
-
-  return parseInt(cnpj.charAt(13)) === digit2
 }

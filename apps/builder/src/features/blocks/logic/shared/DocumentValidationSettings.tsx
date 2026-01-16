@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useTranslate } from '@tolgee/react'
 import { Stack, Text } from '@chakra-ui/react'
 import { VariableSearchInput } from '@/components/inputs/VariableSearchInput'
@@ -6,6 +6,7 @@ import { SwitchWithLabel } from '@/components/inputs/SwitchWithLabel'
 import { Variable } from '@typebot.io/schemas'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { createId } from '@paralleldrive/cuid2'
+import { VALIDATION_RESULT_VARIABLES } from '@typebot.io/bot-engine/blocks/logic/validation/constants'
 
 type BaseOptions = {
   inputVariableId?: string
@@ -47,24 +48,28 @@ export const DocumentValidationSettings = <T extends BaseOptions>({
     onOptionsChange({ ...options, removeFormatting } as T)
   }
 
-  //  TODO QUANDO VIRAR CONSTANTE, ISSO TEM QUE SER MAIS ROBUSTO
-  const resultVariableName = `${documentType}_valido`
+  const resultVariableName =
+    documentType === 'cpf'
+      ? VALIDATION_RESULT_VARIABLES.CPF
+      : VALIDATION_RESULT_VARIABLES.CNPJ
 
   // Auto-create validation result variable
-  if (typebot?.variables) {
-    const existingVariable = typebot.variables.find(
-      (v) => v.name === resultVariableName
-    )
+  useEffect(() => {
+    if (typebot?.variables) {
+      const existingVariable = typebot.variables.find(
+        (v) => v.name === resultVariableName
+      )
 
-    if (!existingVariable) {
-      const id = 'v' + createId()
-      createVariable({
-        id,
-        name: resultVariableName,
-        isSessionVariable: true,
-      })
+      if (!existingVariable) {
+        const id = 'v' + createId()
+        createVariable({
+          id,
+          name: resultVariableName,
+          isSessionVariable: true,
+        })
+      }
     }
-  }
+  }, [typebot?.variables, resultVariableName, createVariable])
 
   return (
     <Stack spacing={4}>

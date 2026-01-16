@@ -1,8 +1,4 @@
-import {
-  NativeVariablesBlock,
-  SessionState,
-  Variable,
-} from '@typebot.io/schemas'
+import { NativeVariablesBlock, SessionState } from '@typebot.io/schemas'
 import { deepParseVariables } from '@typebot.io/variables/deepParseVariables'
 import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesInSession'
 import { createId } from '@typebot.io/lib/createId'
