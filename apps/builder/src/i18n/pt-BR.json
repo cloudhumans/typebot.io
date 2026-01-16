@@ -578,5 +578,6 @@
   "blocks.logic.wait.settings.input.label": "Segundos de espera (máx {max}s):",
   "blocks.logic.wait.settings.toast.maxReached.title": "Limite máximo atingido",
   "blocks.logic.wait.settings.toast.maxReached.description": "O tempo máximo de espera permitido é {max} segundos.",
-  "blocks.logic.wait.validation.secondsOrVariable": "Deve ser um número ou uma variável em {{}}"
+  "blocks.logic.wait.validation.secondsOrVariable": "Deve ser um número ou uma variável em {{}}",
+  "editor.gettingStartedModal.editorBasics.list.faq-by-language": "https://cloudchat.cloudhumans.com/hc/claudia/pt_BR/"
 }
