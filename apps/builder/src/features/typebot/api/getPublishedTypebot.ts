@@ -405,12 +405,12 @@ export const getPublishedTypebotVariables = authenticatedProcedure
         }),
       }))
 
-      const variables = typebotData.publishedTypebot.variables.map(
-        (variable) => ({
+      const variables = typebotData.publishedTypebot.variables
+        .filter((variable) => variable)
+        .map((variable) => ({
           id: variable.id,
           name: variable.name,
-        })
-      )
+        }))
 
       return {
         publishedTypebot: {
