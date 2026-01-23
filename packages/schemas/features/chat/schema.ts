@@ -377,5 +377,9 @@ export const startPreviewChatResponseSchema = startChatResponseSchema.omit({
   resultId: true,
 })
 
-export const continueChatResponseSchema = chatResponseBaseSchema
+export const continueChatResponseSchema = chatResponseBaseSchema.merge(
+  z.object({
+    resultId: z.string().optional(),
+  })
+)
 export type ContinueChatResponse = z.infer<typeof continueChatResponseSchema>

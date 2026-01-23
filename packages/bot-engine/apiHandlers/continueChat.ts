@@ -118,6 +118,7 @@ export const continueChat = async ({
     logs: isPreview ? logs : logs?.filter(filterPotentiallySensitiveLogs),
     lastMessageNewFormat,
     corsOrigin,
+    resultId: newSessionState.typebotsQueue[0]?.resultId,
     progress: newSessionState.progressMetadata
       ? isEnded
         ? 100
