@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { emailIsCloudhumans } from '@typebot.io/lib/utils'
 import { WorkspaceRole } from '@typebot.io/prisma'
+import { isAdminWriteWorkspaceForbidden } from '@/features/workspace/helpers/isAdminWriteWorkspaceForbidden'
 
 export const inviteCloudersClaudia = authenticatedProcedure
   .meta({
@@ -43,13 +44,24 @@ export const inviteCloudersClaudia = authenticatedProcedure
 
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        members: { select: { userId: true, role: true } },
+      },
     })
 
     if (!workspace) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Workspace not found',
+      })
+    }
+
+    if (isAdminWriteWorkspaceForbidden(workspace, user)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You are not an ADMIN of this workspace',
       })
     }
 
@@ -84,6 +96,7 @@ export const inviteCloudersClaudia = authenticatedProcedure
           workspaceId,
           role: WorkspaceRole.ADMIN,
         })),
+        skipDuplicates: true,
       })
     }
 
