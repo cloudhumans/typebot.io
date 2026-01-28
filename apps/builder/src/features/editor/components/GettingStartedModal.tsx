@@ -7,7 +7,7 @@ import {
   ModalBody,
   Stack,
   Text,
-  Link, // Added Link import
+  Link,
   Image,
 } from '@chakra-ui/react'
 import { useRouter } from 'next/router'
