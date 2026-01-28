@@ -2,7 +2,10 @@ import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
-import { emailIsCloudhumans } from '@typebot.io/lib/utils'
+import {
+  emailIsCloudhumans,
+  CLOUDHUMANS_EMAIL_DOMAIN,
+} from '@typebot.io/lib/utils'
 import { WorkspaceRole } from '@typebot.io/prisma'
 import { isAdminWriteWorkspaceForbidden } from '@/features/workspace/helpers/isAdminWriteWorkspaceForbidden'
 
@@ -68,7 +71,7 @@ export const inviteCloudersClaudia = authenticatedProcedure
     const cloudhumansUsers = await prisma.user.findMany({
       where: {
         email: {
-          endsWith: '@cloudhumans.com',
+          endsWith: CLOUDHUMANS_EMAIL_DOMAIN,
         },
       },
       select: {
