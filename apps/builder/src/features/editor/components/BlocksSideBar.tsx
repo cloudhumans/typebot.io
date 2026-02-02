@@ -19,6 +19,7 @@ import { BlockCardOverlay } from './BlockCardOverlay'
 import { headerHeight } from '../constants'
 import { useTranslate } from '@tolgee/react'
 import { useEditor } from '../providers/EditorProvider'
+import { useTypebot } from '../providers/TypebotProvider'
 import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
 import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
@@ -94,6 +95,7 @@ const allBlocks = [...Object.values(IntegrationBlockType), ...forgedBlockIds]
 
 export const BlocksSideBar = () => {
   const { t } = useTranslate()
+  const { typebot } = useTypebot()
   const { setDraggedBlockType, draggedBlockType } = useBlockDnd()
   const { isSidebarExtended, setIsSidebarExtended } = useEditor()
   const [position, setPosition] = useState({
@@ -205,6 +207,7 @@ export const BlocksSideBar = () => {
           <SimpleGrid columns={2} spacing="3">
             {Object.values(BubbleBlockType)
               .filter((type) => !hiddenTypes.includes(type))
+              .filter(() => typebot?.settings?.general?.type !== 'AI_WORKFLOW')
               .map((type) => (
                 <BlockCard
                   key={type}
@@ -222,6 +225,7 @@ export const BlocksSideBar = () => {
           <SimpleGrid columns={2} spacing="3">
             {Object.values(InputBlockType)
               .filter((type) => !hiddenInputTypes.includes(type))
+              .filter(() => typebot?.settings?.general?.type !== 'AI_WORKFLOW')
               .map((type) => (
                 <BlockCard
                   key={type}
@@ -239,6 +243,15 @@ export const BlocksSideBar = () => {
           <SimpleGrid columns={2} spacing="3">
             {Object.values(LogicBlockType)
               .filter((type) => !hiddenLogicTypes.includes(type))
+              .filter((type) =>
+                typebot?.settings?.general?.type === 'AI_WORKFLOW'
+                  ? [
+                      LogicBlockType.SET_VARIABLE,
+                      LogicBlockType.CONDITION,
+                      LogicBlockType.SCRIPT,
+                    ].includes(type)
+                  : true
+              )
               .map((type) => (
                 <BlockCard
                   key={type}
@@ -254,9 +267,21 @@ export const BlocksSideBar = () => {
             {t('editor.sidebarBlocks.blockType.integrations.heading')}
           </Text>
           <SimpleGrid columns={2} spacing="3">
-            {allBlocks.map((type) => (
-              <BlockCard key={type} type={type} onMouseDown={handleMouseDown} />
-            ))}
+            {allBlocks
+              .filter((type) =>
+                typebot?.settings?.general?.type === 'AI_WORKFLOW'
+                  ? [IntegrationBlockType.WEBHOOK].includes(
+                      type as IntegrationBlockType
+                    )
+                  : true
+              )
+              .map((type) => (
+                <BlockCard
+                  key={type}
+                  type={type}
+                  onMouseDown={handleMouseDown}
+                />
+              ))}
           </SimpleGrid>
         </Stack>
 

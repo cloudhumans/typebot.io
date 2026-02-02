@@ -81,10 +81,13 @@ export const CreateNewTypebotButtons = () => {
     },
   })
 
-  const handleCreateSubmit = async (typebot?: Typebot) => {
+  const handleCreateSubmit = async (
+    typebot?: Typebot,
+    isImport: boolean = true
+  ) => {
     if (!user || !workspace) return
     const folderId = router.query.folderId?.toString() ?? null
-    if (typebot)
+    if (typebot && isImport)
       importTypebot({
         workspaceId: workspace.id,
         typebot: {
@@ -98,6 +101,8 @@ export const CreateNewTypebotButtons = () => {
         typebot: {
           name: t('typebots.defaultName'),
           folderId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(typebot as any),
         },
       })
   }
@@ -139,6 +144,30 @@ export const CreateNewTypebotButtons = () => {
           isLoading={isLoading}
         >
           {t('templates.buttons.fromTemplateButton.label')}
+        </Button>
+        <Button
+          variant="outline"
+          w="full"
+          py="8"
+          fontSize="lg"
+          leftIcon={
+            <ToolIcon
+              color={useColorModeValue('purple.500', 'purple.300')}
+              boxSize="25px"
+              mr="2"
+            />
+          }
+          onClick={() =>
+            handleCreateSubmit(
+              {
+                settings: { general: { type: 'AI_WORKFLOW' } },
+              } as Typebot,
+              false
+            )
+          }
+          isLoading={isLoading}
+        >
+          Create new AI Workflow
         </Button>
         <ImportTypebotFromFileButton
           variant="outline"

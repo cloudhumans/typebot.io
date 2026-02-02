@@ -128,6 +128,8 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
       )
         return
 
+      if (!isDeletable) return
+
       if (first) {
         setIsMouseDown(true)
         if (focusedGroups.find((id) => id === group.id) && !event.shiftKey)
@@ -162,10 +164,28 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
     (e) => e.groupId === group.id
   )
 
+  const isDeletable =
+    typebot?.settings?.general?.type === 'AI_WORKFLOW'
+      ? !['Start', 'End'].includes(group.title)
+      : true
+
+  const handleDeleteClick = () =>
+    dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }))
+
+  const handleDuplicateClick = () => {
+    dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true }))
+  }
+
   return (
     <ContextMenu<HTMLDivElement>
       onOpen={() => focusGroup(group.id)}
-      renderMenu={() => <GroupNodeContextMenu />}
+      renderMenu={() => (
+        <GroupNodeContextMenu
+          onDeleteClick={handleDeleteClick}
+          onDuplicateClick={handleDuplicateClick}
+          isDeletable={isDeletable}
+        />
+      )}
       isDisabled={isReadOnly}
     >
       {(ref, isContextMenuOpened) => (
@@ -259,6 +279,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
               <GroupFocusToolbar
                 groupId={group.id}
                 onPlayClick={startPreviewAtThisGroup}
+                isDeletable={isDeletable}
               />
             </SlideFade>
           )}

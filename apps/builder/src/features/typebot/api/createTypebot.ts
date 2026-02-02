@@ -101,6 +101,21 @@ export const createTypebot = authenticatedProcedure
     const groups = (
       typebot.groups ? await sanitizeGroups(workspaceId)(typebot.groups) : []
     ) as TypebotV6['groups']
+
+    if (typebot.settings?.general?.type === 'AI_WORKFLOW') {
+      groups.push({
+        id: createId(),
+        title: 'Start',
+        graphCoordinates: { x: 0, y: 200 },
+        blocks: [],
+      })
+      groups.push({
+        id: createId(),
+        title: 'End',
+        graphCoordinates: { x: 600, y: 200 },
+        blocks: [],
+      })
+    }
     const newTypebot = await prisma.typebot.create({
       data: {
         version: '6',
@@ -109,13 +124,23 @@ export const createTypebot = authenticatedProcedure
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
         groups,
-        events: typebot.events ?? [
-          {
-            type: EventType.START,
-            graphCoordinates: { x: 0, y: 0 },
-            id: createId(),
-          },
-        ],
+        events:
+          typebot.events ??
+          (typebot.settings?.general?.type === 'AI_WORKFLOW'
+            ? [
+                {
+                  type: EventType.START,
+                  graphCoordinates: { x: 0, y: 0 },
+                  id: createId(),
+                },
+              ]
+            : [
+                {
+                  type: EventType.START,
+                  graphCoordinates: { x: 0, y: 0 },
+                  id: createId(),
+                },
+              ]),
         theme: typebot.theme ? typebot.theme : {},
         settings: typebot.settings
           ? sanitizeSettings(typebot.settings, workspace.plan, 'create')
