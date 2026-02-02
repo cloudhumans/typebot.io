@@ -112,9 +112,7 @@ export const getNextGroup = async ({
   const startBlockIndex = nextEdge.to.blockId
     ? nextGroup.blocks.findIndex(byId(nextEdge.to.blockId))
     : 0
-  const currentVisitedEdgeIndex = isOffDefaultPath
-    ? (state.currentVisitedEdgeIndex ?? -1) + 1
-    : state.currentVisitedEdgeIndex
+  const currentVisitedEdgeIndex = (state.currentVisitedEdgeIndex ?? -1) + 1
   const resultId = state.typebotsQueue[0].resultId
   return {
     group: {
@@ -135,7 +133,7 @@ export const getNextGroup = async ({
             },
     },
     visitedEdge:
-      resultId && isOffDefaultPath && !nextEdge.id.startsWith('virtual-')
+      resultId && !nextEdge.id.startsWith('virtual-')
         ? {
             index: currentVisitedEdgeIndex as number,
             edgeId: nextEdge.id,

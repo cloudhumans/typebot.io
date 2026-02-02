@@ -33,8 +33,7 @@ export const computeTotalUsersAtBlock = (
     const incomingEdges = publishedTypebot.edges.filter(
       (edge) => edge.to.blockId === block.id
     )
-    if (!incomingEdges.length) continue
-    totalUsers += incomingEdges.reduce(
+    const incomingEdgesTotal = incomingEdges.reduce(
       (acc, incomingEdge) =>
         acc +
         (totalVisitedEdges.find(
@@ -42,6 +41,7 @@ export const computeTotalUsersAtBlock = (
         )?.total ?? 0),
       0
     )
+    if (incomingEdgesTotal > 0) return incomingEdgesTotal
   }
   const edgesConnectedToGroup = publishedTypebot.edges.filter(
     (edge) =>
