@@ -1,5 +1,17 @@
-import { Stack, Button, HStack, IconButton, Text, Tooltip, Checkbox } from '@chakra-ui/react'
-import { DeclareVariablesBlock, Variable, DeclaredVariable } from '@typebot.io/schemas'
+import {
+  Stack,
+  Button,
+  HStack,
+  IconButton,
+  Text,
+  Tooltip,
+  Checkbox,
+} from '@chakra-ui/react'
+import {
+  DeclareVariablesBlock,
+  Variable,
+  DeclaredVariable,
+} from '@typebot.io/schemas'
 import { VariableSearchInput } from '@/components/inputs/VariableSearchInput'
 import { TextInput } from '@/components/inputs'
 import { TrashIcon, PlusIcon } from '@/components/icons'
@@ -10,8 +22,11 @@ type Props = {
   onOptionsChange: (options: DeclareVariablesBlock['options']) => void
 }
 
-export const DeclareVariablesSettings = ({ options, onOptionsChange }: Props) => {
-  const { typebot, updateVariable } = useTypebot()
+export const DeclareVariablesSettings = ({
+  options,
+  onOptionsChange,
+}: Props) => {
+  const { updateVariable } = useTypebot()
   const variables = options?.variables ?? []
 
   const addVariable = () => {
@@ -24,7 +39,10 @@ export const DeclareVariablesSettings = ({ options, onOptionsChange }: Props) =>
     })
   }
 
-  const updateDeclaredVariable = (index: number, update: Partial<DeclaredVariable>) => {
+  const updateDeclaredVariable = (
+    index: number,
+    update: Partial<DeclaredVariable>
+  ) => {
     const updated = [...variables]
     updated[index] = { ...updated[index], ...update }
     onOptionsChange({ ...options, variables: updated })
@@ -37,13 +55,16 @@ export const DeclareVariablesSettings = ({ options, onOptionsChange }: Props) =>
     })
   }
 
-  const handleVariableSelect = (index: number, variable?: Pick<Variable, 'id' | 'name'>) => {
+  const handleVariableSelect = (
+    index: number,
+    variable?: Pick<Variable, 'id' | 'name'>
+  ) => {
     if (!variable?.id) return
-    
+
     // Mark the variable as an input variable
     updateVariable(variable.id, { isInputVariable: true })
-    
-    updateDeclaredVariable(index, { 
+
+    updateDeclaredVariable(index, {
       variableId: variable.id,
     })
   }
@@ -76,22 +97,26 @@ export const DeclareVariablesSettings = ({ options, onOptionsChange }: Props) =>
           <TextInput
             label="Description (required)"
             defaultValue={variable.description}
-            onChange={(description) => updateDeclaredVariable(index, { description })}
+            onChange={(description) =>
+              updateDeclaredVariable(index, { description })
+            }
             placeholder="Describe what this variable should contain"
             isRequired
           />
           <Checkbox
             isChecked={variable.required ?? true}
-            onChange={(e) => updateDeclaredVariable(index, { required: e.target.checked })}
+            onChange={(e) =>
+              updateDeclaredVariable(index, { required: e.target.checked })
+            }
           >
             Required (agent must provide this value)
           </Checkbox>
         </Stack>
       ))}
-      
-      <Button 
-        leftIcon={<PlusIcon />} 
-        onClick={addVariable} 
+
+      <Button
+        leftIcon={<PlusIcon />}
+        onClick={addVariable}
         size="sm"
         variant="outline"
       >

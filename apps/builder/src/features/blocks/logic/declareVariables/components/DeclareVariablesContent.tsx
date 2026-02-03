@@ -3,10 +3,10 @@ import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { DeclareVariablesBlock } from '@typebot.io/schemas'
 import { byId } from '@typebot.io/lib'
 
-export const DeclareVariablesContent = ({ 
-  block 
-}: { 
-  block: DeclareVariablesBlock 
+export const DeclareVariablesContent = ({
+  block,
+}: {
+  block: DeclareVariablesBlock
 }) => {
   const { typebot } = useTypebot()
   const variables = block.options?.variables ?? []
@@ -21,8 +21,13 @@ export const DeclareVariablesContent = ({
         const variable = typebot?.variables.find(byId(v.variableId))
         const isOptional = v.required === false
         return (
-          <Tag key={v.variableId} size="sm" colorScheme={isOptional ? 'gray' : 'blue'}>
-            {variable?.name ?? 'Unknown'}{isOptional ? ' (optional)' : ''}
+          <Tag
+            key={v.variableId}
+            size="sm"
+            colorScheme={isOptional ? 'gray' : 'blue'}
+          >
+            {variable?.name ?? 'Unknown'}
+            {isOptional ? ' (optional)' : ''}
           </Tag>
         )
       })}

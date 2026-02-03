@@ -30,6 +30,7 @@ export const startChatForAgent = async ({
 
   const {
     typebot,
+    messages,
     newSessionState,
     resultId: sessionResultId,
     input,
@@ -99,10 +100,19 @@ export const startChatForAgent = async ({
     requiredInputCount: requiredInputs.filter((i) => i.required).length,
   })
 
+  const toolOutputLog = logs?.find(
+    (log) => log.details && (log.details as any).action === 'END_WORKFLOW'
+  )
+  const toolOutput = toolOutputLog ? (toolOutputLog.details as any).response : undefined
+
   return {
     sessionId: session.id,
     typebotId: typebot.id,
     resultId: sessionResultId,
+    messages,
+    input,
+    logs,
+    toolOutput,
     requiredInputs,
     providedInputs: Object.keys(prefilledVariables ?? {}),
   }

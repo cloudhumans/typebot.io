@@ -396,18 +396,23 @@ export const requiredInputSchema = z.object({
 })
 export type RequiredInput = z.infer<typeof requiredInputSchema>
 
-export const startChatForAgentResponseSchema = z.object({
-  sessionId: z.string().describe('Session ID to use for continueChat'),
-  typebotId: z.string().describe('Typebot ID'),
-  resultId: z.string().optional().describe('Result ID if applicable'),
-  requiredInputs: z.array(requiredInputSchema).describe('List of declared input variables'),
-  providedInputs: z.array(z.string()).describe('List of variable names that were provided'),
-})
+export const startChatForAgentResponseSchema = z
+  .object({
+    sessionId: z.string().describe('Session ID to use for continueChat'),
+    typebotId: z.string().describe('Typebot ID'),
+    resultId: z.string().optional().describe('Result ID if applicable'),
+    toolOutput: z.unknown().optional().describe('Final output of the workflow if ended'),
+    requiredInputs: z.array(requiredInputSchema).describe('List of declared input variables'),
+    providedInputs: z.array(z.string()).describe('List of variable names that were provided'),
+  })
+  .merge(chatResponseBaseSchema)
 export type StartChatForAgentResponse = z.infer<typeof startChatForAgentResponseSchema>
 
 export const startPreviewChatResponseSchema = startChatResponseSchema.omit({
   resultId: true,
 })
 
-export const continueChatResponseSchema = chatResponseBaseSchema
+export const continueChatResponseSchema = chatResponseBaseSchema.extend({
+  toolOutput: z.unknown().optional().describe('Final output of the workflow if ended'),
+})
 export type ContinueChatResponse = z.infer<typeof continueChatResponseSchema>
