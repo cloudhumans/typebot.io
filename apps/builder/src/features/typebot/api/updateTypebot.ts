@@ -2,7 +2,7 @@ import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { Prisma } from '@typebot.io/prisma'
-import { Settings, typebotV6Schema } from '@typebot.io/schemas'
+import { Settings, typebotV5Schema, typebotV6Schema } from '@typebot.io/schemas'
 import { z } from 'zod'
 import {
   isCustomDomainNotAvailable,
@@ -14,7 +14,6 @@ import {
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 import { isCloudProdInstance } from '@/helpers/isCloudProdInstance'
-import { Prisma } from '@typebot.io/prisma'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 
 const typebotUpdateSchemaPick = {

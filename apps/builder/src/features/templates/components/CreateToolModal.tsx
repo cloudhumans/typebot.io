@@ -17,13 +17,14 @@ import {
   AlertIcon,
 } from '@chakra-ui/react'
 import { Typebot } from '@typebot.io/schemas'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 type Props = {
   isOpen: boolean
   onClose: () => void
   onSubmit: (typebot: Typebot) => void
   isLoading: boolean
+  initialTenant?: string
 }
 
 export const CreateToolModal = ({
@@ -31,10 +32,17 @@ export const CreateToolModal = ({
   onClose,
   onSubmit,
   isLoading,
+  initialTenant,
 }: Props) => {
   const [name, setName] = useState('')
   const [tenant, setTenant] = useState('')
   const [toolDescription, setToolDescription] = useState('')
+
+  useEffect(() => {
+    if (initialTenant) {
+      setTenant(initialTenant)
+    }
+  }, [initialTenant])
 
   const handleCreateClick = () => {
     onSubmit({
@@ -71,6 +79,7 @@ export const CreateToolModal = ({
                 placeholder="e.g. workspace-123"
                 value={tenant}
                 onChange={(e) => setTenant(e.target.value)}
+                isDisabled={!!initialTenant}
               />
               <FormHelperText>
                 Identificador do tenant dentro do workspace.

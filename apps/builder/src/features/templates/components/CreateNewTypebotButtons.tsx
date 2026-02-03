@@ -8,7 +8,7 @@ import {
 } from '@chakra-ui/react'
 import { ToolIcon, TemplateIcon, DownloadIcon } from '@/components/icons'
 import { useRouter } from 'next/router'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ImportTypebotFromFileButton } from './ImportTypebotFromFileButton'
 import { CreateToolModal } from './CreateToolModal'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
@@ -86,6 +86,14 @@ export const CreateNewTypebotButtons = () => {
       setIsLoading(false)
     },
   })
+
+  /* New logic to auto-open modal based on query params */
+  useEffect(() => {
+    const { type } = router.query
+    if (type === 'ai_workflow' || type === 'tooling') {
+      onCreateToolOpen()
+    }
+  }, [router.query, onCreateToolOpen])
 
   const handleCreateSubmit = async (
     typebot?: Typebot,
@@ -165,6 +173,7 @@ export const CreateNewTypebotButtons = () => {
           }
           onClick={onCreateToolOpen}
           isLoading={isLoading}
+          display="none"
         >
           Create new Tool
         </Button>
@@ -197,6 +206,11 @@ export const CreateNewTypebotButtons = () => {
         onClose={onCreateToolClose}
         onSubmit={(typebot) => handleCreateSubmit(typebot, false)}
         isLoading={isLoading}
+        initialTenant={
+          typeof router.query.tenant_name === 'string'
+            ? router.query.tenant_name
+            : undefined
+        }
       />
     </VStack>
   )
