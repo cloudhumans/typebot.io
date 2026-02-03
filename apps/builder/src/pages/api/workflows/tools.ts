@@ -1,4 +1,5 @@
 import prisma from '@typebot.io/lib/prisma'
+import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import NextCors from 'nextjs-cors'
@@ -19,6 +20,12 @@ export default async function handler(
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const user = await getAuthenticatedUser(req, res)
+
+  if (!user) {
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
   const query = querySchema.safeParse(req.query)
