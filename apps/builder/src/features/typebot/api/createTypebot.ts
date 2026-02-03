@@ -30,6 +30,8 @@ const typebotCreateSchemaPick = {
   resultsTablePreferences: true,
   publicId: true,
   customDomain: true,
+  tenant: true,
+  toolDescription: true,
 } as const
 
 export const createTypebot = authenticatedProcedure
@@ -89,6 +91,21 @@ export const createTypebot = authenticatedProcedure
         message: 'Public id not available',
       })
 
+    if (!typebot.name)
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Name is mandatory',
+      })
+
+    if (
+      typebot.settings?.general?.type === 'AI_WORKFLOW' &&
+      (!typebot.tenant || !typebot.toolDescription)
+    )
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Tenant and Tool description are mandatory for AI Workflow',
+      })
+
     if (typebot.folderId) {
       const existingFolder = await prisma.dashboardFolder.findUnique({
         where: {
@@ -106,7 +123,7 @@ export const createTypebot = authenticatedProcedure
       data: {
         version: '6',
         workspaceId,
-        name: typebot.name ?? 'My typebot',
+        name: typebot.name,
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
         groups,
@@ -143,6 +160,8 @@ export const createTypebot = authenticatedProcedure
         resultsTablePreferences: typebot.resultsTablePreferences ?? undefined,
         publicId: typebot.publicId ?? undefined,
         customDomain: typebot.customDomain ?? undefined,
+        tenant: typebot.tenant,
+        toolDescription: typebot.toolDescription,
       } satisfies Partial<TypebotV6>,
     })
 

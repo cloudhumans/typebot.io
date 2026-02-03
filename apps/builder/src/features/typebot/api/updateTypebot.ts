@@ -1,11 +1,8 @@
 import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
-import {
-  typebotSchema,
-  typebotV5Schema,
-  typebotV6Schema,
-} from '@typebot.io/schemas'
+import { Prisma } from '@typebot.io/prisma'
+import { Settings, typebotV6Schema } from '@typebot.io/schemas'
 import { z } from 'zod'
 import {
   isCustomDomainNotAvailable,
@@ -40,6 +37,8 @@ const typebotUpdateSchemaPick = {
   riskLevel: true,
   events: true,
   updatedAt: true,
+  tenant: true,
+  toolDescription: true,
 } as const
 
 export const updateTypebot = authenticatedProcedure
@@ -160,6 +159,18 @@ export const updateTypebot = authenticatedProcedure
         })
     }
 
+    if (
+      existingTypebot.settings &&
+      (existingTypebot.settings as unknown as Settings).general?.type ===
+        'AI_WORKFLOW' &&
+      ((typebot.tenant !== undefined && !typebot.tenant) ||
+        (typebot.toolDescription !== undefined && !typebot.toolDescription))
+    )
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Tenant and Tool description are mandatory for AI Workflow',
+      })
+
     const groups = typebot.groups
       ? await sanitizeGroups(existingTypebot.workspace.id)(typebot.groups)
       : undefined
@@ -231,6 +242,9 @@ export const updateTypebot = authenticatedProcedure
         isClosed: typebot.isClosed,
         isSecondaryFlow: typebot.isSecondaryFlow ?? false,
         whatsAppCredentialsId: typebot.whatsAppCredentialsId ?? undefined,
+        tenant: typebot.tenant,
+        toolDescription: typebot.toolDescription,
+        description: typebot.description,
       },
     })
 

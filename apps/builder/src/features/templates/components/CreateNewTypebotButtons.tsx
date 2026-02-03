@@ -10,6 +10,7 @@ import { ToolIcon, TemplateIcon, DownloadIcon } from '@/components/icons'
 import { useRouter } from 'next/router'
 import React, { useState } from 'react'
 import { ImportTypebotFromFileButton } from './ImportTypebotFromFileButton'
+import { CreateToolModal } from './CreateToolModal'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { useUser } from '@/features/account/hooks/useUser'
 import { useToast } from '@/hooks/useToast'
@@ -24,6 +25,11 @@ export const CreateNewTypebotButtons = () => {
   const { user } = useUser()
   const router = useRouter()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const {
+    isOpen: isCreateToolOpen,
+    onOpen: onCreateToolOpen,
+    onClose: onCreateToolClose,
+  } = useDisclosure()
 
   const [isLoading, setIsLoading] = useState(false)
 
@@ -157,14 +163,7 @@ export const CreateNewTypebotButtons = () => {
               mr="2"
             />
           }
-          onClick={() =>
-            handleCreateSubmit(
-              {
-                settings: { general: { type: 'AI_WORKFLOW' } },
-              } as Typebot,
-              false
-            )
-          }
+          onClick={onCreateToolOpen}
           isLoading={isLoading}
         >
           Create new Tool
@@ -191,6 +190,12 @@ export const CreateNewTypebotButtons = () => {
         isOpen={isOpen}
         onClose={onClose}
         onTypebotChoose={handleCreateSubmit}
+        isLoading={isLoading}
+      />
+      <CreateToolModal
+        isOpen={isCreateToolOpen}
+        onClose={onCreateToolClose}
+        onSubmit={(typebot) => handleCreateSubmit(typebot, false)}
         isLoading={isLoading}
       />
     </VStack>
