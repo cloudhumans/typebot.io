@@ -286,17 +286,14 @@ export const BlocksSideBar = () => {
               ))}
           </SimpleGrid>
         </Stack>
-        
+
         {typebot?.settings?.general?.type === 'AI_WORKFLOW' && (
           <Stack>
             <Text fontSize="sm" fontWeight="semibold">
               Tool Output
             </Text>
             <SimpleGrid columns={2} spacing="3">
-              <BlockCard
-                type={'workflow'}
-                onMouseDown={handleMouseDown}
-              />
+              <BlockCard type={'workflow'} onMouseDown={handleMouseDown} />
             </SimpleGrid>
           </Stack>
         )}
