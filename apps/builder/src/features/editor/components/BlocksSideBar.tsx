@@ -251,6 +251,7 @@ export const BlocksSideBar = () => {
                       LogicBlockType.SET_VARIABLE,
                       LogicBlockType.CONDITION,
                       LogicBlockType.SCRIPT,
+                      LogicBlockType.DECLARE_VARIABLES,
                     ].includes(type)
                   : true
               )

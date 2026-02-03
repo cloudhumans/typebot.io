@@ -335,6 +335,7 @@
   "editor.sidebarBlock.redirect.label": "Redirect",
   "editor.sidebarBlock.script.label": "Script",
   "editor.sidebarBlock.setVariable.label": "Set variable",
+  "editor.sidebarBlock.declareVariables.label": "Declare variables",
   "editor.sidebarBlock.sheets.label": "Sheets",
   "editor.sidebarBlock.start.label": "Start",
   "editor.sidebarBlock.text.label": "Text",
