@@ -40,8 +40,13 @@ import { useUser } from '@/features/account/hooks/useUser'
 import { EditToolDescriptionModal } from './EditToolDescriptionModal'
 
 export const TypebotHeader = () => {
-  const { typebot, publishedTypebot, currentUserMode, isSavingLoading } =
-    useTypebot()
+  const {
+    typebot,
+    publishedTypebot,
+    currentUserMode,
+    isSavingLoading,
+    updateTypebot,
+  } = useTypebot()
   const { isOpen } = useDisclosure()
   const {
     isOpen: isEditToolDescriptionOpen,
