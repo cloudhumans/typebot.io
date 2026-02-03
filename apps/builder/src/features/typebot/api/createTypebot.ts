@@ -102,20 +102,6 @@ export const createTypebot = authenticatedProcedure
       typebot.groups ? await sanitizeGroups(workspaceId)(typebot.groups) : []
     ) as TypebotV6['groups']
 
-    if (typebot.settings?.general?.type === 'AI_WORKFLOW') {
-      groups.push({
-        id: createId(),
-        title: 'Start',
-        graphCoordinates: { x: 0, y: 200 },
-        blocks: [],
-      })
-      groups.push({
-        id: createId(),
-        title: 'End',
-        graphCoordinates: { x: 600, y: 200 },
-        blocks: [],
-      })
-    }
     const newTypebot = await prisma.typebot.create({
       data: {
         version: '6',

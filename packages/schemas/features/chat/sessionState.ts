@@ -106,6 +106,7 @@ const sessionStateSchemaV3 = sessionStateSchemaV2
           .optional(),
       })
       .optional(),
+    lastEndpointResponse: z.unknown().optional(),
   })
 
 export type SessionState = z.infer<typeof sessionStateSchemaV3>

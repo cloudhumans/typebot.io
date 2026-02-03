@@ -15,6 +15,7 @@ import {
 import {
   isClaudiaAnswerTicketBlock,
   isClaudiaBlock,
+  isWorkflowBlock,
 } from '@typebot.io/schemas/features/blocks/forged/helpers'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
@@ -143,6 +144,7 @@ const validateFlowBranchesHaveClaudia = (groups: Group[], edges: Edge[]) => {
       let currentHasClaudia = hasClaudia
       if (
         isClaudiaBlock(block) ||
+        isWorkflowBlock(block) ||
         isJumpBlock(block) ||
         isTypebotLinkBlock(block)
       ) {

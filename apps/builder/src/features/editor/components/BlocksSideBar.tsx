@@ -270,8 +270,8 @@ export const BlocksSideBar = () => {
             {allBlocks
               .filter((type) =>
                 typebot?.settings?.general?.type === 'AI_WORKFLOW'
-                  ? [IntegrationBlockType.WEBHOOK].includes(
-                      type as IntegrationBlockType
+                  ? [IntegrationBlockType.WEBHOOK, 'workflow'].includes(
+                      type as IntegrationBlockType | string
                     )
                   : true
               )
