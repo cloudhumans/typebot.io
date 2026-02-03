@@ -4,7 +4,7 @@ import { endWorkflow } from './actions/endWorkflow'
 
 export const workflowBlock = createBlock({
   id: 'workflow',
-  name: 'Workflow',
+  name: 'Tool Output',
   tags: ['workflow', 'logic'],
   LightLogo: WorkflowLogo,
   actions: [endWorkflow],

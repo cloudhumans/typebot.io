@@ -640,7 +640,7 @@ const getErrorMessage = (type: string, groupTitle?: string): string => {
     missingTextBetweenInputBlocks: 'Missing text between input blocks',
     missingClaudiaInFlowBranches: 'Missing ClaudIA block in flow branches',
     missingWorkflowEndInFlowBranches:
-      'Missing Workflow End block in flow branches',
+      'Missing Tool Output block in flow branches',
   }
   const baseMessage =
     errorMessages[type as keyof typeof errorMessages] || 'Validation Error'

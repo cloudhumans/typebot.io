@@ -1,7 +1,7 @@
 import { createAction, option } from '@typebot.io/forge'
 
 export const endWorkflow = createAction({
-  name: 'End Workflow',
+  name: 'Return Output',
   run: {
     server: ({ logs, options, lastEndpointResponse }) => {
       let response: unknown
@@ -20,7 +20,7 @@ export const endWorkflow = createAction({
 
       logs.add({
         status: 'success',
-        description: 'Workflow End',
+        description: 'Tool Output',
         details: {
           action: 'END_WORKFLOW',
           responseType: options.responseType,

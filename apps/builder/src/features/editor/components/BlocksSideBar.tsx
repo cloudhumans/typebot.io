@@ -200,41 +200,43 @@ export const BlocksSideBar = () => {
           </Tooltip>
         </Flex>
 
-        <Stack>
-          <Text fontSize="sm" fontWeight="semibold">
-            {t('editor.sidebarBlocks.blockType.bubbles.heading')}
-          </Text>
-          <SimpleGrid columns={2} spacing="3">
-            {Object.values(BubbleBlockType)
-              .filter((type) => !hiddenTypes.includes(type))
-              .filter(() => typebot?.settings?.general?.type !== 'AI_WORKFLOW')
-              .map((type) => (
-                <BlockCard
-                  key={type}
-                  type={type}
-                  onMouseDown={handleMouseDown}
-                />
-              ))}
-          </SimpleGrid>
-        </Stack>
+        {typebot?.settings?.general?.type !== 'AI_WORKFLOW' && (
+          <Stack>
+            <Text fontSize="sm" fontWeight="semibold">
+              {t('editor.sidebarBlocks.blockType.bubbles.heading')}
+            </Text>
+            <SimpleGrid columns={2} spacing="3">
+              {Object.values(BubbleBlockType)
+                .filter((type) => !hiddenTypes.includes(type))
+                .map((type) => (
+                  <BlockCard
+                    key={type}
+                    type={type}
+                    onMouseDown={handleMouseDown}
+                  />
+                ))}
+            </SimpleGrid>
+          </Stack>
+        )}
 
-        <Stack>
-          <Text fontSize="sm" fontWeight="semibold">
-            {t('editor.sidebarBlocks.blockType.inputs.heading')}
-          </Text>
-          <SimpleGrid columns={2} spacing="3">
-            {Object.values(InputBlockType)
-              .filter((type) => !hiddenInputTypes.includes(type))
-              .filter(() => typebot?.settings?.general?.type !== 'AI_WORKFLOW')
-              .map((type) => (
-                <BlockCard
-                  key={type}
-                  type={type}
-                  onMouseDown={handleMouseDown}
-                />
-              ))}
-          </SimpleGrid>
-        </Stack>
+        {typebot?.settings?.general?.type !== 'AI_WORKFLOW' && (
+          <Stack>
+            <Text fontSize="sm" fontWeight="semibold">
+              {t('editor.sidebarBlocks.blockType.inputs.heading')}
+            </Text>
+            <SimpleGrid columns={2} spacing="3">
+              {Object.values(InputBlockType)
+                .filter((type) => !hiddenInputTypes.includes(type))
+                .map((type) => (
+                  <BlockCard
+                    key={type}
+                    type={type}
+                    onMouseDown={handleMouseDown}
+                  />
+                ))}
+            </SimpleGrid>
+          </Stack>
+        )}
 
         <Stack>
           <Text fontSize="sm" fontWeight="semibold">
@@ -270,7 +272,7 @@ export const BlocksSideBar = () => {
             {allBlocks
               .filter((type) =>
                 typebot?.settings?.general?.type === 'AI_WORKFLOW'
-                  ? [IntegrationBlockType.WEBHOOK, 'workflow'].includes(
+                  ? [IntegrationBlockType.WEBHOOK].includes(
                       type as IntegrationBlockType | string
                     )
                   : true
@@ -284,6 +286,20 @@ export const BlocksSideBar = () => {
               ))}
           </SimpleGrid>
         </Stack>
+        
+        {typebot?.settings?.general?.type === 'AI_WORKFLOW' && (
+          <Stack>
+            <Text fontSize="sm" fontWeight="semibold">
+              Tool Output
+            </Text>
+            <SimpleGrid columns={2} spacing="3">
+              <BlockCard
+                type={'workflow'}
+                onMouseDown={handleMouseDown}
+              />
+            </SimpleGrid>
+          </Stack>
+        )}
 
         {draggedBlockType && (
           <Portal>

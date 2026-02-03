@@ -167,7 +167,7 @@ export const CreateNewTypebotButtons = () => {
           }
           isLoading={isLoading}
         >
-          Create new AI Workflow
+          Create new Tool
         </Button>
         <ImportTypebotFromFileButton
           variant="outline"
