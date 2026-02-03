@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import React from 'react'
 
 export const WorkflowLogo = (props: React.SVGProps<SVGSVGElement>) => (

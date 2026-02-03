@@ -497,6 +497,8 @@
   "validationErrors.conditionalBlocks.title": "Incomplete Conditions",
   "validationErrors.missingClaudiaInFlowBranches.description": "All flow branches must pass through at least one ClaudIA block before ending.",
   "validationErrors.missingClaudiaInFlowBranches.title": "Missing ClaudIA block in flow branches",
+  "validationErrors.missingWorkflowEndInFlowBranches.description": "All flow branches must pass through at least one Workflow End block before ending.",
+  "validationErrors.missingWorkflowEndInFlowBranches.title": "Missing Workflow End block in flow branches",
   "validationErrors.missingTextBeforeClaudia.description": "Some text is required alongside the ClaudIA block. ",
   "validationErrors.missingTextBeforeClaudia.title": "Missing text alongside ClaudIA block",
   "validationErrors.missingTextBetweenInputBlocks.description": "There must be a text message block between each data collection block connected from Start.",

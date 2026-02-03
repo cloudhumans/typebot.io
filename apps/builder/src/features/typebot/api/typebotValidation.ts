@@ -8,6 +8,8 @@ import {
   Group,
   groupV5Schema,
   groupV6Schema,
+  Settings,
+  settingsSchema,
   TypebotLinkBlock,
   Variable,
   variableSchema,
@@ -55,7 +57,11 @@ const isJumpBlock = (block: Block): block is JumpBlock =>
   block.type === LogicBlockType.JUMP
 
 // Helpers restaurados
-const validateFlowBranchesHaveClaudia = (groups: Group[], edges: Edge[]) => {
+const validateFlowBranchesHaveClaudia = (
+  groups: Group[],
+  edges: Edge[],
+  settings?: Settings
+) => {
   const invalidGroupIds = new Set<string>()
   const groupMap = new Map<string, Group>(groups.map((g) => [g.id, g]))
 
@@ -124,31 +130,42 @@ const validateFlowBranchesHaveClaudia = (groups: Group[], edges: Edge[]) => {
     if (!startGroup || !hasBlocks(startGroup)) return
 
     const visited = new Set<string>()
-    const pathsToCheck: { block: Block; group: Group; hasClaudia: boolean }[] =
-      []
+    const pathsToCheck: {
+      block: Block
+      group: Group
+      hasTerminator: boolean
+    }[] = []
 
     const firstBlock = startGroup.blocks[0]
     pathsToCheck.push({
       block: firstBlock,
       group: startGroup,
-      hasClaudia: false,
+      hasTerminator: false,
     })
 
     while (pathsToCheck.length > 0) {
-      const { block, group, hasClaudia } = pathsToCheck.shift()!
+      const { block, group, hasTerminator } = pathsToCheck.shift()!
       const visitKey = `${group.id}-${block.id}`
 
       if (visited.has(visitKey)) continue
       visited.add(visitKey)
 
-      let currentHasClaudia = hasClaudia
-      if (
-        isClaudiaBlock(block) ||
-        isWorkflowBlock(block) ||
-        isJumpBlock(block) ||
-        isTypebotLinkBlock(block)
-      ) {
-        currentHasClaudia = true
+      let currentHasTerminator = hasTerminator
+
+      const isAiWorkflow = settings?.general?.type === 'AI_WORKFLOW'
+
+      if (isAiWorkflow) {
+        if (isWorkflowBlock(block)) {
+          currentHasTerminator = true
+        }
+      } else {
+        if (
+          isClaudiaBlock(block) ||
+          isJumpBlock(block) ||
+          isTypebotLinkBlock(block)
+        ) {
+          currentHasTerminator = true
+        }
       }
 
       const blockIndex = group.blocks.findIndex((b) => b.id === block.id)
@@ -157,7 +174,7 @@ const validateFlowBranchesHaveClaudia = (groups: Group[], edges: Edge[]) => {
       const nextBlocks = getNextBlocks(group, blockIndex)
 
       if (nextBlocks.length === 0) {
-        if (!currentHasClaudia) {
+        if (!currentHasTerminator) {
           invalidGroupIds.add(group.id)
         }
       } else {
@@ -165,7 +182,7 @@ const validateFlowBranchesHaveClaudia = (groups: Group[], edges: Edge[]) => {
           pathsToCheck.push({
             block: nextBlock,
             group: nextGroup,
-            hasClaudia: currentHasClaudia,
+            hasTerminator: currentHasTerminator,
           })
         })
       }
@@ -622,6 +639,8 @@ const getErrorMessage = (type: string, groupTitle?: string): string => {
     missingTextBeforeClaudia: 'Missing text alongside ClaudIA block',
     missingTextBetweenInputBlocks: 'Missing text between input blocks',
     missingClaudiaInFlowBranches: 'Missing ClaudIA block in flow branches',
+    missingWorkflowEndInFlowBranches:
+      'Missing Workflow End block in flow branches',
   }
   const baseMessage =
     errorMessages[type as keyof typeof errorMessages] || 'Validation Error'
@@ -636,11 +655,13 @@ const validateTypebot = async ({
   variables,
   groups,
   edges,
+  settings,
   isSecondaryFlow = false,
 }: {
   variables: Variable[]
   groups: Group[]
   edges: Edge[]
+  settings?: Settings
   isSecondaryFlow?: boolean
 }) => {
   const safeEdges = (edges as Edge[]) || []
@@ -680,16 +701,23 @@ const validateTypebot = async ({
       })
     )
 
+    const isAiWorkflow = settings?.general?.type === 'AI_WORKFLOW'
+
     const missingClaudiaInFlowBranches = validateFlowBranchesHaveClaudia(
       groups,
-      safeEdges
+      safeEdges,
+      settings
     )
     missingClaudiaInFlowBranchesErrors = missingClaudiaInFlowBranches.map(
       (groupId) => ({
-        type: 'missingClaudiaInFlowBranches',
+        type: isAiWorkflow
+          ? 'missingWorkflowEndInFlowBranches'
+          : 'missingClaudiaInFlowBranches',
         groupId,
         message: getErrorMessage(
-          'missingClaudiaInFlowBranches',
+          isAiWorkflow
+            ? 'missingWorkflowEndInFlowBranches'
+            : 'missingClaudiaInFlowBranches',
           groupTitleMap.get(groupId)
         ),
       })
@@ -737,12 +765,14 @@ export const getTypebotValidation = publicProcedure
         variables: true,
         groups: true,
         edges: true,
+        settings: true,
         isSecondaryFlow: true,
       },
     })) as {
       variables: Variable[]
       groups: Group[]
       edges: Edge[]
+      settings: Settings
       isSecondaryFlow: boolean
     } | null
 
@@ -775,6 +805,7 @@ export const postTypebotValidation = publicProcedure
           variables: z.array(variableSchema),
           edges: z.array(edgeSchema),
           groups: z.array(groupV6Schema.or(groupV5Schema)),
+          settings: settingsSchema.optional(),
           isSecondaryFlow: z.boolean().optional().default(false),
         })
         .describe(
@@ -784,6 +815,13 @@ export const postTypebotValidation = publicProcedure
   )
   .output(responseSchema)
   .mutation(async ({ input }) => {
-    const { variables, groups, edges, isSecondaryFlow } = input.typebot
-    return await validateTypebot({ variables, groups, edges, isSecondaryFlow })
+    const { variables, groups, edges, settings, isSecondaryFlow } =
+      input.typebot
+    return await validateTypebot({
+      variables,
+      groups,
+      edges,
+      settings,
+      isSecondaryFlow,
+    })
   })
