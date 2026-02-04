@@ -9,7 +9,7 @@ import { continueChat } from '@/features/chat/api/continueChat'
 import { saveClientLogs } from '@/features/chat/api/saveClientLogs'
 import { startChat } from '@/features/chat/api/startChat'
 import { startChatPreview } from '@/features/chat/api/startChatPreview'
-import { startChatForAgent } from '@/features/chat/api/startChatForAgent'
+
 
 export const appRouter = router({
   sendMessageV1,
@@ -17,7 +17,7 @@ export const appRouter = router({
   startChat,
   continueChat,
   startChatPreview: startChatPreview,
-  startChatForAgent,
+
   getUploadUrl,
   generateUploadUrl,
   updateTypebotInSession,

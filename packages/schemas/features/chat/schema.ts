@@ -374,39 +374,6 @@ export const startChatResponseSchema = z
 export type StartChatResponse = z.infer<typeof startChatResponseSchema>
 
 // Agent-specific startChat schemas
-export const startChatForAgentInputSchema = z.object({
-  publicId: z
-    .string()
-    .describe('The public ID of the typebot to start'),
-  prefilledVariables: z
-    .record(z.unknown())
-    .optional()
-    .describe('Variables to prefill, must include all required input variables'),
-  resultId: z
-    .string()
-    .optional()
-    .describe("Provide it if you'd like to overwrite an existing result."),
-})
-export type StartChatForAgentInput = z.infer<typeof startChatForAgentInputSchema>
-
-export const requiredInputSchema = z.object({
-  name: z.string().describe('Variable name'),
-  description: z.string().describe('Description of what this variable should contain'),
-  required: z.boolean().describe('Whether this variable is required'),
-})
-export type RequiredInput = z.infer<typeof requiredInputSchema>
-
-export const startChatForAgentResponseSchema = z
-  .object({
-    sessionId: z.string().describe('Session ID to use for continueChat'),
-    typebotId: z.string().describe('Typebot ID'),
-    resultId: z.string().optional().describe('Result ID if applicable'),
-    toolOutput: z.unknown().optional().describe('Final output of the workflow if ended'),
-    requiredInputs: z.array(requiredInputSchema).describe('List of declared input variables'),
-    providedInputs: z.array(z.string()).describe('List of variable names that were provided'),
-  })
-  .merge(chatResponseBaseSchema)
-export type StartChatForAgentResponse = z.infer<typeof startChatForAgentResponseSchema>
 
 export const startPreviewChatResponseSchema = startChatResponseSchema.omit({
   resultId: true,

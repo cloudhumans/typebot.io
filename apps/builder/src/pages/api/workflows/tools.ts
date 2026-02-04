@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUs
 import { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import NextCors from 'nextjs-cors'
+import type { JsonValue } from '@typebot.io/prisma'
 
 const querySchema = z.object({
   tenant: z.string().min(1),
@@ -72,26 +73,33 @@ export default async function handler(
         )
       })
       .map((typebot) => {
-        const typebotVariables = typebot.variables as any[]
-        const groups = typebot.groups as any[]
-        const declareVariablesBlocks = groups
-          .flatMap((g: any) => g.blocks || [])
-          .filter((b: any) => b.type === 'Declare variables')
+        const typebotVariables = typebot.variables as {
+          id: string
+          name?: string
+          description?: string
+        }[]
+        const groups = typebot.groups as JsonValue[]
+        const declareVariablesBlocks = (groups as { blocks?: JsonValue[] }[])
+          .flatMap((g) => g.blocks || [])
+          .filter((b) => (b as { type?: string }).type === 'Declare variables')
         const declaredVariables = declareVariablesBlocks.flatMap(
-          (b: any) => b.options?.variables || []
+          (b) =>
+            (b as { options?: { variables?: JsonValue[] } }).options
+              ?.variables || []
         )
 
         let variables = declaredVariables
-          .map((v: any) => {
+          .map((v) => {
+            const vObj = v as { variableId?: string; description?: string }
             const variable = typebotVariables.find(
-              (tv) => tv.id === v.variableId
+              (tv) => tv.id === vObj.variableId
             )
             return {
               name: variable?.name,
-              description: v.description,
+              description: vObj.description,
             }
           })
-          .filter((v: any) => v.name)
+          .filter((v) => v.name)
 
         if (variables.length === 0) {
           variables = typebotVariables
