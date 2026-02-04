@@ -12,10 +12,7 @@ type Props = {
   onPlayClick: () => void
 }
 
-export const GroupFocusToolbar = ({
-  groupId,
-  onPlayClick,
-}: Props) => {
+export const GroupFocusToolbar = ({ groupId, onPlayClick }: Props) => {
   const { hasCopied, onCopy } = useClipboard(groupId)
 
   const dispatchCopyEvent = () => {
