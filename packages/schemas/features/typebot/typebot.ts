@@ -59,8 +59,8 @@ export const typebotV5Schema = z.preprocess(
     isSecondaryFlow: z.boolean().optional().default(false),
     whatsAppCredentialsId: z.string().nullable(),
     riskLevel: z.number().nullable(),
-    tenant: z.string().nullable(),
-    toolDescription: z.string().nullable(),
+    tenant: z.string().nullish(),
+    toolDescription: z.string().nullish(),
   }) satisfies z.ZodType<TypebotPrisma, z.ZodTypeDef, unknown>
 )
 
