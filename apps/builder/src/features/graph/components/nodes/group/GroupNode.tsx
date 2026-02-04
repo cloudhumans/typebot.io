@@ -75,7 +75,6 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
         : group.graphCoordinates
     )
   )
-  const isDeletable = true
   const { moveFocusedGroups, focusGroup, getGroupsCoordinates } =
     useGroupsStore(
       useShallow((state) => ({
@@ -129,8 +128,6 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
       )
         return
 
-      if (!isDeletable) return
-
       if (first) {
         setIsMouseDown(true)
         if (focusedGroups.find((id) => id === group.id) && !event.shiftKey)
@@ -179,7 +176,6 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
         <GroupNodeContextMenu
           onDeleteClick={handleDeleteClick}
           onDuplicateClick={handleDuplicateClick}
-          isDeletable={isDeletable}
         />
       )}
       isDisabled={isReadOnly}
@@ -275,7 +271,6 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
               <GroupFocusToolbar
                 groupId={group.id}
                 onPlayClick={startPreviewAtThisGroup}
-                isDeletable={isDeletable}
               />
             </SlideFade>
           )}

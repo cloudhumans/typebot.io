@@ -5,13 +5,11 @@ import { useTranslate } from '@tolgee/react'
 type Props = {
   onDuplicateClick: () => void
   onDeleteClick: () => void
-  isDeletable?: boolean
 }
 
 export const GroupNodeContextMenu = ({
   onDuplicateClick,
   onDeleteClick,
-  isDeletable = true,
 }: Props) => {
   const { t } = useTranslate()
 
@@ -20,11 +18,9 @@ export const GroupNodeContextMenu = ({
       <MenuItem icon={<CopyIcon />} onClick={onDuplicateClick}>
         {t('copy')}
       </MenuItem>
-      {isDeletable && (
-        <MenuItem icon={<TrashIcon />} onClick={onDeleteClick}>
-          {t('delete')}
-        </MenuItem>
-      )}
+      <MenuItem icon={<TrashIcon />} onClick={onDeleteClick}>
+        {t('delete')}
+      </MenuItem>
     </MenuList>
   )
 }
