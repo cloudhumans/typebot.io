@@ -10,7 +10,6 @@ import { saveClientLogs } from '@/features/chat/api/saveClientLogs'
 import { startChat } from '@/features/chat/api/startChat'
 import { startChatPreview } from '@/features/chat/api/startChatPreview'
 
-
 export const appRouter = router({
   sendMessageV1,
   sendMessageV2,
