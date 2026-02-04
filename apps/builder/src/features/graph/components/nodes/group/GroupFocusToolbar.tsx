@@ -10,13 +10,11 @@ import {
 type Props = {
   groupId: string
   onPlayClick: () => void
-  isDeletable?: boolean
 }
 
 export const GroupFocusToolbar = ({
   groupId,
   onPlayClick,
-  isDeletable = true,
 }: Props) => {
   const { hasCopied, onCopy } = useClipboard(groupId)
 
@@ -74,16 +72,14 @@ export const GroupFocusToolbar = ({
           onClick={onCopy}
         />
       </Tooltip>
-      {isDeletable && (
-        <IconButton
-          aria-label="Delete"
-          borderLeftRadius="none"
-          icon={<TrashIcon />}
-          onClick={dispatchDeleteEvent}
-          variant="ghost"
-          size="sm"
-        />
-      )}
+      <IconButton
+        aria-label="Delete"
+        borderLeftRadius="none"
+        icon={<TrashIcon />}
+        onClick={dispatchDeleteEvent}
+        variant="ghost"
+        size="sm"
+      />
     </HStack>
   )
 }
