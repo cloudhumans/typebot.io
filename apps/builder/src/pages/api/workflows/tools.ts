@@ -45,6 +45,7 @@ export default async function handler(
         tenant,
         isArchived: { not: true },
         toolDescription: { not: null },
+        publishedTypebot: { isNot: null },
       },
       select: {
         id: true,
