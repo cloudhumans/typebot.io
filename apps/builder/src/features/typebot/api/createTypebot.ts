@@ -127,23 +127,13 @@ export const createTypebot = authenticatedProcedure
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
         groups,
-        events:
-          typebot.events ??
-          (typebot.settings?.general?.type === 'TOOL'
-            ? [
-                {
-                  type: EventType.START,
-                  graphCoordinates: { x: 0, y: 0 },
-                  id: createId(),
-                },
-              ]
-            : [
-                {
-                  type: EventType.START,
-                  graphCoordinates: { x: 0, y: 0 },
-                  id: createId(),
-                },
-              ]),
+        events: typebot.events ?? [
+          {
+            type: EventType.START,
+            graphCoordinates: { x: 0, y: 0 },
+            id: createId(),
+          },
+        ],
         theme: typebot.theme ? typebot.theme : {},
         settings: typebot.settings
           ? sanitizeSettings(typebot.settings, workspace.plan, 'create')
