@@ -125,7 +125,7 @@ export const PublishButton = ({
     if (!typebot?.id) return
     if (isFreePlan(workspace) && hasInputFile) return onOpen()
     if (
-      typebot.settings.general?.type === 'AI_WORKFLOW' &&
+      typebot.settings.general?.type === 'TOOL' &&
       (!typebot.tenant || !typebot.toolDescription)
     ) {
       return showToast({

@@ -98,12 +98,12 @@ export const createTypebot = authenticatedProcedure
       })
 
     if (
-      typebot.settings?.general?.type === 'AI_WORKFLOW' &&
+      typebot.settings?.general?.type === 'TOOL' &&
       (!typebot.tenant || !typebot.toolDescription)
     )
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Tenant and Tool description are mandatory for AI Workflow',
+        message: 'Tenant and Tool description are mandatory for Tool workflows',
       })
 
     if (typebot.folderId) {
@@ -129,7 +129,7 @@ export const createTypebot = authenticatedProcedure
         groups,
         events:
           typebot.events ??
-          (typebot.settings?.general?.type === 'AI_WORKFLOW'
+          (typebot.settings?.general?.type === 'TOOL'
             ? [
                 {
                   type: EventType.START,

@@ -49,7 +49,7 @@ describe('createTypebot', () => {
     vi.mocked(getUserRoleInWorkspace).mockReturnValue(WorkspaceRole.ADMIN)
   })
 
-  it('should throw if AI_WORKFLOW is missing tenant', async () => {
+  it('should throw if TOOL is missing tenant', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const caller = createTypebot.createCaller({ user: mockUser } as any)
@@ -61,7 +61,7 @@ describe('createTypebot', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: {
           name: 'My Bot',
-          settings: { general: { type: 'AI_WORKFLOW' } },
+          settings: { general: { type: 'TOOL' } },
           toolDescription: 'desc',
           // tenant missing
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,7 +70,7 @@ describe('createTypebot', () => {
     ).rejects.toThrow('Tenant and Tool description are mandatory')
   })
 
-  it('should throw if AI_WORKFLOW is missing toolDescription', async () => {
+  it('should throw if TOOL is missing toolDescription', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const caller = createTypebot.createCaller({ user: mockUser } as any)
@@ -82,7 +82,7 @@ describe('createTypebot', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: {
           name: 'My Bot',
-          settings: { general: { type: 'AI_WORKFLOW' } },
+          settings: { general: { type: 'TOOL' } },
           tenant: 'ten-1',
           // toolDescription missing
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,12 +91,12 @@ describe('createTypebot', () => {
     ).rejects.toThrow('Tenant and Tool description are mandatory')
   })
 
-  it('should create AI_WORKFLOW if tenant and toolDescription provided', async () => {
+  it('should create TOOL if tenant and toolDescription provided', async () => {
     vi.mocked(prisma.typebot.create).mockResolvedValue({
       id: 'tb-1',
       workspaceId: mockWorkspace.id,
       name: 'My Bot',
-      settings: { general: { type: 'AI_WORKFLOW' } },
+      settings: { general: { type: 'TOOL' } },
       tenant: 'ten-1',
       toolDescription: 'desc',
       groups: [],
@@ -113,7 +113,7 @@ describe('createTypebot', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: {
           name: 'My Bot',
-          settings: { general: { type: 'AI_WORKFLOW' } },
+          settings: { general: { type: 'TOOL' } },
           tenant: 'ten-1',
           toolDescription: 'desc',
         },

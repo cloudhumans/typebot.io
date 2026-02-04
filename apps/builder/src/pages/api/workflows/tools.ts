@@ -67,7 +67,7 @@ export default async function handler(
       .filter((typebot) => {
         const settings = typebot.settings as { general?: { type?: string } }
         return (
-          settings?.general?.type === 'AI_WORKFLOW' &&
+          settings?.general?.type === 'TOOL' &&
           typebot.tenant &&
           typebot.toolDescription
         )

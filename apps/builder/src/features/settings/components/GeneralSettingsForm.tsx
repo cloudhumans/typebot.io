@@ -78,7 +78,7 @@ export const GeneralSettingsForm = ({
 
   return (
     <Stack spacing={6}>
-      {generalSettings?.type === 'AI_WORKFLOW' && (
+      {generalSettings?.type === 'TOOL' && (
         <>
           <TextInput
             label="Tenant"

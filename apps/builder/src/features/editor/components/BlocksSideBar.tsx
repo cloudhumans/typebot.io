@@ -200,7 +200,7 @@ export const BlocksSideBar = () => {
           </Tooltip>
         </Flex>
 
-        {typebot?.settings?.general?.type !== 'AI_WORKFLOW' && (
+        {typebot?.settings?.general?.type !== 'TOOL' && (
           <Stack>
             <Text fontSize="sm" fontWeight="semibold">
               {t('editor.sidebarBlocks.blockType.bubbles.heading')}
@@ -219,7 +219,7 @@ export const BlocksSideBar = () => {
           </Stack>
         )}
 
-        {typebot?.settings?.general?.type !== 'AI_WORKFLOW' && (
+        {typebot?.settings?.general?.type !== 'TOOL' && (
           <Stack>
             <Text fontSize="sm" fontWeight="semibold">
               {t('editor.sidebarBlocks.blockType.inputs.heading')}
@@ -246,7 +246,7 @@ export const BlocksSideBar = () => {
             {Object.values(LogicBlockType)
               .filter((type) => !hiddenLogicTypes.includes(type))
               .filter((type) =>
-                typebot?.settings?.general?.type === 'AI_WORKFLOW'
+                typebot?.settings?.general?.type === 'TOOL'
                   ? [
                       LogicBlockType.SET_VARIABLE,
                       LogicBlockType.CONDITION,
@@ -272,7 +272,7 @@ export const BlocksSideBar = () => {
           <SimpleGrid columns={2} spacing="3">
             {allBlocks
               .filter((type) =>
-                typebot?.settings?.general?.type === 'AI_WORKFLOW'
+                typebot?.settings?.general?.type === 'TOOL'
                   ? [IntegrationBlockType.WEBHOOK].includes(
                       type as IntegrationBlockType | string
                     )
@@ -288,7 +288,7 @@ export const BlocksSideBar = () => {
           </SimpleGrid>
         </Stack>
 
-        {typebot?.settings?.general?.type === 'AI_WORKFLOW' && (
+        {typebot?.settings?.general?.type === 'TOOL' && (
           <Stack>
             <Text fontSize="sm" fontWeight="semibold">
               Tool Output

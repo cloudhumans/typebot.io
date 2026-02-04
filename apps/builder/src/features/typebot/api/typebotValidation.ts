@@ -152,9 +152,9 @@ const validateFlowBranchesHaveClaudia = (
 
       let currentHasTerminator = hasTerminator
 
-      const isAiWorkflow = settings?.general?.type === 'AI_WORKFLOW'
+      const isToolWorkflow = settings?.general?.type === 'TOOL'
 
-      if (isAiWorkflow) {
+      if (isToolWorkflow) {
         if (isWorkflowBlock(block)) {
           currentHasTerminator = true
         }
@@ -701,7 +701,7 @@ const validateTypebot = async ({
       })
     )
 
-    const isAiWorkflow = settings?.general?.type === 'AI_WORKFLOW'
+    const isToolWorkflow = settings?.general?.type === 'TOOL'
 
     const missingClaudiaInFlowBranches = validateFlowBranchesHaveClaudia(
       groups,
@@ -710,12 +710,12 @@ const validateTypebot = async ({
     )
     missingClaudiaInFlowBranchesErrors = missingClaudiaInFlowBranches.map(
       (groupId) => ({
-        type: isAiWorkflow
+        type: isToolWorkflow
           ? 'missingWorkflowEndInFlowBranches'
           : 'missingClaudiaInFlowBranches',
         groupId,
         message: getErrorMessage(
-          isAiWorkflow
+          isToolWorkflow
             ? 'missingWorkflowEndInFlowBranches'
             : 'missingClaudiaInFlowBranches',
           groupTitleMap.get(groupId)

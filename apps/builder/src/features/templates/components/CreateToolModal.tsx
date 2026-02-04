@@ -47,7 +47,7 @@ export const CreateToolModal = ({
   const handleCreateClick = () => {
     onSubmit({
       name,
-      settings: { general: { type: 'AI_WORKFLOW' } },
+      settings: { general: { type: 'TOOL' } },
       tenant,
       toolDescription,
     } as Typebot)

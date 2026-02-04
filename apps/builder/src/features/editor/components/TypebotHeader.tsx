@@ -250,7 +250,7 @@ const LeftElements = ({
             </Tooltip>
           </HStack>
         )}
-        {typebot?.settings?.general?.type === 'AI_WORKFLOW' && (
+        {typebot?.settings?.general?.type === 'TOOL' && (
           <Button
             size="sm"
             onClick={onOpenEditToolDescription}

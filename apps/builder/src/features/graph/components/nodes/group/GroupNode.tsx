@@ -75,6 +75,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
         : group.graphCoordinates
     )
   )
+  const isDeletable = true
   const { moveFocusedGroups, focusGroup, getGroupsCoordinates } =
     useGroupsStore(
       useShallow((state) => ({
@@ -163,11 +164,6 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
   const hasError = !!validationErrors?.errors.find(
     (e) => e.groupId === group.id
   )
-
-  const isDeletable =
-    typebot?.settings?.general?.type === 'AI_WORKFLOW'
-      ? !['Start', 'End'].includes(group.title)
-      : true
 
   const handleDeleteClick = () =>
     dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }))

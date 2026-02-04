@@ -166,13 +166,13 @@ export const updateTypebot = authenticatedProcedure
     if (
       existingTypebot.settings &&
       (existingTypebot.settings as unknown as Settings).general?.type ===
-        'AI_WORKFLOW' &&
+        'TOOL' &&
       ((typebot.tenant !== undefined && !typebot.tenant) ||
         (typebot.toolDescription !== undefined && !typebot.toolDescription))
     )
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Tenant and Tool description are mandatory for AI Workflow',
+        message: 'Tenant and Tool description are mandatory for Tool workflows',
       })
 
     const groups = typebot.groups
