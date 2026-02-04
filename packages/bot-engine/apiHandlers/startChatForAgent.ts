@@ -4,6 +4,7 @@ import { saveStateToDatabase } from '../saveStateToDatabase'
 import { Typebot, DeclareVariablesBlock } from '@typebot.io/schemas'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import logger from '@typebot.io/lib/logger'
+import { isDefined } from '@typebot.io/lib/utils'
 
 type Props = {
   publicId: string
@@ -64,7 +65,10 @@ export const startChatForAgent = async ({
   })
 
   // Validate that all required inputs were provided
-  const missingInputs = validateRequiredInputs(requiredInputs, prefilledVariables)
+  const missingInputs = validateRequiredInputs(
+    requiredInputs,
+    prefilledVariables
+  )
 
   if (missingInputs.length > 0) {
     logger.warn('Missing required inputs', {
@@ -103,7 +107,9 @@ export const startChatForAgent = async ({
   const toolOutputLog = logs?.find(
     (log) => log.details && (log.details as any).action === 'END_WORKFLOW'
   )
-  const toolOutput = toolOutputLog ? (toolOutputLog.details as any).response : undefined
+  const toolOutput = toolOutputLog
+    ? (toolOutputLog.details as any).response
+    : undefined
 
   return {
     sessionId: session.id,
@@ -149,7 +155,11 @@ function validateRequiredInputs(
   requiredInputs: RequiredInput[],
   provided?: Record<string, unknown>
 ): RequiredInput[] {
+  if (!provided) return requiredInputs.filter((input) => input.required)
   return requiredInputs
     .filter((input) => input.required)
-    .filter((input) => !(input.name in (provided ?? {})))
+    .filter((input) => {
+      const byName = provided[input.name]
+      return !isDefined(byName)
+    })
 }

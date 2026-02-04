@@ -51,6 +51,9 @@ export default async function handler(
         tenant: true,
         toolDescription: true,
         settings: true,
+        variables: true,
+        publicId: true,
+        groups: true,
         publishedTypebot: {
           select: {
             id: true,
@@ -68,13 +71,53 @@ export default async function handler(
           typebot.toolDescription
         )
       })
-      .map((typebot) => ({
-        id: typebot.id,
-        name: typebot.name,
-        tenant: typebot.tenant!,
-        description: typebot.toolDescription!, // Maps to description in DTO
-        isPublished: Boolean(typebot.publishedTypebot),
-      }))
+      .map((typebot) => {
+        const typebotVariables = typebot.variables as any[]
+        const groups = typebot.groups as any[]
+        const declareVariablesBlocks = groups
+          .flatMap((g: any) => g.blocks || [])
+          .filter((b: any) => b.type === 'Declare variables')
+        const declaredVariables = declareVariablesBlocks.flatMap(
+          (b: any) => b.options?.variables || []
+        )
+
+        let variables = declaredVariables
+          .map((v: any) => {
+            const variable = typebotVariables.find(
+              (tv) => tv.id === v.variableId
+            )
+            return {
+              name: variable?.name,
+              description: v.description,
+            }
+          })
+          .filter((v: any) => v.name)
+
+        if (variables.length === 0) {
+          variables = typebotVariables
+            .filter((v) => v.name && v.description)
+            .map((v) => ({
+              name: v.name,
+              description: v.description,
+            }))
+        }
+
+        const slug = typebot.name
+          .toLowerCase()
+          .replace(/_/g, '-')
+          .replace(/\s+/g, '-')
+          .replace(/[^\w-]+/g, '')
+
+        return {
+          id: typebot.id,
+          name: typebot.name,
+          tenant: typebot.tenant!,
+          description: typebot.toolDescription!, // Maps to description in DTO
+          isPublished: Boolean(typebot.publishedTypebot),
+          variables,
+          publicName: typebot.publicId ?? `${slug}-${typebot.id.slice(-7)}`,
+        }
+      })
 
     return res.status(200).json({ tools })
   } catch (error) {
