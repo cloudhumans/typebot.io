@@ -273,9 +273,7 @@ export const BlocksSideBar = () => {
             {allBlocks
               .filter((type) =>
                 typebot?.settings?.general?.type === 'TOOL'
-                  ? [IntegrationBlockType.WEBHOOK].includes(
-                      type as IntegrationBlockType | string
-                    )
+                  ? type === IntegrationBlockType.WEBHOOK
                   : true
               )
               .map((type) => (

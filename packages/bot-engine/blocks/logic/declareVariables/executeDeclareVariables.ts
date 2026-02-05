@@ -50,11 +50,11 @@ export const executeDeclareVariables = async (
 
     // Return a text input for this variable
     return {
+      outgoingEdgeId: block.outgoingEdgeId,
       messages,
       input: {
         id: `${block.id}-input-${variable.id}`,
         type: InputBlockType.TEXT,
-        groupId: block.groupId,
         outgoingEdgeId: block.outgoingEdgeId,
         options: {
           labels: {
