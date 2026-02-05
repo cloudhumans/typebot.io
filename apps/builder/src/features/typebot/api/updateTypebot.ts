@@ -248,7 +248,6 @@ export const updateTypebot = authenticatedProcedure
         whatsAppCredentialsId: typebot.whatsAppCredentialsId ?? undefined,
         tenant: typebot.tenant,
         toolDescription: typebot.toolDescription,
-        description: typebot.description,
       },
     })
 

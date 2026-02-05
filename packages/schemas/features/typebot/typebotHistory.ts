@@ -192,8 +192,8 @@ export const createTypebotHistoryContent = (
     isSecondaryFlow: typebot.isSecondaryFlow || false,
     riskLevel: typebot.riskLevel,
     whatsAppCredentialsId: typebot.whatsAppCredentialsId,
-    tenant: typebot.tenant,
-    toolDescription: typebot.toolDescription,
+    tenant: typebot.tenant ?? null,
+    toolDescription: typebot.toolDescription ?? null,
   }
 }
 
