@@ -22,7 +22,7 @@ export default async function handler(
   // Handle CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-tenant, tenant, mcp-session-id')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-tenant, tenant, mcp-session-id, Authorization, X-MCP-Access-Token')
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
@@ -38,8 +38,12 @@ export default async function handler(
   if (req.method === 'GET') {
     // SSE endpoint for server-to-client messages
     res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
     res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
+    
+    // Establishing the stream
+    res.write('retry: 1000\n\n')
     
     // Keep connection alive
     const keepAlive = setInterval(() => {
@@ -48,6 +52,7 @@ export default async function handler(
     
     req.on('close', () => {
       clearInterval(keepAlive)
+      res.end()
     })
     
     return
@@ -210,5 +215,6 @@ export const config = {
     bodyParser: {
       sizeLimit: '4mb',
     },
+    externalResolver: true,
   },
 }
