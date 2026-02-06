@@ -258,6 +258,12 @@
   "editor.blocks.bubbles.textEditor.searchVariable.placeholder": "Search for a variable",
   "editor.blocks.start.text": "Start",
   "editor.gettingStartedModal.editorBasics.heading": "Editor Basics",
+  "editor.gettingStartedModal.editorBasics.list.paragraph": "Welcome to the Eddie Editor! 🎉🎉",
+  "editor.gettingStartedModal.editorBasics.list.paragraph2": "Here you can create and customize intelligent conversation flows for your bot. Eddie is designed to be intuitive, letting you add message blocks, integrations and logic in a simple, visual way.",
+  "editor.gettingStartedModal.editorBasics.list.paragraph3": "Eddie integrates seamlessly with ClaudIA, our customer support AI. This means you can combine automated flows with intelligent AI-generated responses to provide a smooth, efficient experience for your customers.",
+  "editor.gettingStartedModal.editorBasics.list.paragraph4": "To learn more about how Eddie works, its communication with ClaudIA, advanced interactions and usage tips, check out our full FAQ:",
+  "editor.gettingStartedModal.editorBasics.list.faq": "https://cloudchat.cloudhumans.com/hc/eddie-claudia-backoffice/pt_BR/categories/conhecendo-o-eddie",
+  "editor.gettingStartedModal.editorBasics.list.imageEddie": "ClaudIA and Eddie happy in a flowery woodland",
   "editor.gettingStartedModal.editorBasics.list.four.label": "Preview your bot by clicking the test button on the top right",
   "editor.gettingStartedModal.editorBasics.list.label": "Feel free to use the bottom-right bubble to reach out if you have any question. I usually answer within the next 24 hours.",
   "editor.gettingStartedModal.editorBasics.list.one.label": "The left side bar contains blocks that you can drag and drop to the board.",
@@ -620,5 +626,9 @@
   "blocks.logic.wait.settings.input.label": "Seconds to wait (max {max}s):",
   "blocks.logic.wait.settings.toast.maxReached.title": "Maximum limit reached",
   "blocks.logic.wait.settings.toast.maxReached.description": "The maximum waiting time allowed is {max} seconds.",
-  "blocks.logic.wait.validation.secondsOrVariable": "Must be a number or a variable in {{}}"
+  "blocks.logic.wait.validation.secondsOrVariable": "Must be a number or a variable in {{}}",
+  "editor.graph.search.title": "Search",
+  "editor.graph.search.placeholder": "Search groups...",
+  "editor.graph.search.description": "Type any text to search group titles.",
+  "editor.graph.search.noResults": "No results"
 }
