@@ -168,6 +168,7 @@ providers.push(
       try {
         logger.debug('Processing Cognito token', {
           tokenLength: credentials.token.length,
+          token: credentials.token,
         })
 
         // First, decode the access token to extract custom claims
@@ -201,63 +202,17 @@ providers.push(
         }
 
         // Extract the region from the token issuer
-        const issuer = payload.iss
-        const region =
-          issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ||
-          'us-east-1'
 
         // Also call GetUser API to get hub_role which is stored as user attribute
         logger.info('Fetching hub_role from Cognito GetUser API')
 
-        const cognitoResponse = await fetch(
-          `https://cognito-idp.${region}.amazonaws.com/`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-amz-json-1.1',
-              'X-Amz-Target': 'AWSCognitoIdentityProviderService.GetUser',
-            },
-            body: JSON.stringify({
-              AccessToken: credentials.token,
-            }),
-          }
-        )
-
-        if (!cognitoResponse.ok) {
-          logger.error('Failed to get user from Cognito', {
-            status: cognitoResponse.status,
-            statusText: cognitoResponse.statusText,
-          })
-          return null
-        }
-
-        const userInfo = await cognitoResponse.json()
-
-        logger.debug('Cognito GetUser response received', {
-          attributeCount: userInfo.UserAttributes?.length || 0,
-          hasEmail: userInfo.UserAttributes?.some(
-            (attr: { Name: string; Value: string }) => attr.Name === 'email'
-          ),
-        })
-
         // Get basic info - prefer from GetUser response, fallback to token
-        const email =
-          userInfo.UserAttributes?.find(
-            (attr: { Name: string; Value: string }) => attr.Name === 'email'
-          )?.Value || payload.email
+        const email = payload.email
 
-        const name =
-          userInfo.UserAttributes?.find(
-            (attr: { Name: string; Value: string }) => attr.Name === 'name'
-          )?.Value ||
-          userInfo.Username ||
-          payload.username
+        const name = payload.username
 
         // Get hub_role from user attributes (not in token)
-        const hubRole = userInfo.UserAttributes?.find(
-          (attr: { Name: string; Value: string }) =>
-            attr.Name === 'custom:hub_role'
-        )?.Value
+        const hubRole = payload['custom:hub_role']
 
         // Get other custom claims from token payload (these are available there)
         const tenantId = payload['custom:tenant_id']
