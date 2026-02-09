@@ -198,6 +198,26 @@ export const executeWebhook = async (
 
   if (isFormData && isJson) body = parseFormDataBody(body as object)
 
+  const calculateTimeout = (): number | false => {
+    // No global timeout configured
+    if (isNotDefined(env.CHAT_API_TIMEOUT)) {
+      return false
+    }
+
+    // Custom timeout provided in parameters
+    if (params.timeout && params.timeout !== defaultTimeout) {
+      return Math.min(params.timeout, maxTimeout) * 1000
+    }
+
+    // Long-running request (whitelisted URLs or explicitly disabled)
+    if (isLongRequest) {
+      return maxTimeout * 1000
+    }
+
+    // Default timeout
+    return defaultTimeout * 1000
+  }
+
   const request = {
     url,
     method,
@@ -205,13 +225,7 @@ export const executeWebhook = async (
     ...(basicAuth ?? {}),
     json: !isFormData && body && isJson ? body : undefined,
     body: (isFormData && body ? body : undefined) as any,
-    timeout: isNotDefined(env.CHAT_API_TIMEOUT)
-      ? false
-      : params.timeout && params.timeout !== defaultTimeout
-      ? Math.min(params.timeout, maxTimeout) * 1000
-      : isLongRequest
-      ? maxTimeout * 1000
-      : defaultTimeout * 1000,
+    timeout: calculateTimeout(),
   } satisfies Options & { url: string; body: any }
 
   const requestStartTime = Date.now()
