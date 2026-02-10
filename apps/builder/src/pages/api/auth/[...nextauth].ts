@@ -260,6 +260,7 @@ providers.push(
             'custom:tenant_id': tenantId,
             'custom:claudia_projects': claudiaProjects,
           },
+          cloudChatAuthorization: true,
         }
 
         logger.debug('Final user object created', {
@@ -347,7 +348,10 @@ export const getAuthOptions = ({
         if (account.provider === 'cloudchat-embedded') {
           const userFromCognitoAuth = user as DatabaseUserWithCognito
           const claimsFromCognitoToken = userFromCognitoAuth.cognitoClaims
+          const cloudChatAuthorization =
+            userFromCognitoAuth.cloudChatAuthorization
 
+          nextAuthJWT.cloudChatAuthorization = cloudChatAuthorization
           if (claimsFromCognitoToken) {
             logger.debug(
               'Transferring claims from Cognito auth to NextAuth JWT',
@@ -414,7 +418,8 @@ export const getAuthOptions = ({
         ...session,
         user: {
           ...userFromDb,
-          cognitoClaims: nextAuthJWT.cognitoClaims, // Pass Cognito claims from NextAuth JWT to session user
+          cognitoClaims: nextAuthJWT.cognitoClaims,
+          cloudChatAuthorization: nextAuthJWT.cloudChatAuthorization,
         },
       }
 
