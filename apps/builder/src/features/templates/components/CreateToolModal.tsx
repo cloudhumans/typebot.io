@@ -11,6 +11,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Select,
   Textarea,
   VStack,
   Alert,
@@ -19,12 +20,20 @@ import {
 import { Typebot } from '@typebot.io/schemas'
 import React, { useEffect, useState } from 'react'
 
+type WorkspaceOption = {
+  id: string
+  name: string
+}
+
 type Props = {
   isOpen: boolean
   onClose: () => void
   onSubmit: (typebot: Typebot) => void
   isLoading: boolean
   initialTenant?: string
+  workspaces: WorkspaceOption[]
+  currentWorkspaceId?: string
+  onWorkspaceChange: (workspaceId: string) => void
 }
 
 export const CreateToolModal = ({
@@ -33,6 +42,9 @@ export const CreateToolModal = ({
   onSubmit,
   isLoading,
   initialTenant,
+  workspaces,
+  currentWorkspaceId,
+  onWorkspaceChange,
 }: Props) => {
   const [name, setName] = useState('')
   const [tenant, setTenant] = useState('')
@@ -64,6 +76,19 @@ export const CreateToolModal = ({
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Workspace</FormLabel>
+              <Select
+                value={currentWorkspaceId}
+                onChange={(e) => onWorkspaceChange(e.target.value)}
+              >
+                {workspaces.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.name}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
             <FormControl isRequired>
               <FormLabel>Name</FormLabel>
               <Input

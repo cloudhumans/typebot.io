@@ -21,7 +21,7 @@ import { TemplatesModal } from './TemplatesModal'
 
 export const CreateNewTypebotButtons = () => {
   const { t } = useTranslate()
-  const { workspace } = useWorkspace()
+  const { workspace, workspaces, switchWorkspace } = useWorkspace()
   const { user } = useUser()
   const router = useRouter()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -211,6 +211,13 @@ export const CreateNewTypebotButtons = () => {
             ? router.query.tenant_name
             : undefined
         }
+        workspaces={
+          workspace
+            ? [workspace, ...workspaces.filter((w) => w.id !== workspace.id)]
+            : []
+        }
+        currentWorkspaceId={workspace?.id}
+        onWorkspaceChange={switchWorkspace}
       />
     </VStack>
   )
