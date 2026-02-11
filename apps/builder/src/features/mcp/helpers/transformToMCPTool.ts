@@ -19,6 +19,7 @@ export function transformToMCPTool(tool: WorkflowTool) {
   })
 
   return {
+    workflowId: tool.id,
     name: sanitizeToolName(tool.name),
     description: tool.description || `Execute ${tool.name}`,
     inputSchema: {
