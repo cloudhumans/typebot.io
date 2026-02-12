@@ -231,21 +231,25 @@ const TypebotButton = ({
                 <AlertIcon />
                 {t('folders.typebotButton.deleteConfirmationMessageWarning')}
               </Alert>
-              <FormControl>
-                <FormLabel>
-                  {t('folders.typebotButton.deleteConfirmationLabel') ||
-                    'Para apagar, escreva o nome do flow:'}
-                </FormLabel>
-                <Input
-                  value={confirmInput}
-                  onChange={(e) => setConfirmInput(e.target.value)}
-                  placeholder={typebot.name}
-                />
-              </FormControl>
+              {typebot.publishedTypebotId && (
+                <FormControl>
+                  <FormLabel>
+                    {t('folders.typebotButton.deleteConfirmationLabel') ||
+                      'Para apagar, escreva o nome do flow:'}
+                  </FormLabel>
+                  <Input
+                    value={confirmInput}
+                    onChange={(e) => setConfirmInput(e.target.value)}
+                    placeholder={typebot.name}
+                  />
+                </FormControl>
+              )}
             </Stack>
           }
           confirmButtonLabel={t('delete')}
-          confirmButtonDisabled={confirmInput !== typebot.name}
+          confirmButtonDisabled={
+            typebot.publishedTypebotId ? confirmInput !== typebot.name : false
+          }
           onConfirm={handleDeleteTypebotClick}
           isOpen={isDeleteOpen}
           onClose={onDeleteClose}
