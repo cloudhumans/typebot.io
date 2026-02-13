@@ -1,3 +1,5 @@
+import eddieImage from '../images/eddie-image.jpg'
+
 import {
   useDisclosure,
   Modal,
@@ -47,12 +49,12 @@ export const GettingStartedModal = () => {
 
           {/* FAQ image */}
           <Image
-            src="https://i.postimg.cc/Sx0h6wRN/image.jpg"
+            src={eddieImage.src}
             alt={t('editor.gettingStartedModal.editorBasics.list.imageEddie')}
             mt={4}
             borderRadius="md"
             maxW="100%"
-          />
+/>
         </ModalBody>
       </ModalContent>
     </Modal>
