@@ -29,6 +29,7 @@ import {
   DatabaseUserWithCognito,
 } from '@/features/auth/types/cognito'
 import logger from '@/helpers/logger'
+import { verifyCognitoToken } from '@/features/auth/helpers/verifyCognitoToken'
 
 const providers: Provider[] = []
 
@@ -157,121 +158,48 @@ providers.push(
     credentials: {
       token: { label: 'Token', type: 'text' },
     },
-    async authorize(credentials) {
-      logger.info('Cognito authorize called', {
-        hasToken: !!credentials?.token,
-      })
-      if (!credentials?.token) {
-        return null
-      }
-
+    async authorize(
+      credentials
+    ): Promise<Pick<
+      DatabaseUserWithCognito,
+      | 'id'
+      | 'name'
+      | 'email'
+      | 'image'
+      | 'emailVerified'
+      | 'cognitoClaims'
+      | 'cloudChatAuthorization'
+    > | null> {
       try {
-        logger.debug('Processing Cognito token', {
-          tokenLength: credentials.token.length,
-          token: credentials.token,
+        if (!credentials?.token) return null
+
+        const payload = await verifyCognitoToken({
+          cognitoAppClientId: env.CLOUDCHAT_COGNITO_APP_CLIENT_ID,
+          cognitoIssuerUrl: env.COGNITO_ISSUER_URL,
+          cognitoToken: credentials.token,
         })
 
-        // First, decode the access token to extract custom claims
-        const tokenParts = credentials.token.split('.')
-        if (tokenParts.length !== 3) {
-          logger.error('Invalid JWT token format', {
-            tokenParts: tokenParts.length,
-          })
-          return null
-        }
-
-        const payload = JSON.parse(
-          Buffer.from(tokenParts[1], 'base64url').toString('utf8')
-        )
-
-        logger.debug('CloudChat access token payload decoded', {
-          sub: payload.sub,
-          exp: payload.exp,
-          hasCustomClaims: !!(
-            payload['custom:hub_role'] || payload['custom:tenant_id']
-          ),
+        const user = await prisma.user.findUnique({
+          where: { email: payload.email },
         })
 
-        // Verify token hasn't expired
-        if (payload.exp && Date.now() >= payload.exp * 1000) {
-          logger.error('Access token has expired', {
-            exp: payload.exp,
-            now: Date.now(),
-          })
-          return null
-        }
+        if (!user) return null
 
-        // Extract the region from the token issuer
-
-        // Also call GetUser API to get hub_role which is stored as user attribute
-        logger.info('Fetching hub_role from Cognito GetUser API')
-
-        // Get basic info - prefer from GetUser response, fallback to token
-        const email = payload.email
-
-        const name = payload.username
-
-        // Get hub_role from user attributes (not in token)
-        const hubRole = payload['custom:hub_role']
-
-        // Get other custom claims from token payload (these are available there)
-        const tenantId = payload['custom:tenant_id']
-        const claudiaProjects = payload['custom:claudia_projects']
-        const tenantVersion = payload['custom:tenant_version']
-        const cloudchatInstance = payload['custom:cloudchat_instance']
-        const connectorProjects = payload['custom:connector_projects']
-        const projects = payload['custom:projects']
-
-        logger.debug('Extracted Cognito values', {
-          hasEmail: !!email,
-          hasName: !!name,
-          hubRole,
-          hasTenantId: !!tenantId,
-          hasClaudiaProjects: !!claudiaProjects,
-          tenantVersion,
-          cloudchatInstance,
-          hasConnectorProjects: !!connectorProjects,
-          hasProjects: !!projects,
-        })
-
-        if (!email) return null
-
-        // Use the adapter to find or create user
-        const adapter = customAdapter(prisma)
-        let user = await adapter.getUserByEmail(email)
-
-        if (!user) {
-          user = await adapter.createUser({
-            email,
-            name,
-            emailVerified: new Date(),
-            image: null,
-          })
-        }
-
-        const userResult = {
+        return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
           emailVerified: user.emailVerified,
           cognitoClaims: {
-            'custom:hub_role': hubRole as 'ADMIN' | 'CLIENT' | 'MANAGER',
-            'custom:tenant_id': tenantId,
-            'custom:claudia_projects': claudiaProjects,
+            'custom:hub_role': payload['custom:hub_role'],
+            'custom:tenant_id': payload['custom:tenant_id'],
+            'custom:claudia_projects': payload['custom:claudia_projects'],
           },
           cloudChatAuthorization: true,
         }
-
-        logger.debug('Final user object created', {
-          userId: userResult.id,
-          email: userResult.email,
-          hasName: !!userResult.name,
-        })
-        return userResult
       } catch (error) {
         logger.error('Error in cloudchat-embedded authorize', { error })
-        Sentry.captureException(error)
         return null
       }
     },
