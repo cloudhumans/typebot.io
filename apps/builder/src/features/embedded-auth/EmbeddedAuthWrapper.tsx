@@ -36,7 +36,11 @@ export const EmbeddedAuthWrapper = ({ children }: PropsWithChildren) => {
       handleEmbeddedAuthentication(embeddedJwt)
         .then((success) => {
           if (!success)
-            setAuthError('Failed to load flow builder. Please reload the page.')
+            return setAuthError(
+              'Failed to load flow builder. Please reload the page.'
+            )
+
+          setIsAuthReady(true)
         })
         .catch(() => {
           setAuthError('An unexpected error occurred.')

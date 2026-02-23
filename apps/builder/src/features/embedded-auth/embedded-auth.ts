@@ -57,16 +57,6 @@ export const handleEmbeddedAuthentication = async (
       return false
     }
 
-    const updatedSession = await verifyAuthenticationStatus()
-    if (!updatedSession?.user) {
-      logger.error('Session not available after successful signIn')
-      return false
-    }
-
-    logger.info('User authenticated via embedded Cognito token', {
-      userId: updatedSession.user.id,
-      authMethod: 'embedded-cognito',
-    })
     return true
   } catch (error) {
     logger.error('Embedded authentication error', { error })
