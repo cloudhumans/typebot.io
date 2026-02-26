@@ -32,7 +32,9 @@ const minScale = 0.05
 
 // Custom zoom steps: 9 larger steps then 3 finer steps near the minimum
 const ZOOM_STEPS = [...Array(9).fill(0.2), ...Array(3).fill(0.05)]
-const zoomButtonsScaleBlock = 0.2
+const pinchZoomDeltaLimit = 0.2
+// Backward-compatible alias: historically used for zoom buttons, now tied to pinch zoom delta limit.
+const zoomButtonsScaleBlock = pinchZoomDeltaLimit
 
 const getZoomStepForScale = (scale: number) => {
   // position = how far we've moved from maxScale towards minScale
