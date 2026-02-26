@@ -177,6 +177,18 @@ export const executeGroup = async (
       continue
     }
 
+    logger.info('Block Executed', {
+      workflow: {
+        id: newSessionState.typebotsQueue[0].typebot.id,
+        version: String(newSessionState.typebotsQueue[0].typebot.version ?? 'unknown'),
+        execution_id: sessionId ?? 'preview',
+      },
+      typebot_block: {
+        id: block.id,
+        type: block.type,
+      },
+    })
+
     if (
       executionResponse.newSetVariableHistory &&
       executionResponse.newSetVariableHistory?.length > 0
