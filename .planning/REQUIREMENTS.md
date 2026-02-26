@@ -12,7 +12,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **LOG-01**: Logger emits valid single-line JSON to stdout when `DD_LOGS_ENABLED=true`
 - [x] **LOG-02**: Every log entry includes `ddsource: "nodejs"` and `service: "typebot-runner"` as top-level fields
 - [x] **LOG-03**: `DD_LOGS_ENABLED` and `LOG_LEVEL` are validated via Zod env schema — app fails on startup if misconfigured
-- [ ] **LOG-04**: Nested metadata objects serialize as nested JSON keys (not flattened) matching DD pipeline contract
+- [x] **LOG-04**: Nested metadata objects serialize as nested JSON keys (not flattened) matching DD pipeline contract
 
 ### Block Instrumentation
 
@@ -69,7 +69,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOG-01 | Phase 1 | Complete (01-01) |
 | LOG-02 | Phase 1 | Complete (01-01) |
 | LOG-03 | Phase 1 | Complete (01-01) |
-| LOG-04 | Phase 1 | Pending |
+| LOG-04 | Phase 1 | Complete |
 | BLOCK-01 | Phase 2 | Pending |
 | BLOCK-02 | Phase 2 | Pending |
 | BLOCK-03 | Phase 2 | Pending |

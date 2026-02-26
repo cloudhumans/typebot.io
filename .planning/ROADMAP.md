@@ -12,7 +12,7 @@ This project instruments an existing Typebot execution engine to emit structured
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Logger Foundation** - Logger emits correct JSON schema with static DD fields; env vars validated at startup
+- [x] **Phase 1: Logger Foundation** - Logger emits correct JSON schema with static DD fields; env vars validated at startup (completed 2026-02-26)
 - [ ] **Phase 2: Block Instrumentation** - All logic and integration blocks emit structured workflow.* and typebot_block.* logs from executeGroup
 - [ ] **Phase 3: HTTP Block Enrichment** - HTTP Request block logs emit schema-compliant http.* fields with correct log levels and no PII
 - [ ] **Phase 4: Schema Validation and Performance** - Unit tests confirm schema correctness against DD pipeline fixture; benchmark confirms no latency regression
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Logger Foundation | 1/2 | In progress | - |
+| 1. Logger Foundation | 2/2 | Complete   | 2026-02-26 |
 | 2. Block Instrumentation | 0/TBD | Not started | - |
 | 3. HTTP Block Enrichment | 0/TBD | Not started | - |
 | 4. Schema Validation and Performance | 0/TBD | Not started | - |
