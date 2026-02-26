@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Add env vars to Zod schema and defaultMeta to Winston logger
+- [x] 01-01-PLAN.md — Add env vars to Zod schema and defaultMeta to Winston logger
 - [ ] 01-02-PLAN.md — Unit test verifying JSON output, static fields, and nested serialization
 
 ### Phase 2: Block Instrumentation
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Logger Foundation | 0/2 | Planning complete | - |
+| 1. Logger Foundation | 1/2 | In progress | - |
 | 2. Block Instrumentation | 0/TBD | Not started | - |
 | 3. HTTP Block Enrichment | 0/TBD | Not started | - |
 | 4. Schema Validation and Performance | 0/TBD | Not started | - |
