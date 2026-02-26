@@ -16,10 +16,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Block Instrumentation
 
-- [ ] **BLOCK-01**: Every logic and integration block execution emits a structured log with `workflow.id`, `workflow.version`, `workflow.execution_id`
-- [ ] **BLOCK-02**: Every block log includes `typebot_block.id` and `typebot_block.type`
-- [ ] **BLOCK-03**: Block log `message` field uses deterministic vocabulary: `"Block Executed"`
-- [ ] **BLOCK-04**: No duplicate log entries from recursive `executeGroup` re-entry (Declare Variables pattern)
+- [x] **BLOCK-01**: Every logic and integration block execution emits a structured log with `workflow.id`, `workflow.version`, `workflow.execution_id`
+- [x] **BLOCK-02**: Every block log includes `typebot_block.id` and `typebot_block.type`
+- [x] **BLOCK-03**: Block log `message` field uses deterministic vocabulary: `"Block Executed"`
+- [x] **BLOCK-04**: No duplicate log entries from recursive `executeGroup` re-entry (Declare Variables pattern)
 
 ### HTTP Block Enrichment
 
@@ -70,10 +70,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOG-02 | Phase 1 | Complete (01-01) |
 | LOG-03 | Phase 1 | Complete (01-01) |
 | LOG-04 | Phase 1 | Complete |
-| BLOCK-01 | Phase 2 | Pending |
-| BLOCK-02 | Phase 2 | Pending |
-| BLOCK-03 | Phase 2 | Pending |
-| BLOCK-04 | Phase 2 | Pending |
+| BLOCK-01 | Phase 2 | Complete |
+| BLOCK-02 | Phase 2 | Complete |
+| BLOCK-03 | Phase 2 | Complete |
+| BLOCK-04 | Phase 2 | Complete |
 | HTTP-01 | Phase 3 | Pending |
 | HTTP-02 | Phase 3 | Pending |
 | HTTP-03 | Phase 3 | Pending |

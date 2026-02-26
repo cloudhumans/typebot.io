@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every workflow execution produces a complete, queryable trace in Datadog — enabling detection of HTTP request loops and performance analysis per workflow.
-**Current focus:** Phase 1 — Logger Foundation
+**Current focus:** Phase 2 — Block Instrumentation
 
 ## Current Position
 
-Phase: 1 of 4 (Logger Foundation)
-Plan: 2 of TBD in current phase
+Phase: 2 of 4 (Block Instrumentation)
+Plan: 1 of TBD in current phase
 Status: In progress
-Last activity: 2026-02-26 — Plan 01-02 complete
+Last activity: 2026-02-26 — Plan 02-01 complete
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 2 min
-- Total execution time: 4 min
+- Total execution time: 6 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-logger-foundation | 2 | 4 min | 2 min |
+| 02-block-instrumentation | 1 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (2min)
+- Last 5 plans: 01-01 (2min), 01-02 (2min), 02-01 (2min)
 - Trend: Consistent
 
 *Updated after each plan completion*
@@ -50,6 +51,9 @@ Recent decisions affecting current work:
 - [01-01]: defaultMeta limited to flat string fields only -- nested objects risk shallow-merge overwrite
 - [01-02]: tsx (not bare node) required for child process TypeScript logger loading -- plain node cannot require .ts files
 - [01-02]: tsx binary resolved as absolute path to avoid PATH lookup issues in CI environments
+- [02-01]: Block log call placed after null executionResponse guard -- satisfies BLOCK-04 naturally without deduplication logic
+- [02-01]: String(typebot.version ?? 'unknown') coercion prevents Datadog numeric facet mismatch
+- [02-01]: No deduplication Set needed -- Declare Variables re-entry per user turn is a distinct execution
 
 ### Pending Todos
 
@@ -62,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-02-PLAN.md (Vitest unit tests for logger JSON output)
+Stopped at: Completed 02-01-PLAN.md (block instrumentation logger call and schema tests)
 Resume file: None
