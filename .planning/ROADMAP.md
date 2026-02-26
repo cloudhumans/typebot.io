@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Add env vars to Zod schema and defaultMeta to Winston logger
-- [ ] 01-02-PLAN.md — Unit test verifying JSON output, static fields, and nested serialization
+- [x] 01-02-PLAN.md — Unit test verifying JSON output, static fields, and nested serialization
 
 ### Phase 2: Block Instrumentation
 **Goal**: Every logic block and integration block execution emits a structured log with full workflow context and block identity, with no duplicate entries from recursive executeGroup re-entry
@@ -43,10 +43,10 @@ Plans:
   2. Each log entry contains `workflow.id`, `workflow.version`, and `workflow.execution_id` matching the executing session
   3. Each log entry contains `typebot_block.id` and `typebot_block.type` identifying the specific block
   4. Each log entry `message` field reads exactly `"Block Executed"` (deterministic vocabulary, no ad-hoc strings)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [x] 02-01-PLAN.md — Add logger.info('Block Executed') call to executeGroup.ts and schema tests
 
 ### Phase 3: HTTP Block Enrichment
 **Goal**: HTTP Request block logs emit the full http.* schema on all execution paths (success, error, timeout) with correct log levels and no PII or secrets in logged fields
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Logger Foundation | 2/2 | Complete   | 2026-02-26 |
-| 2. Block Instrumentation | 0/TBD | Not started | - |
+| 1. Logger Foundation | 2/2 | Complete    | 2026-02-26 |
+| 2. Block Instrumentation | 1/1 | Complete | 2026-02-26 |
 | 3. HTTP Block Enrichment | 0/TBD | Not started | - |
 | 4. Schema Validation and Performance | 0/TBD | Not started | - |
