@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every workflow execution produces a complete, queryable trace in Datadog — enabling detection of HTTP request loops and performance analysis per workflow.
-**Current focus:** Phase 3 — HTTP Block Enrichment
+**Current focus:** Phase 4 — Schema Validation and Performance
 
 ## Current Position
 
-Phase: 3 of 4 (HTTP Block Enrichment)
-Plan: 1 of 1 complete in current phase
-Status: In progress
-Last activity: 2026-02-27 — Plan 03-01 complete
+Phase: 4 of 4 (Schema Validation and Performance)
+Plan: 2 of 2 in current phase
+Status: Phase 4 complete — all plans executed
+Last activity: 2026-02-27 — Phase 4 plan 04-02 executed (VAL-03 injection verification complete)
 
-Progress: [████░░░░░░] 40%
+Progress: [████████░░] 87%
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@ Progress: [████░░░░░░] 40%
 - Trend: Consistent
 
 *Updated after each plan completion*
+| Phase 04 P01 | 3 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,7 @@ Recent decisions affecting current work:
 - [03-01]: TimeoutError does NOT log http.status_code: 408 -- 408 is synthetic ChatLog value, not real server response
 - [03-01]: request.timeout || 0 coercion -- request.timeout is number|false; || 0 safely converts false->0
 - [03-01]: Generic error uses error instanceof Error ? error.message : String(error) for PII-safe serialization
+- [04-02]: dd.trace_id injection present when dd-trace init runs before Winston; absent on background job paths — pre-existing limitation, primary correlation uses workflow.id/execution_id
 
 ### Pending Todos
 
@@ -65,10 +67,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 4]: `dd.trace_id` injection may be absent on non-tRPC paths due to lazy `dd-trace` init order — must confirm or document during Phase 4
+None. (Phase 4 VAL-03 blocker resolved — documented in PROJECT.md Key Decisions.)
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 03-01-PLAN.md (HTTP block enrichment -- structured http.* logger calls and schema tests)
+Last session: 2026-02-27T11:33:30Z
+Stopped at: Completed 04-01-PLAN.md (schema fixture + benchmark). 04-02 still pending.
+Resume with: /gsd:execute-phase 4
 Resume file: None
