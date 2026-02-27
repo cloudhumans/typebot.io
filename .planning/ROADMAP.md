@@ -60,7 +60,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Add/reshape 4 logger calls in executeWebhookBlock.ts with http.* schema and Vitest tests
+- [x] 03-01-PLAN.md — Add/reshape 4 logger calls in executeWebhookBlock.ts with http.* schema and Vitest tests
 
 ### Phase 4: Schema Validation and Performance
 **Goal**: All instrumented log paths are verified against the Datadog pipeline schema fixture by automated tests, performance regression is confirmed absent, and the dd.trace_id injection status is known and documented
@@ -70,10 +70,11 @@ Plans:
   1. A unit test captures stdout from all instrumented paths, parses the JSON, and asserts field presence, correct nesting depth, and correct value types against the DD pipeline schema fixture — and the test passes
   2. A benchmark of a 20-block workflow execution with logging enabled shows no measurable p99 latency regression vs. baseline without logging
   3. The status of `dd.trace_id` injection (present or absent due to initialization order) is confirmed and documented in PROJECT.md Key Decisions
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — DD pipeline schema fixture test and performance benchmark (VAL-01, VAL-02)
+- [ ] 04-02-PLAN.md — dd.trace_id injection verification and documentation (VAL-03)
 
 ## Progress
 
@@ -84,5 +85,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Logger Foundation | 2/2 | Complete    | 2026-02-26 |
 | 2. Block Instrumentation | 1/1 | Complete    | 2026-02-26 |
-| 3. HTTP Block Enrichment | 1/1 | Complete   | 2026-02-27 |
-| 4. Schema Validation and Performance | 0/TBD | Not started | - |
+| 3. HTTP Block Enrichment | 1/1 | Complete    | 2026-02-27 |
+| 4. Schema Validation and Performance | 0/2 | In progress | - |
