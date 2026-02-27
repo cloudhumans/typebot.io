@@ -85,9 +85,11 @@ Every workflow execution produces a complete, queryable trace in Datadog — ena
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Log all block types, not just HTTP | Enables full execution trace per workflow in DD | — Pending |
-| JSON to stdout (no sidecar/forwarder changes) | DD Agent DaemonSet already collects stdout | — Pending |
-| Logger library TBD (likely Pino) | Fast structured JSON output, low overhead | — Pending |
+| Keep Winston (reject Pino migration) | Already installed, wired to 13 files — 4x perf difference irrelevant when logging follows DB/HTTP I/O | Decided |
+| Log all block types, not just HTTP | Enables full execution trace per workflow in DD | Decided |
+| JSON to stdout (no sidecar/forwarder changes) | DD Agent DaemonSet already collects stdout | Decided |
+| Hook at executeGroup level only | Only place with full context (sessionId, typebotId, block); deeper hooks require 20+ signature changes | Decided |
+| dd.trace_id injection is present when dd-trace is initialized before Winston (tRPC request paths); absent on non-tRPC paths (background jobs) where dd-trace lazy init has not run. This is a pre-existing limitation. Primary log correlation uses workflow.id/execution_id which is always present. | Empirically confirmed via verify-trace-injection.ts — dd key present in Scenario A (dd-trace first), absent in Scenario B (no dd-trace init). Phase 4 (VAL-03) | Decided |
 
 ---
-*Last updated: 2026-02-26 after initialization*
+*Last updated: 2026-02-27 after Phase 4 dd.trace_id verification*
