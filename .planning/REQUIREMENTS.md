@@ -23,11 +23,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### HTTP Block Enrichment
 
-- [ ] **HTTP-01**: HTTP Request block success logs include `http.url`, `http.method`, `http.status_code`, `http.duration`
-- [ ] **HTTP-02**: HTTP Request block error logs include `http.url`, `http.method`, `http.status_code`, error message
-- [ ] **HTTP-03**: HTTP Request block timeout logs include `http.url`, `http.method`, timeout detail
-- [ ] **HTTP-04**: HTTP logs use correct log levels: `logger.info` for 2xx, `logger.warn` for non-2xx, `logger.error` for timeouts/failures
-- [ ] **HTTP-05**: HTTP logs never include request bodies, response bodies, or headers (PII/secrets protection)
+- [x] **HTTP-01**: HTTP Request block success logs include `http.url`, `http.method`, `http.status_code`, `http.duration`
+- [x] **HTTP-02**: HTTP Request block error logs include `http.url`, `http.method`, `http.status_code`, error message
+- [x] **HTTP-03**: HTTP Request block timeout logs include `http.url`, `http.method`, timeout detail
+- [x] **HTTP-04**: HTTP logs use correct log levels: `logger.info` for 2xx, `logger.warn` for non-2xx, `logger.error` for timeouts/failures
+- [x] **HTTP-05**: HTTP logs never include request bodies, response bodies, or headers (PII/secrets protection)
 
 ### Validation
 
@@ -74,11 +74,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BLOCK-02 | Phase 2 | Complete |
 | BLOCK-03 | Phase 2 | Complete |
 | BLOCK-04 | Phase 2 | Complete |
-| HTTP-01 | Phase 3 | Pending |
-| HTTP-02 | Phase 3 | Pending |
-| HTTP-03 | Phase 3 | Pending |
-| HTTP-04 | Phase 3 | Pending |
-| HTTP-05 | Phase 3 | Pending |
+| HTTP-01 | Phase 3 | Complete |
+| HTTP-02 | Phase 3 | Complete |
+| HTTP-03 | Phase 3 | Complete |
+| HTTP-04 | Phase 3 | Complete |
+| HTTP-05 | Phase 3 | Complete |
 | VAL-01 | Phase 4 | Pending |
 | VAL-02 | Phase 4 | Pending |
 | VAL-03 | Phase 4 | Pending |
