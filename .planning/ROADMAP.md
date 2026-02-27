@@ -13,8 +13,8 @@ This project instruments an existing Typebot execution engine to emit structured
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Logger Foundation** - Logger emits correct JSON schema with static DD fields; env vars validated at startup (completed 2026-02-26)
-- [ ] **Phase 2: Block Instrumentation** - All logic and integration blocks emit structured workflow.* and typebot_block.* logs from executeGroup
-- [ ] **Phase 3: HTTP Block Enrichment** - HTTP Request block logs emit schema-compliant http.* fields with correct log levels and no PII
+- [x] **Phase 2: Block Instrumentation** - All logic and integration blocks emit structured workflow.* and typebot_block.* logs from executeGroup (completed 2026-02-26)
+- [x] **Phase 3: HTTP Block Enrichment** - HTTP Request block logs emit schema-compliant http.* fields with correct log levels and no PII (completed 2026-02-27)
 - [ ] **Phase 4: Schema Validation and Performance** - Unit tests confirm schema correctness against DD pipeline fixture; benchmark confirms no latency regression
 
 ## Phase Details
@@ -57,10 +57,10 @@ Plans:
   2. A non-2xx HTTP response produces a log with `http.url`, `http.method`, and `http.status_code` at `logger.warn` level
   3. An HTTP timeout produces a log with `http.url`, `http.method`, and timeout detail at `logger.error` level
   4. None of the HTTP log entries contain request body, response body, or any request header values (PII/secrets protection)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Add/reshape 4 logger calls in executeWebhookBlock.ts with http.* schema and Vitest tests
 
 ### Phase 4: Schema Validation and Performance
 **Goal**: All instrumented log paths are verified against the Datadog pipeline schema fixture by automated tests, performance regression is confirmed absent, and the dd.trace_id injection status is known and documented
@@ -83,6 +83,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Logger Foundation | 2/2 | Complete    | 2026-02-26 |
-| 2. Block Instrumentation | 1/1 | Complete | 2026-02-26 |
-| 3. HTTP Block Enrichment | 0/TBD | Not started | - |
+| 2. Block Instrumentation | 1/1 | Complete    | 2026-02-26 |
+| 3. HTTP Block Enrichment | 1/1 | Complete   | 2026-02-27 |
 | 4. Schema Validation and Performance | 0/TBD | Not started | - |
