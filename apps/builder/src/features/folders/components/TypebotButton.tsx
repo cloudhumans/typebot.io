@@ -234,8 +234,7 @@ const TypebotButton = ({
               {typebot.publishedTypebotId && (
                 <FormControl>
                   <FormLabel>
-                    {t('folders.typebotButton.deleteConfirmationLabel') ||
-                      'Para apagar, escreva o nome do flow:'}
+                    {t('folders.typebotButton.deleteConfirmationLabel')}
                   </FormLabel>
                   <Input
                     value={confirmInput}
