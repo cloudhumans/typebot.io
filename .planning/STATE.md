@@ -37,6 +37,7 @@ Progress: [████████░░] 87%
 
 *Updated after each plan completion*
 | Phase 04 P01 | 3 | 2 tasks | 1 files |
+| Phase 04-schema-validation-and-performance P02 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,7 @@ Recent decisions affecting current work:
 - [03-01]: request.timeout || 0 coercion -- request.timeout is number|false; || 0 safely converts false->0
 - [03-01]: Generic error uses error instanceof Error ? error.message : String(error) for PII-safe serialization
 - [04-02]: dd.trace_id injection present when dd-trace init runs before Winston; absent on background job paths — pre-existing limitation, primary correlation uses workflow.id/execution_id
+- [Phase 04-02]: dd.trace_id injection present when dd-trace initialized before Winston; absent on non-tRPC paths — pre-existing limitation documented in PROJECT.md
 
 ### Pending Todos
 

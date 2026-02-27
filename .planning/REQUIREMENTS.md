@@ -33,7 +33,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **VAL-01**: Unit test validates JSON output matches DD pipeline schema fixture (field presence, nesting depth, value types)
 - [x] **VAL-02**: Performance benchmark confirms no measurable p99 latency regression on a 20-block workflow
-- [ ] **VAL-03**: `dd.trace_id` injection status confirmed and documented
+- [x] **VAL-03**: `dd.trace_id` injection status confirmed and documented
 
 ## v2 Requirements
 
@@ -81,7 +81,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HTTP-05 | Phase 3 | Complete |
 | VAL-01 | Phase 4 | Complete |
 | VAL-02 | Phase 4 | Complete |
-| VAL-03 | Phase 4 | Pending |
+| VAL-03 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
