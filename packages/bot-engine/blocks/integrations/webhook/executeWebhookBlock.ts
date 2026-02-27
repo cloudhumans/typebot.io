@@ -244,6 +244,15 @@ export const executeWebhook = async (
         request,
       },
     })
+    const httpDuration = Date.now() - requestStartTime
+    logger.info('HTTP Request Executed', {
+      http: {
+        url: request.url,
+        method: request.method,
+        status_code: response.status,
+        duration: httpDuration,
+      },
+    })
     return {
       response: {
         statusCode: response.status,
@@ -275,9 +284,13 @@ export const executeWebhook = async (
           response,
         },
       })
-      logger.info('HTTP Request error', {
-        statusCode: error.response.status,
-        duration: Date.now() - requestStartTime,
+      logger.warn('HTTP Request Error', {
+        http: {
+          url: request.url,
+          method: request.method,
+          status_code: error.response.status,
+          duration: Date.now() - requestStartTime,
+        },
       })
       return { response, logs, startTimeShouldBeUpdated: true }
     }
@@ -300,9 +313,13 @@ export const executeWebhook = async (
           request,
         },
       })
-      logger.warn('HTTP Request timeout', {
-        timeout: request.timeout,
-        duration: Date.now() - requestStartTime,
+      logger.error('HTTP Request Timeout', {
+        http: {
+          url: request.url,
+          method: request.method,
+          timeout_ms: request.timeout || 0,
+          duration: Date.now() - requestStartTime,
+        },
       })
       return { response, logs, startTimeShouldBeUpdated: true }
     }
@@ -310,7 +327,14 @@ export const executeWebhook = async (
       statusCode: 500,
       data: { message: `Error from Typebot server: ${error}` },
     }
-    logger.error(error)
+    logger.error('HTTP Request Failed', {
+      http: {
+        url: request.url,
+        method: request.method,
+        duration: Date.now() - requestStartTime,
+      },
+      error: error instanceof Error ? error.message : String(error),
+    })
     logs.push({
       status: 'error',
       description: `Webhook failed to execute.`,
