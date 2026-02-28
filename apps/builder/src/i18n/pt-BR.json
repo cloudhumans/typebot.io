@@ -371,6 +371,7 @@
   "folders.typebotButton.delete": "Apagar",
   "folders.typebotButton.deleteConfirmationMessage": "Tem certeza de que deseja excluir seu typebot <strong>typebotName</strong>?",
   "folders.typebotButton.deleteConfirmationMessageWarning": "Todos os dados associados serão excluídos e não poderão ser recuperados.",
+  "folders.typebotButton.deleteConfirmationLabel": "Para apagar, escreva o nome do Flow:",
   "folders.typebotButton.duplicate": "Duplicar",
   "folders.typebotButton.live": "Live",
   "folders.typebotButton.showMoreOptions": "Mostrar mais opções",
