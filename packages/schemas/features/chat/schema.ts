@@ -149,6 +149,8 @@ export type ChatMessage = z.infer<typeof chatMessageSchema>
 const startTypebotPick = {
   version: true,
   id: true,
+  name: true,
+  workspaceId: true,
   groups: true,
   events: true,
   edges: true,

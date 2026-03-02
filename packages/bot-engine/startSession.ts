@@ -79,7 +79,7 @@ export const startSession = async ({
     resultId?: string
   }
 > => {
-  const typebot = await getTypebot(startParams)
+  const { workspaceName, ...typebot } = await getTypebot(startParams)
 
   const prefilledVariables = startParams.prefilledVariables
     ? prefillVariables(typebot.variables, startParams.prefilledVariables)
@@ -104,7 +104,8 @@ export const startSession = async ({
 
   const typebotInSession = convertStartTypebotToTypebotInSession(
     typebot,
-    startVariables
+    startVariables,
+    workspaceName
   )
 
   const initialState: SessionState = {
@@ -315,7 +316,9 @@ export const startSession = async ({
   }
 }
 
-const getTypebot = async (startParams: StartParams): Promise<StartTypebot> => {
+const getTypebot = async (
+  startParams: StartParams
+): Promise<StartTypebot & { workspaceName?: string }> => {
   if (startParams.type === 'preview' && startParams.typebot)
     return startParams.typebot
 
@@ -367,7 +370,14 @@ const getTypebot = async (startParams: StartParams): Promise<StartTypebot> => {
       message: 'Typebot is closed',
     })
 
-  return startTypebotSchema.parse(parsedTypebot)
+  const workspaceName =
+    typebotQuery && 'typebot' in typebotQuery
+      ? typebotQuery.typebot.workspace.name
+      : typebotQuery && 'workspace' in typebotQuery
+      ? (typebotQuery as { workspace?: { name?: string } }).workspace?.name
+      : undefined
+
+  return { ...startTypebotSchema.parse(parsedTypebot), workspaceName }
 }
 
 const getResult = async ({
@@ -500,12 +510,16 @@ const removeLiteBadgeCss = (code: string) => {
 
 const convertStartTypebotToTypebotInSession = (
   typebot: StartTypebot,
-  startVariables: Variable[]
+  startVariables: Variable[],
+  workspaceName?: string
 ): TypebotInSession =>
   typebot.version === '6'
     ? {
         version: typebot.version,
         id: typebot.id,
+        name: typebot.name,
+        workspaceId: typebot.workspaceId,
+        workspaceName,
         groups: typebot.groups,
         edges: typebot.edges,
         variables: startVariables,
@@ -515,6 +529,9 @@ const convertStartTypebotToTypebotInSession = (
     : {
         version: typebot.version,
         id: typebot.id,
+        name: typebot.name,
+        workspaceId: typebot.workspaceId,
+        workspaceName,
         groups: typebot.groups,
         edges: typebot.edges,
         variables: startVariables,
