@@ -5,75 +5,94 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every workflow execution produces a complete, queryable trace in Datadog — enabling detection of HTTP request loops and performance analysis per workflow.
-**Current focus:** Phase 4 — Schema Validation and Performance
+**Current focus:** UAT feedback implemented — all 4 items complete
 
 ## Current Position
 
-Phase: 4 of 4 (Schema Validation and Performance)
-Plan: 2 of 2 in current phase
-Status: Phase 4 complete — all plans executed
-Last activity: 2026-02-27 — Phase 4 plan 04-02 executed (VAL-03 injection verification complete)
+Phase: 4 of 4 (all phases complete)
+Plan: All plans executed + UAT quick task complete
+Status: UAT feedback implemented — ready for re-test in Datadog
+Last activity: 2026-03-02 — UAT feedback implemented (quick task 1)
 
-Progress: [████████░░] 87%
+Progress: [█████████░] 95%
+
+## UAT Feedback (2026-03-02)
+
+User tested in real Datadog and needs these changes:
+
+### 1. Message prefix with workspace name
+- Current: `"Block Executed"`
+- Wanted: `"${workspace_name} - Block Executed"`
+- Affects: executeGroup.ts, executeWebhookBlock.ts
+
+### 2. Workflow name field
+- Current: only `workflow.id`
+- Wanted: `workflow.name` added
+- Source: `typebot.name` — NOT in TypebotInSession currently
+
+### 3. Version field rename
+- Current: `workflow.version`
+- Wanted: `workflow.version_id` (renamed field)
+- Affects: executeGroup.ts, all tests
+
+### 4. All logs must include workspace context
+- `workspace.name` and `workspace.id` on every log
+- Source: `typebot.workspaceId` — NOT in TypebotInSession currently
+- `workspace.name` — needs lookup or must be passed through session
+
+### Key blocker
+`TypebotInSession` schema (used in session state) does NOT include `name` or `workspaceId`.
+These are stripped in `convertStartTypebotToTypebotInSession()` at `packages/bot-engine/startSession.ts:501`.
+
+**Fix approach:**
+1. Add `name` and `workspaceId` to TypebotInSession schema (in @typebot.io/schemas)
+2. Include them in `convertStartTypebotToTypebotInSession()`
+3. Update logger calls in executeGroup.ts and executeWebhookBlock.ts
+4. Update all test fixtures
+5. `workspace.name` may require a DB lookup unless it's available on the StartTypebot — needs investigation
+
+**Resume with:** `/gsd:quick` or `/gsd:insert-phase` to implement these changes
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 2 min
-- Total execution time: 8 min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-logger-foundation | 2 | 4 min | 2 min |
-| 02-block-instrumentation | 1 | 2 min | 2 min |
-| 03-http-block-enrichment | 1 | 2 min | 2 min |
-
-**Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (2min), 02-01 (2min), 03-01 (2min)
-- Trend: Consistent
-
-*Updated after each plan completion*
-| Phase 04 P01 | 3 | 2 tasks | 1 files |
-| Phase 04-schema-validation-and-performance P02 | 5 | 2 tasks | 3 files |
+- Total plans completed: 6
+- Average duration: 2-3 min
+- Total execution time: ~15 min
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Pre-roadmap]: Winston stays (migration to Pino rejected — no performance benefit given DB/HTTP bottlenecks, migration cost 1-2 days)
-- [Pre-roadmap]: Log all block types (not just HTTP) to enable full execution trace per workflow in Datadog
-- [Pre-roadmap]: JSON to stdout only — DD Agent DaemonSet already collects container stdout
-- [01-01]: DD_LOGS_ENABLED uses existing boolean Zod helper -- no new type defined
-- [01-01]: logger.ts reads process.env directly (not @typebot.io/env) to avoid circular dependency risk
-- [01-01]: defaultMeta limited to flat string fields only -- nested objects risk shallow-merge overwrite
-- [01-02]: tsx (not bare node) required for child process TypeScript logger loading -- plain node cannot require .ts files
-- [01-02]: tsx binary resolved as absolute path to avoid PATH lookup issues in CI environments
-- [02-01]: Block log call placed after null executionResponse guard -- satisfies BLOCK-04 naturally without deduplication logic
-- [02-01]: String(typebot.version ?? 'unknown') coercion prevents Datadog numeric facet mismatch
-- [02-01]: No deduplication Set needed -- Declare Variables re-entry per user turn is a distinct execution
-- [03-01]: TimeoutError does NOT log http.status_code: 408 -- 408 is synthetic ChatLog value, not real server response
-- [03-01]: request.timeout || 0 coercion -- request.timeout is number|false; || 0 safely converts false->0
-- [03-01]: Generic error uses error instanceof Error ? error.message : String(error) for PII-safe serialization
-- [04-02]: dd.trace_id injection present when dd-trace init runs before Winston; absent on background job paths — pre-existing limitation, primary correlation uses workflow.id/execution_id
-- [Phase 04-02]: dd.trace_id injection present when dd-trace initialized before Winston; absent on non-tRPC paths — pre-existing limitation documented in PROJECT.md
+- [Pre-roadmap]: Winston stays
+- [Pre-roadmap]: Log all block types
+- [Pre-roadmap]: JSON to stdout only
+- [01-01]: DD_LOGS_ENABLED uses existing boolean Zod helper
+- [01-01]: logger.ts reads process.env directly to avoid circular dependency
+- [01-01]: defaultMeta limited to flat string fields only
+- [02-01]: Block log placed after null executionResponse guard
+- [02-01]: String(typebot.version) coercion for Datadog facet
+- [03-01]: TimeoutError does NOT log http.status_code: 408
+- [04-02]: dd.trace_id present on tRPC paths, absent on background jobs
 
 ### Pending Todos
 
-None yet.
+None — all UAT feedback items implemented.
+
+### Decisions (quick-1)
+
+- [quick-1]: TypebotInSession uses Zod .and() intersection for optional logging fields (backward compat)
+- [quick-1]: getTypebot() return type extended to include workspaceName to thread through session init
+- [quick-1]: LogContext type in executeWebhookBlock.ts — executeWebhook() accepts optional logContext param
+- [quick-1]: HTTP log execution_id is 'unknown' — sessionId not available without threading through executeIntegration
 
 ### Blockers/Concerns
 
-None. (Phase 4 VAL-03 blocker resolved — documented in PROJECT.md Key Decisions.)
+None.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 04-02-PLAN.md. Phase 4 complete. All 6 plans across 4 phases executed.
-Resume with: Project complete — all phases and plans executed.
-Resume file: None
+Last session: 2026-03-02
+Stopped at: Completed quick task 1 — UAT feedback all 4 items implemented.
+Resume with: Re-test in Datadog with the new log schema.
+Resume file: .planning/quick/1-implement-uat-feedback-add-workspace-wor/1-SUMMARY.md
