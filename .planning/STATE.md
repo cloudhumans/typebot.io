@@ -90,6 +90,12 @@ None — all UAT feedback items implemented.
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Implement UAT feedback: add workspace/workflow context to all logs, rename version field, prefix messages with workspace_name | 2026-03-02 | cc98ee11 | [1-implement-uat-feedback-add-workspace-wor](./quick/1-implement-uat-feedback-add-workspace-wor/) |
+
 ## Session Continuity
 
 Last session: 2026-03-02
