@@ -42,7 +42,7 @@ const runLoggerScript = (
 describe('Block Instrumentation Schema', () => {
   it('emits message prefixed with workspace name (UAT-01)', () => {
     const result = runLoggerScript(
-      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1', version_typebot_history_id: 'hist-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
     expect(result.message).toMatch(/ - Block Executed$/)
     expect(result.message).toContain('TestWorkspace')
@@ -50,26 +50,27 @@ describe('Block Instrumentation Schema', () => {
 
   it('emits workspace.id and workspace.name (UAT-04)', () => {
     const result = runLoggerScript(
-      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-abc', name: 'My Flow', version_id: '2', execution_id: 'sess-xyz' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-abc', name: 'My Flow', version_id: '2', execution_id: 'sess-xyz', version_typebot_history_id: 'hist-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
     expect(result.workspace).toEqual({ id: 'ws-1', name: 'TestWorkspace' })
   })
 
   it('emits workflow.name and workflow.version_id (UAT-02, UAT-03)', () => {
     const result = runLoggerScript(
-      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-abc', name: 'My Flow', version_id: '2', execution_id: 'sess-xyz' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-abc', name: 'My Flow', version_id: '2', execution_id: 'sess-xyz', version_typebot_history_id: 'hist-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
     expect(result.workflow).toEqual({
       id: 'wf-abc',
       name: 'My Flow',
       version_id: '2',
       execution_id: 'sess-xyz',
+      version_typebot_history_id: 'hist-1',
     })
   })
 
   it('emits typebot_block.id and typebot_block.type as nested object (BLOCK-02)', () => {
     const result = runLoggerScript(
-      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'block-id-123', type: 'condition' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1', version_typebot_history_id: 'hist-1' }, typebot_block: { id: 'block-id-123', type: 'condition' } });`
     )
     expect(result.typebot_block).toEqual({
       id: 'block-id-123',
@@ -79,7 +80,7 @@ describe('Block Instrumentation Schema', () => {
 
   it('includes static DD pipeline fields from defaultMeta', () => {
     const result = runLoggerScript(
-      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1', version_typebot_history_id: 'hist-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
     expect(result.ddsource).toBe('nodejs')
     expect(result.service).toBe('typebot-runner')
@@ -87,8 +88,15 @@ describe('Block Instrumentation Schema', () => {
 
   it('workflow.version_id is emitted as string, not number (UAT-03)', () => {
     const result = runLoggerScript(
-      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1', version_typebot_history_id: 'hist-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
     expect(typeof (result.workflow as any).version_id).toBe('string')
+  })
+
+  it('emits workflow.version_typebot_history_id (HIST-01)', () => {
+    const result = runLoggerScript(
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1', version_typebot_history_id: 'clxyz123abc' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+    )
+    expect((result.workflow as any).version_typebot_history_id).toBe('clxyz123abc')
   })
 })

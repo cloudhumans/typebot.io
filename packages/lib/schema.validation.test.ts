@@ -38,7 +38,7 @@ const DD_SCHEMA = {
   ddsource: 'nodejs',
   service: 'typebot-runner',
   workspaceFields: { id: 'string', name: 'string' },
-  workflowFields: { id: 'string', name: 'string', version_id: 'string', execution_id: 'string' },
+  workflowFields: { id: 'string', name: 'string', version_id: 'string', execution_id: 'string', version_typebot_history_id: 'string' },
   typebotBlockFields: { id: 'string', type: 'string' },
   httpSuccessFields: { url: 'string', method: 'string', status_code: 'number', duration: 'number' },
   httpTimeoutFields: { url: 'string', method: 'string', timeout_ms: 'number', duration: 'number' },
@@ -47,7 +47,7 @@ const DD_SCHEMA = {
 describe('DD Pipeline Schema Fixture (VAL-01)', () => {
   it('"Block Executed" log matches DD pipeline schema', () => {
     const result = runLoggerScript(
-      "logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });"
+      "logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1', version_typebot_history_id: 'hist-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });"
     )
 
     // Top-level fields present
@@ -77,6 +77,7 @@ describe('DD Pipeline Schema Fixture (VAL-01)', () => {
     expect(typeof wf.name).toBe('string')
     expect(typeof wf.version_id).toBe('string')
     expect(typeof wf.execution_id).toBe('string')
+    expect(typeof wf.version_typebot_history_id).toBe('string')
     // Ensure old 'version' field is gone
     expect(wf.version).toBeUndefined()
 
@@ -90,7 +91,7 @@ describe('DD Pipeline Schema Fixture (VAL-01)', () => {
 
   it('"HTTP Request Executed" log matches DD pipeline schema', () => {
     const result = runLoggerScript(
-      "logger.info('TestWorkspace - HTTP Request Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com', method: 'POST', status_code: 200, duration: 123 } });"
+      "logger.info('TestWorkspace - HTTP Request Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-http-1', version_typebot_history_id: 'hist-1' }, http: { url: 'https://example.com', method: 'POST', status_code: 200, duration: 123 } });"
     )
 
     expect(result.level).toBe('info')
@@ -112,6 +113,7 @@ describe('DD Pipeline Schema Fixture (VAL-01)', () => {
     expect(typeof wf.id).toBe('string')
     expect(typeof wf.name).toBe('string')
     expect(typeof wf.version_id).toBe('string')
+    expect(typeof wf.version_typebot_history_id).toBe('string')
 
     // http is nested object with correct field types
     expect(typeof result.http).toBe('object')
@@ -125,7 +127,7 @@ describe('DD Pipeline Schema Fixture (VAL-01)', () => {
 
   it('"HTTP Request Error" log matches DD pipeline schema', () => {
     const result = runLoggerScript(
-      "logger.warn('TestWorkspace - HTTP Request Error', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com', method: 'GET', status_code: 404, duration: 55 } });"
+      "logger.warn('TestWorkspace - HTTP Request Error', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-http-1', version_typebot_history_id: 'hist-1' }, http: { url: 'https://example.com', method: 'GET', status_code: 404, duration: 55 } });"
     )
 
     expect(result.level).toBe('warn')
@@ -141,7 +143,7 @@ describe('DD Pipeline Schema Fixture (VAL-01)', () => {
 
   it('"HTTP Request Timeout" log matches DD pipeline schema (no synthetic 408)', () => {
     const result = runLoggerScript(
-      "logger.error('TestWorkspace - HTTP Request Timeout', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com', method: 'POST', timeout_ms: 5000, duration: 5001 } });"
+      "logger.error('TestWorkspace - HTTP Request Timeout', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-http-1', version_typebot_history_id: 'hist-1' }, http: { url: 'https://example.com', method: 'POST', timeout_ms: 5000, duration: 5001 } });"
     )
 
     expect(result.level).toBe('error')
@@ -159,7 +161,7 @@ describe('DD Pipeline Schema Fixture (VAL-01)', () => {
 
   it('"HTTP Request Failed" log matches DD pipeline schema (error is string)', () => {
     const result = runLoggerScript(
-      "logger.error('TestWorkspace - HTTP Request Failed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com', method: 'POST', duration: 12 }, error: 'Network error' });"
+      "logger.error('TestWorkspace - HTTP Request Failed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-http-1', version_typebot_history_id: 'hist-1' }, http: { url: 'https://example.com', method: 'POST', duration: 12 }, error: 'Network error' });"
     )
 
     expect(result.level).toBe('error')
@@ -177,7 +179,7 @@ describe('Performance Benchmark (VAL-02)', () => {
     const script = `
 const logger = require('./packages/lib/logger').default;
 const { performance } = require('perf_hooks');
-const payload = { workspace: { id: 'ws-bench', name: 'Bench' }, workflow: { id: 'wf-bench', name: 'Flow', version_id: '2', execution_id: 'sess-bench' }, typebot_block: { id: 'b-bench', type: 'webhook' } };
+const payload = { workspace: { id: 'ws-bench', name: 'Bench' }, workflow: { id: 'wf-bench', name: 'Flow', version_id: '2', execution_id: 'sess-bench', version_typebot_history_id: 'hist-bench' }, typebot_block: { id: 'b-bench', type: 'webhook' } };
 const t0 = performance.now();
 for (let i = 0; i < 20; i++) logger.info('Bench - Block Executed', payload);
 const elapsed = performance.now() - t0;
