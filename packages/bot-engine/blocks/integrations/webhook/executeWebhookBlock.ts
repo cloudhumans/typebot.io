@@ -49,6 +49,11 @@ export const webhookErrorDescription = `Webhook returned an error.`
 
 type Params = { disableRequestTimeout?: boolean; timeout?: number }
 
+type LogContext = {
+  workspace: { id: string; name: string }
+  workflow: { id: string; name: string; version_id: string; execution_id: string }
+}
+
 export const executeWebhookBlock = async (
   state: SessionState,
   block: HttpRequestBlock | ZapierBlock | MakeComBlock | PabblyConnectBlock,
@@ -87,14 +92,33 @@ export const executeWebhookBlock = async (
         },
       ],
     }
+  const webhookTypebot = state.typebotsQueue[0].typebot
+  const webhookWorkspaceName = webhookTypebot.workspaceName ?? 'unknown'
+  const logContext: LogContext = {
+    workspace: {
+      id: webhookTypebot.workspaceId ?? 'unknown',
+      name: webhookWorkspaceName,
+    },
+    workflow: {
+      id: webhookTypebot.id,
+      name: webhookTypebot.name ?? 'unknown',
+      version_id: String(webhookTypebot.version ?? 'unknown'),
+      execution_id: 'unknown',
+    },
+  }
+
   const {
     response: webhookResponse,
     logs: executeWebhookLogs,
     startTimeShouldBeUpdated,
-  } = await executeWebhook(parsedWebhook, {
-    ...params,
-    timeout: block.options?.timeout,
-  })
+  } = await executeWebhook(
+    parsedWebhook,
+    {
+      ...params,
+      timeout: block.options?.timeout,
+    },
+    logContext
+  )
 
   return {
     ...resumeWebhookExecution({
@@ -175,7 +199,8 @@ export const parseWebhookAttributes = async ({
 
 export const executeWebhook = async (
   webhook: ParsedWebhook,
-  params: Params = {}
+  params: Params = {},
+  logContext?: LogContext
 ): Promise<{
   response: HttpResponse
   logs?: ChatLog[]
@@ -245,7 +270,8 @@ export const executeWebhook = async (
       },
     })
     const httpDuration = Date.now() - requestStartTime
-    logger.info('HTTP Request Executed', {
+    logger.info(`${logContext?.workspace.name ?? 'unknown'} - HTTP Request Executed`, {
+      ...logContext,
       http: {
         url: request.url,
         method: request.method,
@@ -284,7 +310,8 @@ export const executeWebhook = async (
           response,
         },
       })
-      logger.warn('HTTP Request Error', {
+      logger.warn(`${logContext?.workspace.name ?? 'unknown'} - HTTP Request Error`, {
+        ...logContext,
         http: {
           url: request.url,
           method: request.method,
@@ -313,7 +340,8 @@ export const executeWebhook = async (
           request,
         },
       })
-      logger.error('HTTP Request Timeout', {
+      logger.error(`${logContext?.workspace.name ?? 'unknown'} - HTTP Request Timeout`, {
+        ...logContext,
         http: {
           url: request.url,
           method: request.method,
@@ -327,7 +355,8 @@ export const executeWebhook = async (
       statusCode: 500,
       data: { message: `Error from Typebot server: ${error}` },
     }
-    logger.error('HTTP Request Failed', {
+    logger.error(`${logContext?.workspace.name ?? 'unknown'} - HTTP Request Failed`, {
+      ...logContext,
       http: {
         url: request.url,
         method: request.method,

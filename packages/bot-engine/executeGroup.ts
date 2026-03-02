@@ -177,10 +177,18 @@ export const executeGroup = async (
       continue
     }
 
-    logger.info('Block Executed', {
+    const typebot = newSessionState.typebotsQueue[0].typebot
+    const workspaceName = typebot.workspaceName ?? 'unknown'
+
+    logger.info(`${workspaceName} - Block Executed`, {
+      workspace: {
+        id: typebot.workspaceId ?? 'unknown',
+        name: workspaceName,
+      },
       workflow: {
-        id: newSessionState.typebotsQueue[0].typebot.id,
-        version: String(newSessionState.typebotsQueue[0].typebot.version ?? 'unknown'),
+        id: typebot.id,
+        name: typebot.name ?? 'unknown',
+        version_id: String(typebot.version ?? 'unknown'),
         execution_id: sessionId ?? 'preview',
       },
       typebot_block: {

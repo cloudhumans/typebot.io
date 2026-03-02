@@ -40,27 +40,36 @@ const runLoggerScript = (
 }
 
 describe('Block Instrumentation Schema', () => {
-  it('emits message exactly "Block Executed" (BLOCK-03)', () => {
+  it('emits message prefixed with workspace name (UAT-01)', () => {
     const result = runLoggerScript(
-      `logger.info('Block Executed', { workflow: { id: 'wf-1', version: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
-    expect(result.message).toBe('Block Executed')
+    expect(result.message).toMatch(/ - Block Executed$/)
+    expect(result.message).toContain('TestWorkspace')
   })
 
-  it('emits workflow.id, workflow.version, workflow.execution_id as nested object (BLOCK-01)', () => {
+  it('emits workspace.id and workspace.name (UAT-04)', () => {
     const result = runLoggerScript(
-      `logger.info('Block Executed', { workflow: { id: 'wf-abc', version: '2', execution_id: 'sess-xyz' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-abc', name: 'My Flow', version_id: '2', execution_id: 'sess-xyz' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+    )
+    expect(result.workspace).toEqual({ id: 'ws-1', name: 'TestWorkspace' })
+  })
+
+  it('emits workflow.name and workflow.version_id (UAT-02, UAT-03)', () => {
+    const result = runLoggerScript(
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-abc', name: 'My Flow', version_id: '2', execution_id: 'sess-xyz' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
     expect(result.workflow).toEqual({
       id: 'wf-abc',
-      version: '2',
+      name: 'My Flow',
+      version_id: '2',
       execution_id: 'sess-xyz',
     })
   })
 
   it('emits typebot_block.id and typebot_block.type as nested object (BLOCK-02)', () => {
     const result = runLoggerScript(
-      `logger.info('Block Executed', { workflow: { id: 'wf-1', version: '2', execution_id: 'sess-1' }, typebot_block: { id: 'block-id-123', type: 'condition' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'block-id-123', type: 'condition' } });`
     )
     expect(result.typebot_block).toEqual({
       id: 'block-id-123',
@@ -70,16 +79,16 @@ describe('Block Instrumentation Schema', () => {
 
   it('includes static DD pipeline fields from defaultMeta', () => {
     const result = runLoggerScript(
-      `logger.info('Block Executed', { workflow: { id: 'wf-1', version: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
     expect(result.ddsource).toBe('nodejs')
     expect(result.service).toBe('typebot-runner')
   })
 
-  it('workflow.version is emitted as string, not number', () => {
+  it('workflow.version_id is emitted as string, not number (UAT-03)', () => {
     const result = runLoggerScript(
-      `logger.info('Block Executed', { workflow: { id: 'wf-1', version: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
+      `logger.info('TestWorkspace - Block Executed', { workspace: { id: 'ws-1', name: 'TestWorkspace' }, workflow: { id: 'wf-1', name: 'My Flow', version_id: '2', execution_id: 'sess-1' }, typebot_block: { id: 'b-1', type: 'webhook' } });`
     )
-    expect(typeof (result.workflow as any).version).toBe('string')
+    expect(typeof (result.workflow as any).version_id).toBe('string')
   })
 })

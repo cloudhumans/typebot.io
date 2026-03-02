@@ -40,11 +40,13 @@ const runLoggerScript = (
 }
 
 describe('HTTP Instrumentation Schema', () => {
-  it('success path emits http.url, http.method, http.status_code, http.duration (HTTP-01)', () => {
+  it('success path emits workspace, workflow, and http context (HTTP-01, UAT-04)', () => {
     const result = runLoggerScript(
-      `logger.info('HTTP Request Executed', { http: { url: 'https://example.com/api', method: 'POST', status_code: 200, duration: 142 } });`
+      `logger.info('TestWS - HTTP Request Executed', { workspace: { id: 'ws-1', name: 'TestWS' }, workflow: { id: 'wf-1', name: 'Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com/api', method: 'POST', status_code: 200, duration: 142 } });`
     )
-    expect(result.message).toBe('HTTP Request Executed')
+    expect(result.message).toMatch(/ - HTTP Request Executed$/)
+    expect(result.workspace).toEqual({ id: 'ws-1', name: 'TestWS' })
+    expect(result.workflow).toBeDefined()
     expect(result.http).toEqual({
       url: 'https://example.com/api',
       method: 'POST',
@@ -55,9 +57,11 @@ describe('HTTP Instrumentation Schema', () => {
 
   it('error path emits http.url, http.method, http.status_code at warn level (HTTP-02)', () => {
     const result = runLoggerScript(
-      `logger.warn('HTTP Request Error', { http: { url: 'https://example.com/api', method: 'GET', status_code: 404, duration: 98 } });`
+      `logger.warn('TestWS - HTTP Request Error', { workspace: { id: 'ws-1', name: 'TestWS' }, workflow: { id: 'wf-1', name: 'Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com/api', method: 'GET', status_code: 404, duration: 98 } });`
     )
     expect(result.level).toBe('warn')
+    expect(result.message).toMatch(/ - HTTP Request Error$/)
+    expect(result.workspace).toBeDefined()
     expect(result.http).toMatchObject({
       url: 'https://example.com/api',
       method: 'GET',
@@ -67,9 +71,11 @@ describe('HTTP Instrumentation Schema', () => {
 
   it('timeout path emits http.url, http.method, timeout_ms at error level (HTTP-03)', () => {
     const result = runLoggerScript(
-      `logger.error('HTTP Request Timeout', { http: { url: 'https://example.com/api', method: 'POST', timeout_ms: 10000, duration: 10001 } });`
+      `logger.error('TestWS - HTTP Request Timeout', { workspace: { id: 'ws-1', name: 'TestWS' }, workflow: { id: 'wf-1', name: 'Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com/api', method: 'POST', timeout_ms: 10000, duration: 10001 } });`
     )
     expect(result.level).toBe('error')
+    expect(result.message).toMatch(/ - HTTP Request Timeout$/)
+    expect(result.workspace).toBeDefined()
     expect(result.http).toMatchObject({
       url: 'https://example.com/api',
       method: 'POST',
@@ -79,14 +85,14 @@ describe('HTTP Instrumentation Schema', () => {
 
   it('success path emits at info level (HTTP-04)', () => {
     const result = runLoggerScript(
-      `logger.info('HTTP Request Executed', { http: { url: 'https://example.com', method: 'GET', status_code: 200, duration: 55 } });`
+      `logger.info('TestWS - HTTP Request Executed', { workspace: { id: 'ws-1', name: 'TestWS' }, workflow: { id: 'wf-1', name: 'Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com', method: 'GET', status_code: 200, duration: 55 } });`
     )
     expect(result.level).toBe('info')
   })
 
   it('no request body, response body, or headers in http log (HTTP-05)', () => {
     const result = runLoggerScript(
-      `logger.info('HTTP Request Executed', { http: { url: 'https://example.com', method: 'POST', status_code: 200, duration: 50 } });`
+      `logger.info('TestWS - HTTP Request Executed', { workspace: { id: 'ws-1', name: 'TestWS' }, workflow: { id: 'wf-1', name: 'Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com', method: 'POST', status_code: 200, duration: 50 } });`
     )
     const httpKeys = Object.keys(result.http as Record<string, unknown>)
     expect(httpKeys).not.toContain('body')
@@ -95,5 +101,15 @@ describe('HTTP Instrumentation Schema', () => {
     expect(httpKeys).not.toContain('data')
     expect(httpKeys).not.toContain('json')
     expect(httpKeys).not.toContain('authorization')
+  })
+
+  it('failed path emits at error level with error field (HTTP-06)', () => {
+    const result = runLoggerScript(
+      `logger.error('TestWS - HTTP Request Failed', { workspace: { id: 'ws-1', name: 'TestWS' }, workflow: { id: 'wf-1', name: 'Flow', version_id: '2', execution_id: 'unknown' }, http: { url: 'https://example.com', method: 'POST', duration: 12 }, error: 'Network error' });`
+    )
+    expect(result.level).toBe('error')
+    expect(result.message).toMatch(/ - HTTP Request Failed$/)
+    expect(result.workspace).toBeDefined()
+    expect(typeof result.error).toBe('string')
   })
 })
