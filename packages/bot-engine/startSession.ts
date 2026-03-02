@@ -24,6 +24,7 @@ import parse, { NodeType } from 'node-html-parser'
 import { parseDynamicTheme } from './parseDynamicTheme'
 import { findTypebot } from './queries/findTypebot'
 import { findPublicTypebot } from './queries/findPublicTypebot'
+import { findLatestTypebotHistory } from './queries/findLatestTypebotHistory'
 import { findResult } from './queries/findResult'
 import { startBotFlow } from './startBotFlow'
 import { prefillVariables } from '@typebot.io/variables/prefillVariables'
@@ -102,10 +103,16 @@ export const startSession = async ({
       ? injectVariablesFromExistingResult(prefilledVariables, result.variables)
       : prefilledVariables
 
+  const typebotHistoryId =
+    startParams.type !== 'preview'
+      ? await findLatestTypebotHistory({ typebotId: typebot.id })
+      : undefined
+
   const typebotInSession = convertStartTypebotToTypebotInSession(
     typebot,
     startVariables,
-    workspaceName
+    workspaceName,
+    typebotHistoryId
   )
 
   const initialState: SessionState = {
@@ -188,6 +195,7 @@ export const startSession = async ({
       startParams.type === 'preview' ? startParams.startFrom : undefined,
     startTime: Date.now(),
     textBubbleContentFormat: startParams.textBubbleContentFormat,
+    sessionId: result?.id,
   })
 
   // If params has message and first block is an input block, we can directly continue the bot flow
@@ -511,7 +519,8 @@ const removeLiteBadgeCss = (code: string) => {
 const convertStartTypebotToTypebotInSession = (
   typebot: StartTypebot,
   startVariables: Variable[],
-  workspaceName?: string
+  workspaceName?: string,
+  typebotHistoryId?: string
 ): TypebotInSession =>
   typebot.version === '6'
     ? {
@@ -520,6 +529,7 @@ const convertStartTypebotToTypebotInSession = (
         name: typebot.name,
         workspaceId: typebot.workspaceId,
         workspaceName,
+        typebotHistoryId,
         groups: typebot.groups,
         edges: typebot.edges,
         variables: startVariables,
@@ -532,6 +542,7 @@ const convertStartTypebotToTypebotInSession = (
         name: typebot.name,
         workspaceId: typebot.workspaceId,
         workspaceName,
+        typebotHistoryId,
         groups: typebot.groups,
         edges: typebot.edges,
         variables: startVariables,

@@ -47,11 +47,11 @@ export const longReqTimeoutWhitelist = [
 export const webhookSuccessDescription = `Webhook successfuly executed.`
 export const webhookErrorDescription = `Webhook returned an error.`
 
-type Params = { disableRequestTimeout?: boolean; timeout?: number }
+type Params = { disableRequestTimeout?: boolean; timeout?: number; sessionId?: string }
 
 type LogContext = {
   workspace: { id: string; name: string }
-  workflow: { id: string; name: string; version_id: string; execution_id: string }
+  workflow: { id: string; name: string; version_id: string; execution_id: string; version_typebot_history_id: string }
 }
 
 export const executeWebhookBlock = async (
@@ -103,7 +103,8 @@ export const executeWebhookBlock = async (
       id: webhookTypebot.id,
       name: webhookTypebot.name ?? 'unknown',
       version_id: String(webhookTypebot.version ?? 'unknown'),
-      execution_id: 'unknown',
+      execution_id: params.sessionId ?? 'unknown',
+      version_typebot_history_id: webhookTypebot.typebotHistoryId ?? 'unknown',
     },
   }
 

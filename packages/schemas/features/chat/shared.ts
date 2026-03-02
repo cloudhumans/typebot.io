@@ -26,6 +26,7 @@ const sessionLoggingFieldsSchema = z.object({
   name: z.string().optional(),
   workspaceId: z.string().optional(),
   workspaceName: z.string().optional(),
+  typebotHistoryId: z.string().optional(),
 })
 
 export const typebotInSessionStateSchema =

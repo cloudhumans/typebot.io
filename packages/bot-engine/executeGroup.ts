@@ -190,6 +190,7 @@ export const executeGroup = async (
         name: typebot.name ?? 'unknown',
         version_id: String(typebot.version ?? 'unknown'),
         execution_id: sessionId ?? 'preview',
+        version_typebot_history_id: typebot.typebotHistoryId ?? 'unknown',
       },
       typebot_block: {
         id: block.id,
