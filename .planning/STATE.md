@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every workflow execution produces a complete, queryable trace in Datadog — enabling detection of HTTP request loops and performance analysis per workflow.
-**Current focus:** UAT feedback implemented — all 4 items complete
+**Current focus:** execution_id and version_typebot_history_id fixes complete — ready for Datadog re-test
 
 ## Current Position
 
 Phase: 4 of 4 (all phases complete)
-Plan: All plans executed + UAT quick task complete
-Status: UAT feedback implemented — ready for re-test in Datadog
-Last activity: 2026-03-02 — UAT feedback implemented (quick task 1)
+Plan: All plans executed + 2 quick tasks complete
+Status: execution_id and version_typebot_history_id fixed — ready for Datadog re-test
+Last activity: 2026-03-02 — execution_id and history ID fixes (quick task 2)
 
 Progress: [█████████░] 95%
 
@@ -86,6 +86,12 @@ None — all UAT feedback items implemented.
 - [quick-1]: LogContext type in executeWebhookBlock.ts — executeWebhook() accepts optional logContext param
 - [quick-1]: HTTP log execution_id is 'unknown' — sessionId not available without threading through executeIntegration
 
+### Decisions (quick-2)
+
+- [quick-2]: result?.id passed as sessionId to startBotFlow — published workflows get CUID, preview gets undefined (falls back to 'preview')
+- [quick-2]: typebotHistoryId queried only for non-preview sessions to avoid unnecessary DB calls
+- [quick-2]: version_typebot_history_id uses 'unknown' fallback for consistent Datadog field presence
+
 ### Blockers/Concerns
 
 None.
@@ -95,10 +101,11 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Implement UAT feedback: add workspace/workflow context to all logs, rename version field, prefix messages with workspace_name | 2026-03-02 | cc98ee11 | [1-implement-uat-feedback-add-workspace-wor](./quick/1-implement-uat-feedback-add-workspace-wor/) |
+| 2 | Fix execution_id 'preview'/'unknown' for published workflows, add version_typebot_history_id to all logs | 2026-03-02 | 4c065b99 | [2-fix-execution-id-preview-unknown-for-pub](./quick/2-fix-execution-id-preview-unknown-for-pub/) |
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed quick task 1 — UAT feedback all 4 items implemented.
-Resume with: Re-test in Datadog with the new log schema.
-Resume file: .planning/quick/1-implement-uat-feedback-add-workspace-wor/1-SUMMARY.md
+Stopped at: Completed quick task 2 — execution_id and version_typebot_history_id fixes applied.
+Resume with: Re-test in Datadog with the fully enriched log schema.
+Resume file: .planning/quick/2-fix-execution-id-preview-unknown-for-pub/2-SUMMARY.md
