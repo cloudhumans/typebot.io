@@ -177,6 +177,27 @@ export const executeGroup = async (
       continue
     }
 
+    const typebot = newSessionState.typebotsQueue[0].typebot
+    const workspaceName = typebot.workspaceName ?? 'unknown'
+
+    logger.info(`${workspaceName} - Block Executed`, {
+      workspace: {
+        id: typebot.workspaceId ?? 'unknown',
+        name: workspaceName,
+      },
+      workflow: {
+        id: typebot.id,
+        name: typebot.name ?? 'unknown',
+        version_id: String(typebot.version ?? 'unknown'),
+        execution_id: sessionId ?? 'preview',
+        version_typebot_history_id: typebot.typebotHistoryId ?? 'unknown',
+      },
+      typebot_block: {
+        id: block.id,
+        type: block.type,
+      },
+    })
+
     if (
       executionResponse.newSetVariableHistory &&
       executionResponse.newSetVariableHistory?.length > 0

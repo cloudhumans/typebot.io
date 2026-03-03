@@ -149,6 +149,8 @@ export type ChatMessage = z.infer<typeof chatMessageSchema>
 const startTypebotPick = {
   version: true,
   id: true,
+  name: true,
+  workspaceId: true,
   groups: true,
   events: true,
   edges: true,
@@ -380,6 +382,9 @@ export const startPreviewChatResponseSchema = startChatResponseSchema.omit({
 })
 
 export const continueChatResponseSchema = chatResponseBaseSchema.extend({
-  toolOutput: z.unknown().optional().describe('Final output of the workflow if ended'),
+  toolOutput: z
+    .unknown()
+    .optional()
+    .describe('Final output of the workflow if ended'),
 })
 export type ContinueChatResponse = z.infer<typeof continueChatResponseSchema>
