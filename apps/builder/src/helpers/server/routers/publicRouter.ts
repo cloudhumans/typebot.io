@@ -13,8 +13,10 @@ import { collaboratorsRouter } from '@/features/collaboration/api/router'
 import { customDomainsRouter } from '@/features/customDomains/api/router'
 import { publicWhatsAppRouter } from '@/features/whatsapp/router'
 import { folderRouter } from '@/features/folders/api/router'
+import { verifyEmbeddedToken } from '@/features/embedded-auth/api/verifyEmbeddedToken'
 
 export const publicRouter = router({
+  verifyEmbeddedToken,
   getLinkedTypebots,
   analytics: analyticsRouter,
   workspace: workspaceRouter,

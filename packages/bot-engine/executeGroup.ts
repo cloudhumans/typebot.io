@@ -5,6 +5,7 @@ import {
   RuntimeOptions,
   SessionState,
   SetVariableHistoryItem,
+  Variable,
 } from '@typebot.io/schemas'
 import { isNotEmpty } from '@typebot.io/lib'
 import {
@@ -13,6 +14,7 @@ import {
   isIntegrationBlock,
   isLogicBlock,
 } from '@typebot.io/schemas/helpers'
+import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
 import { getNextGroup } from './getNextGroup'
 import { executeLogic } from './executeLogic'
 import { executeIntegration } from './executeIntegration'
@@ -21,8 +23,13 @@ import { injectVariableValuesInButtonsInputBlock } from './blocks/inputs/buttons
 import { injectVariableValuesInPictureChoiceBlock } from './blocks/inputs/pictureChoice/injectVariableValuesInPictureChoiceBlock'
 import { getPrefilledInputValue } from './getPrefilledValue'
 import { parseDateInput } from './blocks/inputs/date/parseDateInput'
+import { parseNativeVariablesInput } from './blocks/inputs/nativeVariables/parseNativeVariablesInput'
 import { deepParseVariables } from '@typebot.io/variables/deepParseVariables'
+import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesInSession'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
+import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
+import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
+
 import { VisitedEdge } from '@typebot.io/prisma'
 import { env } from '@typebot.io/env'
 import { TRPCError } from '@trpc/server'
@@ -32,6 +39,7 @@ import {
   BubbleBlockWithDefinedContent,
   parseBubbleBlock,
 } from './parseBubbleBlock'
+import logger from '@typebot.io/lib/logger'
 
 type ContextProps = {
   version: 1 | 2
@@ -43,6 +51,7 @@ type ContextProps = {
   setVariableHistory: SetVariableHistoryItem[]
   startTime?: number
   textBubbleContentFormat: 'richText' | 'markdown'
+  sessionId?: string
 }
 
 export const executeGroup = async (
@@ -57,6 +66,7 @@ export const executeGroup = async (
     firstBubbleWasStreamed,
     startTime,
     textBubbleContentFormat,
+    sessionId,
   }: ContextProps
 ): Promise<
   ContinueChatResponse & {
@@ -79,6 +89,7 @@ export const executeGroup = async (
   let isNextEdgeOffDefaultPath = false
   let index = -1
   for (const block of group.blocks) {
+    const blockStartTime = Date.now()
     if (
       newStartTime &&
       env.CHAT_API_TIMEOUT &&
@@ -93,8 +104,13 @@ export const executeGroup = async (
     index++
     nextEdgeId = block.outgoingEdgeId
 
+    // Skip NOTE blocks during execution
+    if (block.type === BubbleBlockType.NOTE) continue
+
     if (isBubbleBlock(block)) {
-      if (!block.content || (firstBubbleWasStreamed && index === 0)) continue
+      if (!block.content || (firstBubbleWasStreamed && index === 0)) {
+        continue
+      }
       messages.push(
         parseBubbleBlock(block as BubbleBlockWithDefinedContent, {
           version,
@@ -107,8 +123,34 @@ export const executeGroup = async (
       continue
     }
 
-    if (isInputBlock(block))
-      return {
+    if (isInputBlock(block)) {
+      // NATIVE_VARIABLES não deve travar o fluxo - executa automaticamente
+      if (block.type === InputBlockType.NATIVE_VARIABLES) {
+        const parsedInput = await parseInput(newSessionState)(block)
+        // Se há prefilledValue, atualiza a variável e continua
+        if (parsedInput?.prefilledValue && block.options?.variableId) {
+          const variable =
+            newSessionState.typebotsQueue[0].typebot.variables.find(
+              (v) => v.id === block.options?.variableId
+            )
+          if (variable) {
+            const { updatedState } = updateVariablesInSession({
+              state: newSessionState,
+              currentBlockId: block.id,
+              newVariables: [
+                {
+                  ...variable,
+                  value: parsedInput?.prefilledValue,
+                },
+              ],
+            })
+            newSessionState = updatedState
+          }
+        }
+        continue
+      }
+
+      const inputResult = {
         messages,
         input: await parseInput(newSessionState)(block),
         newSessionState: {
@@ -120,15 +162,21 @@ export const executeGroup = async (
         visitedEdges,
         setVariableHistory,
       }
+      return inputResult
+    }
+
     const executionResponse = (
       isLogicBlock(block)
         ? await executeLogic(newSessionState)(block)
         : isIntegrationBlock(block)
-        ? await executeIntegration(newSessionState)(block)
+        ? await executeIntegration(newSessionState, sessionId)(block)
         : null
     ) as ExecuteLogicResponse | ExecuteIntegrationResponse | null
 
-    if (!executionResponse) continue
+    if (!executionResponse) {
+      continue
+    }
+
     if (
       executionResponse.newSetVariableHistory &&
       executionResponse.newSetVariableHistory?.length > 0
@@ -161,6 +209,26 @@ export const executeGroup = async (
       logs = [...(logs ?? []), ...executionResponse.logs]
     if (executionResponse.newSessionState)
       newSessionState = executionResponse.newSessionState
+
+    // Handle logic blocks that want to collect input (e.g., Declare Variables)
+    if ('input' in executionResponse && executionResponse.input) {
+      if (executionResponse.messages) {
+        messages.push(...executionResponse.messages)
+      }
+      return {
+        messages,
+        input: executionResponse.input,
+        newSessionState: {
+          ...newSessionState,
+          currentBlockId: block.id,
+        },
+        clientSideActions,
+        logs,
+        visitedEdges,
+        setVariableHistory,
+      }
+    }
+
     if (
       'clientSideActions' in executionResponse &&
       executionResponse.clientSideActions
@@ -254,6 +322,7 @@ export const executeGroup = async (
     currentLastBubbleId: lastBubbleBlockId,
     startTime: newStartTime,
     textBubbleContentFormat,
+    sessionId,
   })
 }
 
@@ -308,6 +377,9 @@ export const parseInput =
       case InputBlockType.DATE: {
         return parseDateInput(state)(block)
       }
+      case InputBlockType.NATIVE_VARIABLES: {
+        return parseNativeVariablesInput(state)(block)
+      }
       case InputBlockType.RATING: {
         const parsedBlock = deepParseVariables(
           state.typebotsQueue[0].typebot.variables,
@@ -341,3 +413,56 @@ export const parseInput =
       }
     }
   }
+
+const getBlockLabel = (
+  block: Group['blocks'][number],
+  variables: Variable[]
+): string | undefined => {
+  if (isBubbleBlock(block)) {
+    if (block.type === BubbleBlockType.TEXT) {
+      if (!block.content?.richText) return
+      // @ts-ignore
+      const text = block.content.richText
+        // @ts-ignore
+        .map((node) => node.children.map((child) => child.text).join(''))
+        .join(' ')
+      return text.slice(0, 50) + (text.length > 50 ? '...' : '')
+    }
+  }
+  if (isInputBlock(block)) {
+    // Check if the block has labels property (not all input blocks have this)
+    const labels =
+      block.options && 'labels' in block.options
+        ? block.options.labels
+        : undefined
+    const label =
+      (labels && 'placeholder' in labels ? labels.placeholder : undefined) ??
+      (labels && 'button' in labels ? labels.button : undefined)
+    if (label) return label
+
+    if (block.options?.variableId) {
+      const variable = variables.find((v) => v.id === block.options?.variableId)
+      if (variable) return `Collect ${variable.name}`
+    }
+  }
+  if (isIntegrationBlock(block)) {
+    if (block.type === IntegrationBlockType.WEBHOOK) {
+      const method = block?.options?.webhook?.method
+      const url = block?.options?.webhook?.url
+      if (method && url) return `${method} ${url}`
+    }
+    // @ts-ignore
+    if (block.options?.action) return block.options.action
+  }
+  if (isLogicBlock(block)) {
+    if (block.type === LogicBlockType.SCRIPT) {
+      return block.options?.name ?? 'Run Script'
+    }
+    if (block.type === LogicBlockType.SET_VARIABLE) {
+      // @ts-ignore
+      const variableId = block.options?.variableId
+      const variable = variables.find((v) => v.id === variableId)
+      if (variable) return `Set ${variable.name}`
+    }
+  }
+}

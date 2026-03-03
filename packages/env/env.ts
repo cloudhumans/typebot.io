@@ -104,6 +104,8 @@ const baseEnv = {
       z.string().url().optional()
     ),
     AWS_COGNITO_REGION: z.string().min(1).optional(),
+    COGNITO_ISSUER_URL: z.string().min(1),
+    CLOUDCHAT_COGNITO_APP_CLIENT_ID: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_E2E_TEST: boolean.optional(),
@@ -133,10 +135,6 @@ const baseEnv = {
     NEXT_PUBLIC_EMBEDDED_AUTH_ALLOWED_ORIGIN: z
       .string()
       .transform((val) => val.split(',').map((url) => url.trim()))
-      .refine(
-        (urls) => urls.every((url) => z.string().url().safeParse(url).success),
-        { message: 'All origins must be valid URLs' }
-      )
       .optional(),
     NEXT_PUBLIC_DISABLE_VALIDATION: boolean.optional().default('false'),
   },

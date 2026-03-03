@@ -11,12 +11,14 @@ import { getTypebot } from './getTypebot'
 import {
   getPublishedTypebot,
   getPublishedTypebotCached,
+  getPublishedTypebotVariables,
 } from './getPublishedTypebot'
 import { publishTypebot } from './publishTypebot'
 import { unpublishTypebot } from './unpublishTypebot'
 import { deleteTypebot } from './deleteTypebot'
 import { importTypebot } from './importTypebot'
 import { listTypebotsClaudia } from './listTypebotsClaudia'
+import { inviteCloudersClaudia } from './inviteCloudersClaudia'
 import {
   getTypebotValidation,
   postTypebotValidation,
@@ -24,11 +26,13 @@ import {
 
 export const typebotRouter = router({
   listTypebotsClaudia,
+  inviteCloudersClaudia,
   createTypebot,
   updateTypebot,
   getTypebot,
   getPublishedTypebot,
   getPublishedTypebotCached,
+  getPublishedTypebotVariables,
   publishTypebot,
   unpublishTypebot,
   listTypebots,

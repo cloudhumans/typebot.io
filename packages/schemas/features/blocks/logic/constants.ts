@@ -7,4 +7,7 @@ export enum LogicBlockType {
   WAIT = 'Wait',
   JUMP = 'Jump',
   AB_TEST = 'AB test',
+  VALIDATE_CPF = 'Validate CPF',
+  VALIDATE_CNPJ = 'Validate CNPJ',
+  DECLARE_VARIABLES = 'Declare variables',
 }

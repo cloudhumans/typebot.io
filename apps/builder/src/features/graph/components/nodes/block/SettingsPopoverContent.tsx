@@ -18,6 +18,7 @@ import { MakeComSettings } from '@/features/blocks/integrations/makeCom/componen
 import { PabblyConnectSettings } from '@/features/blocks/integrations/pabbly/components/PabblyConnectSettings'
 import { ButtonsBlockSettings } from '@/features/blocks/inputs/buttons/components/ButtonsBlockSettings'
 import { FileInputSettings } from '@/features/blocks/inputs/fileUpload/components/FileInputSettings'
+import { NativeVariablesSettings } from '@/features/blocks/inputs/nativeVariables/components/NativeVariablesSettings'
 import { PaymentSettings } from '@/features/blocks/inputs/payment/components/PaymentSettings'
 import { RatingInputSettings } from '@/features/blocks/inputs/rating/components/RatingInputSettings'
 import { TextInputSettings } from '@/features/blocks/inputs/textInput/components/TextInputSettings'
@@ -27,6 +28,8 @@ import { HttpRequestSettings } from '@/features/blocks/integrations/webhook/comp
 import { ZapierSettings } from '@/features/blocks/integrations/zapier/components/ZapierSettings'
 import { RedirectSettings } from '@/features/blocks/logic/redirect/components/RedirectSettings'
 import { SetVariableSettings } from '@/features/blocks/logic/setVariable/components/SetVariableSettings'
+import { ValidateCpfSettings } from '@/features/blocks/logic/validateCpf/components/ValidateCpfSettings'
+import { ValidateCnpjSettings } from '@/features/blocks/logic/validateCnpj/components/ValidateCnpjSettings'
 import { TypebotLinkForm } from '@/features/blocks/logic/typebotLink/components/TypebotLinkForm'
 import { NumberInputSettings } from '@/features/blocks/inputs/number/components/NumberInputSettings'
 import { EmailInputSettings } from '@/features/blocks/inputs/emailInput/components/EmailInputSettings'
@@ -45,6 +48,7 @@ import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integr
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { ForgedBlockSettings } from '../../../../forge/components/ForgedBlockSettings'
 import { OpenAISettings } from '@/features/blocks/integrations/openai/components/OpenAISettings'
+import { DeclareVariablesSettings } from '@/features/blocks/logic/declareVariables/components/DeclareVariablesSettings'
 
 type Props = {
   block: BlockWithOptions
@@ -203,9 +207,33 @@ export const BlockSettings = ({
         />
       )
     }
+    case InputBlockType.NATIVE_VARIABLES: {
+      return (
+        <NativeVariablesSettings
+          options={block.options}
+          onOptionsChange={updateOptions}
+        />
+      )
+    }
     case LogicBlockType.SET_VARIABLE: {
       return (
         <SetVariableSettings
+          options={block.options}
+          onOptionsChange={updateOptions}
+        />
+      )
+    }
+    case LogicBlockType.VALIDATE_CPF: {
+      return (
+        <ValidateCpfSettings
+          options={block.options}
+          onOptionsChange={updateOptions}
+        />
+      )
+    }
+    case LogicBlockType.VALIDATE_CNPJ: {
+      return (
+        <ValidateCnpjSettings
           options={block.options}
           onOptionsChange={updateOptions}
         />
@@ -254,6 +282,14 @@ export const BlockSettings = ({
     case LogicBlockType.AB_TEST: {
       return (
         <AbTestSettings
+          options={block.options}
+          onOptionsChange={updateOptions}
+        />
+      )
+    }
+    case LogicBlockType.DECLARE_VARIABLES: {
+      return (
+        <DeclareVariablesSettings
           options={block.options}
           onOptionsChange={updateOptions}
         />

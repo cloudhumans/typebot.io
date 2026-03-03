@@ -45,16 +45,37 @@ import { downloadMedia } from './whatsapp/downloadMedia'
 import { uploadFileToBucket } from '@typebot.io/lib/s3/uploadFileToBucket'
 import { isURL } from '@typebot.io/lib/validators/isURL'
 import { isForgedBlockType } from '@typebot.io/schemas/features/blocks/forged/helpers'
+import logger from '@typebot.io/lib/logger'
+
+interface NativeVariableItem {
+  content?: { isSet?: boolean }
+  outgoingEdgeId?: string
+}
+
+// Tipo helper para blocos NATIVE_VARIABLES com tipagem adequada
+type NativeVariableBlock = Block & {
+  type: InputBlockType.NATIVE_VARIABLES
+  items: NativeVariableItem[]
+  options?: {
+    variableId?: string
+  }
+}
+
+// Type guard para verificar se é um bloco NATIVE_VARIABLES
+const isNativeVariableBlock = (block: Block): block is NativeVariableBlock => {
+  return block.type === InputBlockType.NATIVE_VARIABLES && 'items' in block
+}
 
 type Params = {
   version: 1 | 2
   state: SessionState
   startTime?: number
   textBubbleContentFormat: 'richText' | 'markdown'
+  sessionId?: string
 }
 export const continueBotFlow = async (
   reply: Reply,
-  { state, version, startTime, textBubbleContentFormat }: Params
+  { state, version, startTime, textBubbleContentFormat, sessionId }: Params
 ): Promise<
   ContinueChatResponse & {
     newSessionState: SessionState
@@ -62,13 +83,20 @@ export const continueBotFlow = async (
     setVariableHistory: SetVariableHistoryItem[]
   }
 > => {
+  logger.info('continueBotFlow executing', {
+    sessionId,
+    currentBlockId: state.currentBlockId,
+    reply: typeof reply === 'string' ? reply.slice(0, 50) : 'object',
+    version,
+  })
+
   let firstBubbleWasStreamed = false
   let newSessionState = { ...state }
   const visitedEdges: VisitedEdge[] = []
   const setVariableHistory: SetVariableHistoryItem[] = []
 
   if (!newSessionState.currentBlockId)
-    return startBotFlow({ state, version, textBubbleContentFormat })
+    return startBotFlow({ state, version, textBubbleContentFormat, sessionId })
 
   const { block, group, blockIndex } = getBlockById(
     newSessionState.currentBlockId,
@@ -165,6 +193,33 @@ export const continueBotFlow = async (
 
   let formattedReply: string | undefined
 
+  // Handle Declare Variables block - find the first empty variable and save the reply
+  if (block.type === LogicBlockType.DECLARE_VARIABLES && reply && typeof reply === 'string') {
+    const variables = (block as any).options?.variables ?? []
+    for (const declaredVar of variables) {
+      const variable = state.typebotsQueue[0].typebot.variables.find(
+        (v) => v.id === declaredVar.variableId
+      )
+      if (!variable || (variable.value !== undefined && variable.value !== null && variable.value !== '')) {
+        continue
+      }
+      // Found the variable we're collecting - save it
+      const { updatedState } = updateVariablesInSession({
+        state: newSessionState,
+        currentBlockId: block.id,
+        newVariables: [
+          {
+            ...variable,
+            value: reply,
+          },
+        ],
+      })
+      newSessionState = updatedState
+      formattedReply = reply
+      break
+    }
+  }
+
   if (isInputBlock(block)) {
     const parsedReplyResult = await parseReply(newSessionState)(reply, block)
 
@@ -186,6 +241,31 @@ export const continueBotFlow = async (
 
   const groupHasMoreBlocks = blockIndex < group.blocks.length - 1
 
+  // Special handling for Declare Variables block - re-execute it to check for more inputs
+  if (block.type === LogicBlockType.DECLARE_VARIABLES && formattedReply) {
+    const chatReply = await executeGroup(
+      {
+        ...group,
+        blocks: group.blocks.slice(blockIndex), // Start from current block (re-execute)
+      } as Group,
+      {
+        version,
+        state: newSessionState,
+        visitedEdges,
+        setVariableHistory,
+        firstBubbleWasStreamed,
+        startTime,
+        textBubbleContentFormat,
+        sessionId,
+      }
+    )
+    return {
+      ...chatReply,
+      lastMessageNewFormat:
+        formattedReply !== reply ? formattedReply : undefined,
+    }
+  }
+
   const { edgeId: nextEdgeId, isOffDefaultPath } = getOutgoingEdgeId(
     newSessionState
   )(block, formattedReply)
@@ -204,6 +284,7 @@ export const continueBotFlow = async (
         firstBubbleWasStreamed,
         startTime,
         textBubbleContentFormat,
+        sessionId,
       }
     )
     return {
@@ -251,6 +332,12 @@ export const continueBotFlow = async (
     setVariableHistory,
     startTime,
     textBubbleContentFormat,
+    sessionId,
+  })
+
+  logger.info('continueBotFlow finishing', {
+    nextBlockId: newSessionState.currentBlockId,
+    messagesCount: chatReply.messages.length,
   })
 
   return {
@@ -261,11 +348,11 @@ export const continueBotFlow = async (
 
 const processAndSaveAnswer =
   (state: SessionState, block: InputBlock) =>
-  async (reply: string | undefined): Promise<SessionState> => {
-    if (!reply) return state
-    let newState = await saveAnswerInDb(state, block)(reply)
-    return newState
-  }
+    async (reply: string | undefined): Promise<SessionState> => {
+      if (!reply) return state
+      let newState = await saveAnswerInDb(state, block)(reply)
+      return newState
+    }
 
 const saveVariableValueIfAny =
   (state: SessionState, block: InputBlock) =>
@@ -300,11 +387,11 @@ const parseRetryMessage =
   ): Promise<Pick<ContinueChatResponse, 'messages' | 'input'>> => {
     const retryMessage =
       block.options &&
-      'retryMessageContent' in block.options &&
-      block.options.retryMessageContent
+        'retryMessageContent' in block.options &&
+        block.options.retryMessageContent
         ? parseVariables(state.typebotsQueue[0].typebot.variables)(
-            block.options.retryMessageContent
-          )
+          block.options.retryMessageContent
+        )
         : parseDefaultRetryMessage(block)
     return {
       messages: [
@@ -314,13 +401,13 @@ const parseRetryMessage =
           content:
             textBubbleContentFormat === 'richText'
               ? {
-                  type: 'richText',
-                  richText: [{ type: 'p', children: [{ text: retryMessage }] }],
-                }
+                type: 'richText',
+                richText: [{ type: 'p', children: [{ text: retryMessage }] }],
+              }
               : {
-                  type: 'markdown',
-                  markdown: retryMessage,
-                },
+                type: 'markdown',
+                markdown: retryMessage,
+              },
         },
       ],
       input: await parseInput(state)(block),
@@ -340,41 +427,41 @@ const parseDefaultRetryMessage = (block: InputBlock): string => {
 
 const saveAnswerInDb =
   (state: SessionState, block: InputBlock) =>
-  async (reply: string): Promise<SessionState> => {
-    let newSessionState = state
-    await saveAnswer({
-      answer: {
-        blockId: block.id,
-        content: reply,
-      },
-      reply,
-      state,
-    })
+    async (reply: string): Promise<SessionState> => {
+      let newSessionState = state
+      await saveAnswer({
+        answer: {
+          blockId: block.id,
+          content: reply,
+        },
+        reply,
+        state,
+      })
 
-    newSessionState = {
-      ...saveVariableValueIfAny(newSessionState, block)(reply),
-      previewMetadata: state.typebotsQueue[0].resultId
-        ? newSessionState.previewMetadata
-        : {
+      newSessionState = {
+        ...saveVariableValueIfAny(newSessionState, block)(reply),
+        previewMetadata: state.typebotsQueue[0].resultId
+          ? newSessionState.previewMetadata
+          : {
             ...newSessionState.previewMetadata,
             answers: (newSessionState.previewMetadata?.answers ?? []).concat({
               blockId: block.id,
               content: reply,
             }),
           },
-    }
+      }
 
-    const key = block.options?.variableId
-      ? newSessionState.typebotsQueue[0].typebot.variables.find(
+      const key = block.options?.variableId
+        ? newSessionState.typebotsQueue[0].typebot.variables.find(
           (variable) => variable.id === block.options?.variableId
         )?.name
-      : parseGroupKey(block.id, { state: newSessionState })
+        : parseGroupKey(block.id, { state: newSessionState })
 
-    return setNewAnswerInState(newSessionState)({
-      key: key ?? block.id,
-      value: reply,
-    })
-  }
+      return setNewAnswerInState(newSessionState)({
+        key: key ?? block.id,
+        value: reply,
+      })
+    }
 
 const parseGroupKey = (blockId: string, { state }: { state: SessionState }) => {
   const group = state.typebotsQueue[0].typebot.groups.find((group) =>
@@ -406,9 +493,9 @@ const setNewAnswerInState =
       typebotsQueue: state.typebotsQueue.map((typebot, index) =>
         index === 0
           ? {
-              ...typebot,
-              answers: newAnswers,
-            }
+            ...typebot,
+            answers: newAnswers,
+          }
           : typebot
       ),
     } satisfies SessionState
@@ -421,6 +508,7 @@ const getOutgoingEdgeId =
     reply: string | undefined
   ): { edgeId: string | undefined; isOffDefaultPath: boolean } => {
     const variables = state.typebotsQueue[0].typebot.variables
+
     if (
       block.type === InputBlockType.CHOICE &&
       !(
@@ -437,6 +525,7 @@ const getOutgoingEdgeId =
       if (matchedItem?.outgoingEdgeId)
         return { edgeId: matchedItem.outgoingEdgeId, isOffDefaultPath: true }
     }
+
     if (
       block.type === InputBlockType.PICTURE_CHOICE &&
       !(
@@ -453,6 +542,30 @@ const getOutgoingEdgeId =
       if (matchedItem?.outgoingEdgeId)
         return { edgeId: matchedItem.outgoingEdgeId, isOffDefaultPath: true }
     }
+
+    // NativeVariables conditional routing
+    if (
+      block.type === InputBlockType.NATIVE_VARIABLES &&
+      block.options?.variableId &&
+      isNativeVariableBlock(block)
+    ) {
+      const items = block.items
+      const targetVariable = variables.find(
+        (v) => v.id === block.options?.variableId
+      )
+      const hasValue =
+        targetVariable?.value != null &&
+        targetVariable?.value !== '' &&
+        targetVariable?.value !== undefined
+
+      // Encontrar o item correto baseado na condição
+      const targetItem = items.find((item) => item.content?.isSet === hasValue)
+
+      if (targetItem?.outgoingEdgeId) {
+        return { edgeId: targetItem.outgoingEdgeId, isOffDefaultPath: true }
+      }
+    }
+
     return { edgeId: block.outgoingEdgeId, isOffDefaultPath: false }
   }
 
@@ -554,7 +667,13 @@ const parseReply =
         if (!reply) return { status: 'fail' }
         return { status: 'success', reply: reply }
       }
+      case InputBlockType.NATIVE_VARIABLES: {
+        // NATIVE_VARIABLES é processado automaticamente, não precisa de input do usuário
+        return { status: 'skip' }
+      }
     }
+    // Return statement padrão para casos não cobertos
+    return { status: 'fail' }
   }
 
 export const safeJsonParse = (value: string): unknown => {
