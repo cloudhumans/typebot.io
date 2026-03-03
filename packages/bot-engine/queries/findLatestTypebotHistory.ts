@@ -6,8 +6,8 @@ export const findLatestTypebotHistory = async ({
   typebotId: string
 }): Promise<string | undefined> => {
   const history = await prisma.typebotHistory.findFirst({
-    where: { typebotId },
-    orderBy: { publishedAt: 'desc' },
+    where: { typebotId, origin: { in: ['PUBLISH', 'RESTORE'] } },
+    orderBy: { createdAt: 'desc' },
     select: { id: true },
   })
   return history?.id ?? undefined

@@ -13,18 +13,24 @@
 import { spawnSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
+import { createRequire } from 'module'
 
 const projectRoot = path.resolve(__dirname, '../../..')
 
-// Resolve tsx binary — prefer cli.mjs (works with Node 24+), fall back to shell wrapper
-const tsxCandidates = [
-  path.join(projectRoot, 'node_modules/.pnpm/tsx@4.7.1/node_modules/tsx/dist/cli.mjs'),
-  path.join(projectRoot, 'node_modules/.pnpm/node_modules/.bin/tsx'),
-  path.join(projectRoot, 'node_modules/.bin/tsx'),
-]
-const tsxBin = tsxCandidates.find((p) => fs.existsSync(p))
+// Resolve tsx binary — prefer require.resolve (version-agnostic), fall back to .bin wrappers
+const require_ = createRequire(path.join(projectRoot, 'package.json'))
+let tsxBin: string | undefined
+try {
+  tsxBin = require_.resolve('tsx/dist/cli.mjs')
+} catch {
+  const fallbacks = [
+    path.join(projectRoot, 'node_modules/.bin/tsx'),
+    path.join(projectRoot, 'node_modules/.pnpm/node_modules/.bin/tsx'),
+  ]
+  tsxBin = fallbacks.find((p) => fs.existsSync(p))
+}
 if (!tsxBin) {
-  console.error('tsx binary not found. Tried:', tsxCandidates)
+  console.error('tsx binary not found. Install tsx or check your dependencies.')
   process.exit(1)
 }
 

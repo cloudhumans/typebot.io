@@ -58,9 +58,9 @@ type LogContext = {
   workflow: {
     id: string
     name: string
-    version_id: string
+    schema_version: string
     execution_id: string
-    version_typebot_history_id: string
+    version_id: string
   }
 }
 
@@ -112,9 +112,9 @@ export const executeWebhookBlock = async (
     workflow: {
       id: webhookTypebot.id,
       name: webhookTypebot.name ?? 'unknown',
-      version_id: String(webhookTypebot.version ?? 'unknown'),
-      execution_id: params.sessionId ?? 'unknown',
-      version_typebot_history_id: webhookTypebot.typebotHistoryId ?? 'unknown',
+      schema_version: String(webhookTypebot.version ?? 'unknown'),
+      execution_id: params.sessionId ?? 'preview',
+      version_id: webhookTypebot.typebotHistoryId ?? 'unknown',
     },
   }
 
