@@ -15,7 +15,7 @@ export const getAuthenticatedUser = async (
 ): Promise<DatabaseUserWithCognito | undefined> => {
   const bearerToken = extractBearerToken(req)
 
-  if (req.query.embedded && bearerToken)
+  if (req.query.apiGateway === 'true' && bearerToken)
     return authenticateByEmbeddedToken(bearerToken)
 
   if (bearerToken) return authenticateByToken(bearerToken)
