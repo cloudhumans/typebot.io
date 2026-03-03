@@ -35,14 +35,27 @@ export const GettingStartedModal = () => {
       <ModalContent>
         <ModalCloseButton />
         <ModalBody as={Stack} spacing="8" py="10">
-          <Text>{t('editor.gettingStartedModal.editorBasics.list.paragraph')}</Text>
-          <Text>{t('editor.gettingStartedModal.editorBasics.list.paragraph2')}</Text>
-          <Text>{t('editor.gettingStartedModal.editorBasics.list.paragraph3')}</Text>
+          <Text>
+            {t('editor.gettingStartedModal.editorBasics.list.paragraph')}
+          </Text>
+          <Text>
+            {t('editor.gettingStartedModal.editorBasics.list.paragraph2')}
+          </Text>
+          <Text>
+            {t('editor.gettingStartedModal.editorBasics.list.paragraph3')}
+          </Text>
           <Text>
             {t('editor.gettingStartedModal.editorBasics.list.paragraph4')}
           </Text>
-          <Link href={t('editor.gettingStartedModal.editorBasics.list.faq')} isExternal>
-            <Text as="span" color="blue.500" _hover={{ textDecoration: 'underline', cursor: 'pointer' }}>
+          <Link
+            href={t('editor.gettingStartedModal.editorBasics.list.faq')}
+            isExternal
+          >
+            <Text
+              as="span"
+              color="blue.500"
+              _hover={{ textDecoration: 'underline', cursor: 'pointer' }}
+            >
               {t('editor.gettingStartedModal.editorBasics.list.faq')}
             </Text>
           </Link>
@@ -54,7 +67,7 @@ export const GettingStartedModal = () => {
             mt={4}
             borderRadius="md"
             maxW="100%"
-/>
+          />
         </ModalBody>
       </ModalContent>
     </Modal>

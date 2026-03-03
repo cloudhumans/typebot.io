@@ -326,6 +326,7 @@
   "editor.sidebarBlock.email.label": "Email",
   "editor.sidebarBlock.embed.label": "Embed",
   "editor.sidebarBlock.file.label": "File",
+  "editor.sidebarBlock.group.label": "Group",
   "editor.sidebarBlock.nativeVariables.label": "Native Variables",
   "editor.sidebarBlock.image.label": "Image",
   "editor.sidebarBlock.jump.label": "Jump",
