@@ -7,7 +7,7 @@ import { env } from '@typebot.io/env'
 import { mockedUser } from '@typebot.io/lib/mockedUser'
 import { DatabaseUserWithCognito } from '../types/cognito'
 import { verifyCognitoToken } from './verifyCognitoToken'
-import logger from '@typebot.io/lib/logger'
+import logger from '@/helpers/logger'
 
 export const getAuthenticatedUser = async (
   req: NextApiRequest,
