@@ -242,14 +242,10 @@ const fetchTypebot = async (state: SessionState, typebotId: string) => {
       },
     })
     if (!typebot) return null
-    const typebotHistoryId = await findLatestTypebotHistory({
-      typebotId: typebot.id,
-    })
     return typebotInSessionStateSchema.parse({
       ...typebot,
       typebotId: typebot.id,
       workspaceName: typebot.workspace.name,
-      typebotHistoryId,
     })
   }
   const typebot = await prisma.publicTypebot.findUnique({
