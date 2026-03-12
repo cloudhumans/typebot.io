@@ -39,7 +39,7 @@ export const extractCognitoUserClaims = (
     'custom:eddie_workspaces' in cognitoClaims &&
     cognitoClaims['custom:eddie_workspaces']
 
-  // User must have at least hub_role OR some form of workspace access (tenant_id or eddie_workspaces)
+  // User must have at least custom:hub_role or custom:eddie_workspaces to be considered for workspace access
   if (!hasHubRole && !hasEddieWorkspaces) {
     return undefined
   }
