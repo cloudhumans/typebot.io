@@ -47,6 +47,7 @@ export const trackClientEvents = authenticatedProcedure
         workspaceId: true,
         workspace: {
           select: {
+            id: true,
             name: true,
             isSuspended: true,
             isPastDue: true,
