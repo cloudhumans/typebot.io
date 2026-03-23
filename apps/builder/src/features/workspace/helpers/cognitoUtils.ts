@@ -70,6 +70,10 @@ export const hasWorkspaceAccess = (
     return false
   }
 
+  if (claims['custom:hub_role'] === 'ADMIN') {
+    return true
+  }
+
   if (claims['custom:eddie_workspaces']) {
     const workspacesIds = claims['custom:eddie_workspaces']
       .split(',')
