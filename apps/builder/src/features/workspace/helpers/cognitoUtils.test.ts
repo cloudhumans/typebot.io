@@ -175,11 +175,20 @@ describe('hasWorkspaceAccess', () => {
 
   it('should return false when eddie_workspaces does not contain the workspace id', () => {
     const claims = {
-      'custom:hub_role': 'ADMIN' as const,
+      'custom:hub_role': 'CLIENT' as const,
       'custom:eddie_workspaces': 'ws-123,ws-456',
     }
 
     expect(hasWorkspaceAccess(claims, 'ws-999')).toBe(false)
+  })
+
+  it('should return true for ADMIN even when eddie_workspaces does not contain the workspace id', () => {
+    const claims = {
+      'custom:hub_role': 'ADMIN' as const,
+      'custom:eddie_workspaces': 'ws-123,ws-456',
+    }
+
+    expect(hasWorkspaceAccess(claims, 'ws-999')).toBe(true)
   })
 
   it('should return false when workspace id is empty', () => {
@@ -193,10 +202,18 @@ describe('hasWorkspaceAccess', () => {
 
   it('should return false when no eddie_workspaces is provided', () => {
     const claims = {
-      'custom:hub_role': 'ADMIN' as const,
+      'custom:hub_role': 'CLIENT' as const,
     }
 
     expect(hasWorkspaceAccess(claims, 'ws-123')).toBe(false)
+  })
+
+  it('should return true for ADMIN even when no eddie_workspaces is provided', () => {
+    const claims = {
+      'custom:hub_role': 'ADMIN' as const,
+    }
+
+    expect(hasWorkspaceAccess(claims, 'ws-123')).toBe(true)
   })
 
   it('should handle single workspace in eddie_workspaces', () => {

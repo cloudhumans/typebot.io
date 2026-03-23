@@ -73,12 +73,31 @@ describe('getUserRoleInWorkspace', () => {
       expect(role).toBe(WorkspaceRole.MEMBER)
     })
 
-    it('should fallback to database when eddie_workspaces does not contain workspace id', () => {
+    it('should return ADMIN for hub_role ADMIN even when eddie_workspaces does not contain workspace id', () => {
       const user = {
         id: userId,
         email: 'test@example.com',
         cognitoClaims: {
           'custom:hub_role': 'ADMIN',
+          'custom:eddie_workspaces': 'ws-other,ws-999',
+        },
+      }
+
+      const role = getUserRoleInWorkspace(
+        userId,
+        workspaceMembers,
+        workspaceId,
+        user
+      )
+      expect(role).toBe(WorkspaceRole.ADMIN)
+    })
+
+    it('should fallback to database when eddie_workspaces does not contain workspace id for non-ADMIN roles', () => {
+      const user = {
+        id: userId,
+        email: 'test@example.com',
+        cognitoClaims: {
+          'custom:hub_role': 'CLIENT',
           'custom:eddie_workspaces': 'ws-other,ws-999',
         },
       }
@@ -114,12 +133,26 @@ describe('getUserRoleInWorkspace', () => {
       expect(role).toBe(WorkspaceRole.MEMBER)
     })
 
-    it('should return undefined when no access found anywhere', () => {
+    it('should return ADMIN when hub_role is ADMIN even with unknown user and no database match', () => {
       const user = {
         id: 'unknown-user',
         email: 'unknown@example.com',
         cognitoClaims: {
           'custom:hub_role': 'ADMIN',
+          'custom:eddie_workspaces': 'ws-other',
+        },
+      }
+
+      const role = getUserRoleInWorkspace('unknown-user', [], workspaceId, user)
+      expect(role).toBe(WorkspaceRole.ADMIN)
+    })
+
+    it('should return undefined when no access found anywhere for non-ADMIN roles', () => {
+      const user = {
+        id: 'unknown-user',
+        email: 'unknown@example.com',
+        cognitoClaims: {
+          'custom:hub_role': 'CLIENT',
           'custom:eddie_workspaces': 'ws-other',
         },
       }
@@ -178,12 +211,31 @@ describe('getUserRoleInWorkspace', () => {
       expect(role).toBe(WorkspaceRole.MEMBER)
     })
 
-    it('should fallback to database when no Cognito match found', () => {
+    it('should return ADMIN for hub_role ADMIN even when no Cognito workspace match found', () => {
       const user = {
         id: userId,
         email: 'test@example.com',
         cognitoClaims: {
           'custom:hub_role': 'ADMIN',
+          'custom:eddie_workspaces': 'ws-111,ws-222,ws-333',
+        },
+      }
+
+      const role = getUserRoleInWorkspace(
+        userId,
+        workspaceMembers,
+        workspaceId,
+        user
+      )
+      expect(role).toBe(WorkspaceRole.ADMIN)
+    })
+
+    it('should fallback to database when no Cognito match found for non-ADMIN roles', () => {
+      const user = {
+        id: userId,
+        email: 'test@example.com',
+        cognitoClaims: {
+          'custom:hub_role': 'CLIENT',
           'custom:eddie_workspaces': 'ws-111,ws-222,ws-333',
         },
       }

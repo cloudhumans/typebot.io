@@ -45,11 +45,24 @@ describe('Access Control Helpers', () => {
       expect(forbidden).toBe(false)
     })
 
-    it('should fallback to database members when Cognito claims do not match', () => {
+    it('should allow access for ADMIN hub_role even when eddie_workspaces does not match', () => {
       const user = {
         ...baseUser,
         cognitoClaims: {
           'custom:hub_role': 'ADMIN',
+          'custom:eddie_workspaces': 'ws-different,ws-other',
+        },
+      }
+
+      const forbidden = isReadWorkspaceFobidden(baseWorkspace, user)
+      expect(forbidden).toBe(false) // ADMIN has universal access
+    })
+
+    it('should fallback to database members when Cognito claims do not match for non-ADMIN roles', () => {
+      const user = {
+        ...baseUser,
+        cognitoClaims: {
+          'custom:hub_role': 'CLIENT',
           'custom:eddie_workspaces': 'ws-different,ws-other',
         },
       }
