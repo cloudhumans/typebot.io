@@ -104,6 +104,24 @@ export const mapCognitoRoleToWorkspaceRole = (
   }
 }
 
+export const getCognitoAccessibleWorkspaceIds = (user: {
+  cognitoClaims?: unknown
+}): 'all' | string[] => {
+  const claims = extractCognitoUserClaims(user)
+  if (!claims) return []
+
+  if (claims['custom:hub_role'] === 'ADMIN') return 'all'
+
+  if (claims['custom:eddie_workspaces']) {
+    return claims['custom:eddie_workspaces']
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean)
+  }
+
+  return []
+}
+
 /**
  * Centralized function to check Cognito-based workspace access and return role information.
  * This replaces the duplicated pattern of extracting claims, checking access, and mapping roles.

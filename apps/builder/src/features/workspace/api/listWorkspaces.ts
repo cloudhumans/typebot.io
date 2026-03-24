@@ -3,7 +3,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { workspaceSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
-import { checkCognitoWorkspaceAccess } from '../helpers/cognitoUtils'
+import { getCognitoAccessibleWorkspaceIds } from '../helpers/cognitoUtils'
 
 export const listWorkspaces = authenticatedProcedure
   .meta({
@@ -24,35 +24,26 @@ export const listWorkspaces = authenticatedProcedure
     })
   )
   .query(async ({ ctx: { user } }) => {
-    // First, get workspaces where user is a member in the database
-    const dbWorkspaces = await prisma.workspace.findMany({
-      where: { members: { some: { userId: user.id } } },
-      select: { name: true, id: true, icon: true, plan: true },
+    const cognitoAccess = getCognitoAccessibleWorkspaceIds(user)
+
+    const cognitoFilter =
+      cognitoAccess === 'all'
+        ? [{}]
+        : cognitoAccess.length > 0
+        ? [{ id: { in: cognitoAccess } }]
+        : []
+
+    const conditions = [
+      { members: { some: { userId: user.id } } },
+      ...cognitoFilter,
+    ]
+
+    const workspaces = await prisma.workspace.findMany({
+      where: { OR: conditions },
+      select: { id: true, name: true, icon: true, plan: true },
     })
 
-    // Create a set of workspace IDs that user already has database access to
-    const dbWorkspaceIds = new Set(dbWorkspaces.map((w) => w.id))
-
-    // Then, check for Cognito-based workspace access
-    let cognitoWorkspaces: typeof dbWorkspaces = []
-
-    // Get workspaces that user doesn't already have database access to
-    const remainingWorkspaces = await prisma.workspace.findMany({
-      where: {
-        id: { notIn: Array.from(dbWorkspaceIds) },
-      },
-      select: { name: true, id: true, icon: true, plan: true },
-    })
-
-    cognitoWorkspaces = remainingWorkspaces.filter((workspace) => {
-      const cognitoAccess = checkCognitoWorkspaceAccess(user, workspace.id)
-      return cognitoAccess.hasAccess
-    })
-
-    // Combine workspaces (no need for Map since they're now guaranteed to be unique)
-    const workspaces = [...dbWorkspaces, ...cognitoWorkspaces]
-
-    if (!workspaces || workspaces.length === 0)
+    if (workspaces.length === 0)
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No workspaces found' })
 
     return { workspaces }
