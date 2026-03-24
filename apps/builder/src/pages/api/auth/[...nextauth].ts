@@ -13,7 +13,7 @@ import { Provider } from 'next-auth/providers'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { customAdapter } from '../../../features/auth/api/customAdapter'
 import { User } from '@typebot.io/prisma'
-import { getAtPath, isDefined } from '@typebot.io/lib'
+import { getAtPath, isDefined, emailIsCloudhumans } from '@typebot.io/lib'
 import { mockedUser } from '@typebot.io/lib/mockedUser'
 import { getNewUserInvitations } from '@/features/auth/helpers/getNewUserInvitations'
 import { sendVerificationRequest } from '@/features/auth/helpers/sendVerificationRequest'
@@ -463,7 +463,9 @@ const extractCognitoClaims = (
 ): CognitoClaims | undefined => {
   switch (provider) {
     case 'google':
-      return { 'custom:hub_role': 'ADMIN', 'custom:eddie_workspaces': '' }
+      if (emailIsCloudhumans(user.email))
+        return { 'custom:hub_role': 'ADMIN', 'custom:eddie_workspaces': '' }
+      return undefined
     case 'cloudchat-embedded':
     case 'custom-oauth':
       return (user as DatabaseUserWithCognito).cognitoClaims
