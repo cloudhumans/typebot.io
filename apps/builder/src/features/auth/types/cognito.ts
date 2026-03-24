@@ -15,11 +15,13 @@ export type CognitoJWTPayload = {
   email: string
 }
 
+export type CognitoClaims = Pick<
+  CognitoJWTPayload,
+  'custom:eddie_workspaces' | 'custom:hub_role'
+>
+
 type WithCognitoClaims = {
-  cognitoClaims?: Pick<
-    CognitoJWTPayload,
-    'custom:eddie_workspaces' | 'custom:hub_role'
-  >
+  cognitoClaims?: CognitoClaims
 }
 
 // Database user extended with Cognito claims

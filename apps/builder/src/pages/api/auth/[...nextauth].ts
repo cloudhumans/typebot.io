@@ -1,4 +1,4 @@
-import NextAuth, { Account, AuthOptions } from 'next-auth'
+import NextAuth, { Account, AuthOptions, User as NextAuthUser } from 'next-auth'
 import { JWT } from 'next-auth/jwt'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import EmailProvider from 'next-auth/providers/email'
@@ -27,6 +27,7 @@ import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import {
   NextAuthJWTWithCognito,
   DatabaseUserWithCognito,
+  CognitoClaims,
 } from '@/features/auth/types/cognito'
 import logger from '@/helpers/logger'
 import { verifyCognitoToken } from '@/features/auth/helpers/verifyCognitoToken'
@@ -139,13 +140,17 @@ if (env.CUSTOM_OAUTH_WELL_KNOWN_URL) {
     clientId: env.CUSTOM_OAUTH_CLIENT_ID,
     clientSecret: env.CUSTOM_OAUTH_CLIENT_SECRET,
     wellKnown: env.CUSTOM_OAUTH_WELL_KNOWN_URL,
-    profile(profile) {
+    profile(profile): User & { cognitoClaims: CognitoClaims } {
       return {
         id: getAtPath(profile, env.CUSTOM_OAUTH_USER_ID_PATH),
         name: getAtPath(profile, env.CUSTOM_OAUTH_USER_NAME_PATH),
         email: getAtPath(profile, env.CUSTOM_OAUTH_USER_EMAIL_PATH),
         image: getAtPath(profile, env.CUSTOM_OAUTH_USER_IMAGE_PATH),
-      } as User
+        cognitoClaims: {
+          'custom:hub_role': profile['custom:hub_role'],
+          'custom:eddie_workspaces': profile['custom:eddie_workspaces'],
+        },
+      } as User & { cognitoClaims: CognitoClaims }
     },
   })
 }
@@ -263,7 +268,6 @@ export const getAuthOptions = ({
     jwt: async ({ token, user, account }) => {
       const nextAuthJWT = token as NextAuthJWTWithCognito
 
-      // If user is provided (first sign in), add user info to token
       if (user && account) {
         nextAuthJWT.userId = user.id
         nextAuthJWT.email = user.email || undefined
@@ -271,48 +275,29 @@ export const getAuthOptions = ({
         nextAuthJWT.image = user.image || undefined
         nextAuthJWT.provider = account.provider
 
-        // Extract Cognito claims from cloudchat-embedded provider
-        if (account.provider === 'cloudchat-embedded') {
-          const userFromCognitoAuth = user as DatabaseUserWithCognito
-          const claimsFromCognitoToken = userFromCognitoAuth.cognitoClaims
-          const cloudChatAuthorization =
-            userFromCognitoAuth.cloudChatAuthorization
-
-          nextAuthJWT.cloudChatAuthorization = cloudChatAuthorization
-          if (claimsFromCognitoToken) {
-            logger.debug(
-              'Transferring claims from Cognito auth to NextAuth JWT',
-              {
-                hasEddieWorkspaces:
-                  !!claimsFromCognitoToken['custom:eddie_workspaces'],
-                eddieWorkspacesCount:
-                  typeof claimsFromCognitoToken['custom:eddie_workspaces'] ===
-                  'string'
-                    ? claimsFromCognitoToken['custom:eddie_workspaces'].split(
-                        ','
-                      ).length
-                    : 0,
-              }
-            )
-
-            nextAuthJWT.cognitoClaims = claimsFromCognitoToken
-            logger.debug('Final cognitoClaims set', {
-              hasHubRole: !!claimsFromCognitoToken['custom:hub_role'],
-              hasEddieWorkspaces:
-                !!claimsFromCognitoToken['custom:eddie_workspaces'],
-            })
-
-            logger.info('User authenticated via Cognito token', {
-              hubRole: claimsFromCognitoToken['custom:hub_role'],
-              hasEddieWorkspaces:
-                !!claimsFromCognitoToken['custom:eddie_workspaces'],
-              provider: 'cognito',
-            })
-          }
-        } else {
-          logger.info('User authenticated via OAuth provider', {
+        const cognitoClaims = extractCognitoClaims(
+          account.provider,
+          user as NextAuthUser
+        )
+        if (cognitoClaims) {
+          nextAuthJWT.cognitoClaims = cognitoClaims
+          logger.info('User authenticated with cognito claims', {
+            email: user.email,
+            hubRole: cognitoClaims['custom:hub_role'],
+            hasEddieWorkspaces: !!cognitoClaims['custom:eddie_workspaces'],
             provider: account.provider,
           })
+        } else {
+          logger.info('User authenticated via OAuth provider', {
+            email: user.email,
+            provider: account.provider,
+          })
+        }
+
+        if (account.provider === 'cloudchat-embedded') {
+          nextAuthJWT.cloudChatAuthorization = (
+            user as DatabaseUserWithCognito
+          ).cloudChatAuthorization
         }
       }
       return nextAuthJWT as JWT & NextAuthJWTWithCognito
@@ -471,5 +456,20 @@ const getRequiredGroups = (provider: string): string[] => {
 
 const checkHasGroups = (userGroups: string[], requiredGroups: string[]) =>
   userGroups?.some((userGroup) => requiredGroups?.includes(userGroup))
+
+const extractCognitoClaims = (
+  provider: string,
+  user: NextAuthUser
+): CognitoClaims | undefined => {
+  switch (provider) {
+    case 'google':
+      return { 'custom:hub_role': 'ADMIN', 'custom:eddie_workspaces': '' }
+    case 'cloudchat-embedded':
+    case 'custom-oauth':
+      return (user as DatabaseUserWithCognito).cognitoClaims
+    default:
+      return undefined
+  }
+}
 
 export default handler
