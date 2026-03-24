@@ -265,7 +265,7 @@ export const getAuthOptions = ({
     },
   },
   callbacks: {
-    jwt: async ({ token, user, account }) => {
+    jwt: async ({ token, user, account, profile }) => {
       const nextAuthJWT = token as NextAuthJWTWithCognito
 
       if (user && account) {
@@ -277,7 +277,8 @@ export const getAuthOptions = ({
 
         const cognitoClaims = extractCognitoClaims(
           account.provider,
-          user as NextAuthUser
+          user as NextAuthUser,
+          profile as Partial<CognitoClaims>
         )
         if (cognitoClaims) {
           nextAuthJWT.cognitoClaims = cognitoClaims
@@ -459,15 +460,23 @@ const checkHasGroups = (userGroups: string[], requiredGroups: string[]) =>
 
 const extractCognitoClaims = (
   provider: string,
-  user: NextAuthUser
+  user: NextAuthUser,
+  profile?: Partial<CognitoClaims>
 ): CognitoClaims | undefined => {
   switch (provider) {
     case 'google':
       if (emailIsCloudhumans(user.email))
         return { 'custom:hub_role': 'ADMIN', 'custom:eddie_workspaces': '' }
       return undefined
-    case 'cloudchat-embedded':
     case 'custom-oauth':
+      if (profile) {
+        return {
+          'custom:hub_role': profile['custom:hub_role'] ?? 'CLIENT',
+          'custom:eddie_workspaces': profile['custom:eddie_workspaces'] ?? '',
+        }
+      }
+      return (user as DatabaseUserWithCognito).cognitoClaims
+    case 'cloudchat-embedded':
       return (user as DatabaseUserWithCognito).cognitoClaims
     default:
       return undefined

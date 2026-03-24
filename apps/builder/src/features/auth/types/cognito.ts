@@ -36,4 +36,5 @@ export type NextAuthJWTWithCognito = Record<string, unknown> &
     name?: string
     image?: string
     provider?: string
+    cloudChatAuthorization?: boolean
   }

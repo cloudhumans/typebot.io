@@ -3,6 +3,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { workspaceSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
+import { Prisma } from '@typebot.io/prisma'
 import { getCognitoAccessibleWorkspaceIds } from '../helpers/cognitoUtils'
 
 export const listWorkspaces = authenticatedProcedure
@@ -26,20 +27,27 @@ export const listWorkspaces = authenticatedProcedure
   .query(async ({ ctx: { user } }) => {
     const cognitoAccess = getCognitoAccessibleWorkspaceIds(user)
 
-    const cognitoFilter =
-      cognitoAccess === 'all'
-        ? [{}]
-        : cognitoAccess.length > 0
-        ? [{ id: { in: cognitoAccess } }]
-        : []
+    const personalWorkspaceFilter: Prisma.WorkspaceWhereInput = {
+      NOT: {
+        name: { contains: "'s workspace" },
+      },
+    }
 
-    const conditions = [
-      { members: { some: { userId: user.id } } },
-      ...cognitoFilter,
-    ]
+    let whereClause: Prisma.WorkspaceWhereInput
+    const memberFilter = { members: { some: { userId: user.id } } }
+
+    if (cognitoAccess === 'all') {
+      whereClause = personalWorkspaceFilter
+    } else if (cognitoAccess.length > 0) {
+      whereClause = {
+        OR: [memberFilter, { id: { in: cognitoAccess } }],
+      }
+    } else {
+      whereClause = memberFilter
+    }
 
     const workspaces = await prisma.workspace.findMany({
-      where: { OR: conditions },
+      where: whereClause,
       select: { id: true, name: true, icon: true, plan: true },
     })
 
