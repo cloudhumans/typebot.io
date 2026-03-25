@@ -41,10 +41,7 @@ export function customAdapter(p: PrismaClient): Adapter {
 
       const createdUser = await p.user.create({
         data: {
-          email: data.email,
-          name: data.name,
-          image: data.image,
-          emailVerified: data.emailVerified,
+          ...data,
           id: user.id,
           apiTokens: {
             create: { name: 'Default', token: generateId(24) },

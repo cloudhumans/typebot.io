@@ -140,17 +140,13 @@ if (env.CUSTOM_OAUTH_WELL_KNOWN_URL) {
     clientId: env.CUSTOM_OAUTH_CLIENT_ID,
     clientSecret: env.CUSTOM_OAUTH_CLIENT_SECRET,
     wellKnown: env.CUSTOM_OAUTH_WELL_KNOWN_URL,
-    profile(profile): User & { cognitoClaims: CognitoClaims } {
+    profile(profile) {
       return {
         id: getAtPath(profile, env.CUSTOM_OAUTH_USER_ID_PATH),
         name: getAtPath(profile, env.CUSTOM_OAUTH_USER_NAME_PATH),
         email: getAtPath(profile, env.CUSTOM_OAUTH_USER_EMAIL_PATH),
         image: getAtPath(profile, env.CUSTOM_OAUTH_USER_IMAGE_PATH),
-        cognitoClaims: {
-          'custom:hub_role': profile['custom:hub_role'],
-          'custom:eddie_workspaces': profile['custom:eddie_workspaces'],
-        },
-      } as User & { cognitoClaims: CognitoClaims }
+      } as User
     },
   })
 }
