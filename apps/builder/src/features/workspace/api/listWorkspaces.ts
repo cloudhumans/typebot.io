@@ -3,7 +3,6 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { workspaceSchema } from '@typebot.io/schemas'
 import { z } from 'zod'
-import { Prisma } from '@typebot.io/prisma'
 import { getCognitoAccessibleWorkspaceIds } from '../helpers/cognitoUtils'
 
 export const listWorkspaces = authenticatedProcedure
@@ -27,32 +26,50 @@ export const listWorkspaces = authenticatedProcedure
   .query(async ({ ctx: { user } }) => {
     const cognitoAccess = getCognitoAccessibleWorkspaceIds(user)
 
-    const personalWorkspaceFilter: Prisma.WorkspaceWhereInput = {
-      NOT: {
-        name: { contains: "'s workspace" },
-      },
-    }
-
-    let whereClause: Prisma.WorkspaceWhereInput
-    const memberFilter = { members: { some: { userId: user.id } } }
-
-    if (cognitoAccess === 'all') {
-      whereClause = personalWorkspaceFilter
-    } else if (cognitoAccess.length > 0) {
-      whereClause = {
-        OR: [memberFilter, { id: { in: cognitoAccess } }],
-      }
-    } else {
-      whereClause = memberFilter
-    }
-
-    const workspaces = await prisma.workspace.findMany({
-      where: whereClause,
-      select: { id: true, name: true, icon: true, plan: true },
-    })
+    const workspaces = await findWorkspaces(user.id, cognitoAccess)
 
     if (workspaces.length === 0)
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No workspaces found' })
 
     return { workspaces }
   })
+
+const workspaceSelect = {
+  id: true,
+  name: true,
+  icon: true,
+  plan: true,
+} as const
+
+const findAllNonPersonalWorkspaces = () =>
+  prisma.workspace.findMany({
+    where: { NOT: { name: { contains: "'s workspace" } } },
+    select: workspaceSelect,
+  })
+
+const findMemberWorkspaces = (userId: string) =>
+  prisma.workspace.findMany({
+    where: { members: { some: { userId } } },
+    select: workspaceSelect,
+  })
+
+const findMemberOrCognitoWorkspaces = (
+  userId: string,
+  cognitoWorkspaceIds: string[]
+) =>
+  prisma.workspace.findMany({
+    where: {
+      OR: [
+        { members: { some: { userId } } },
+        { id: { in: cognitoWorkspaceIds } },
+      ],
+    },
+    select: workspaceSelect,
+  })
+
+const findWorkspaces = (userId: string, cognitoAccess: 'all' | string[]) => {
+  if (cognitoAccess === 'all') return findAllNonPersonalWorkspaces()
+  if (cognitoAccess.length > 0)
+    return findMemberOrCognitoWorkspaces(userId, cognitoAccess)
+  return findMemberWorkspaces(userId)
+}
