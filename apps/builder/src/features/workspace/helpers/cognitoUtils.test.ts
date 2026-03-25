@@ -329,7 +329,7 @@ describe('checkCognitoWorkspaceAccess', () => {
 })
 
 describe('getCognitoAccessibleWorkspaceIds', () => {
-  it('should return "all" when user is ADMIN', () => {
+  it('should return { type: "all" } when user is ADMIN', () => {
     const user = {
       cognitoClaims: {
         'custom:hub_role': 'ADMIN',
@@ -337,10 +337,10 @@ describe('getCognitoAccessibleWorkspaceIds', () => {
       },
     }
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toBe('all')
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({ type: 'admin' })
   })
 
-  it('should return parsed workspace IDs for non-admin with eddie_workspaces', () => {
+  it('should return specific workspace IDs for non-admin with eddie_workspaces', () => {
     const user = {
       cognitoClaims: {
         'custom:hub_role': 'CLIENT',
@@ -348,11 +348,10 @@ describe('getCognitoAccessibleWorkspaceIds', () => {
       },
     }
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual([
-      'ws-123',
-      'ws-456',
-      'ws-789',
-    ])
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({
+      type: 'restricted',
+      ids: ['ws-123', 'ws-456', 'ws-789'],
+    })
   })
 
   it('should trim whitespace from workspace IDs', () => {
@@ -362,11 +361,10 @@ describe('getCognitoAccessibleWorkspaceIds', () => {
       },
     }
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual([
-      'ws-123',
-      'ws-456',
-      'ws-789',
-    ])
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({
+      type: 'restricted',
+      ids: ['ws-123', 'ws-456', 'ws-789'],
+    })
   })
 
   it('should filter out empty strings from workspace IDs', () => {
@@ -376,29 +374,32 @@ describe('getCognitoAccessibleWorkspaceIds', () => {
       },
     }
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual(['ws-123', 'ws-456'])
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({
+      type: 'restricted',
+      ids: ['ws-123', 'ws-456'],
+    })
   })
 
-  it('should return empty array when no cognito claims', () => {
+  it('should return { type: "none" } when no cognito claims', () => {
     const user = {}
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual([])
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({ type: 'none' })
   })
 
-  it('should return empty array when cognitoClaims is undefined', () => {
+  it('should return { type: "none" } when cognitoClaims is undefined', () => {
     const user = { cognitoClaims: undefined }
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual([])
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({ type: 'none' })
   })
 
-  it('should return empty array for non-admin without eddie_workspaces', () => {
+  it('should return { type: "none" } for non-admin without eddie_workspaces', () => {
     const user = {
       cognitoClaims: {
         'custom:hub_role': 'CLIENT',
       },
     }
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual([])
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({ type: 'none' })
   })
 
   it('should return single workspace ID correctly', () => {
@@ -408,6 +409,9 @@ describe('getCognitoAccessibleWorkspaceIds', () => {
       },
     }
 
-    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual(['ws-123'])
+    expect(getCognitoAccessibleWorkspaceIds(user)).toEqual({
+      type: 'restricted',
+      ids: ['ws-123'],
+    })
   })
 })

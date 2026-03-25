@@ -12,6 +12,11 @@ export interface CognitoUserClaims {
   'custom:eddie_workspaces'?: string
 }
 
+export type CognitoAccess =
+  | { type: 'admin' }
+  | { type: 'restricted'; ids: string[] }
+  | { type: 'none' }
+
 export const extractCognitoUserClaims = (
   user: unknown
 ): CognitoUserClaims | undefined => {
@@ -105,21 +110,22 @@ export const mapCognitoRoleToWorkspaceRole = (
 }
 
 export const getCognitoAccessibleWorkspaceIds = (user: {
-  cognitoClaims?: unknown
-}): 'all' | string[] => {
+  cognitoClaims?: CognitoUserClaims
+}): CognitoAccess => {
   const claims = extractCognitoUserClaims(user)
-  if (!claims) return []
+  if (!claims) return { type: 'none' }
 
-  if (claims['custom:hub_role'] === 'ADMIN') return 'all'
+  if (claims['custom:hub_role'] === 'ADMIN') return { type: 'admin' }
 
   if (claims['custom:eddie_workspaces']) {
-    return claims['custom:eddie_workspaces']
+    const ids = claims['custom:eddie_workspaces']
       .split(',')
       .map((id) => id.trim())
       .filter(Boolean)
+    if (ids.length > 0) return { type: 'restricted', ids }
   }
 
-  return []
+  return { type: 'none' }
 }
 
 /**

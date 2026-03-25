@@ -285,7 +285,7 @@ export const getAuthOptions = ({
             provider: account.provider,
           })
         } else {
-          logger.info('User authenticated via OAuth provider', {
+          logger.info('User authenticated without cognito claims', {
             email: user.email,
             provider: account.provider,
           })
