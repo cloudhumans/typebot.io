@@ -16,6 +16,8 @@ import { ParentModalProvider } from '@/features/graph/providers/ParentModalProvi
 import { trpc } from '@/lib/trpc'
 import { guessIfUserIsEuropean } from '@typebot.io/billing/helpers/guessIfUserIsEuropean'
 import { useTranslate } from '@tolgee/react'
+import { DashboardSearchProvider } from '../providers/DashboardSearchProvider'
+import { DashboardSearchPanel } from './DashboardSearchPanel'
 
 export const DashboardPage = () => {
   const { t } = useTranslate()
@@ -57,29 +59,32 @@ export const DashboardPage = () => {
   }, [createCustomCheckoutSession, router.query, user, workspace])
 
   return (
-    <Stack minH="100vh">
-      <Seo title={workspace?.name ?? t('dashboard.title')} />
-      <DashboardHeader />
-      {!workspace?.stripeId && (
-        <ParentModalProvider>
-          <PreCheckoutModal
-            selectedSubscription={preCheckoutPlan}
-            existingEmail={user?.email ?? undefined}
-            existingCompany={workspace?.name ?? undefined}
-            onClose={() => setPreCheckoutPlan(undefined)}
-          />
-        </ParentModalProvider>
-      )}
-      <TypebotDndProvider>
-        {isLoading ? (
-          <VStack w="full" justifyContent="center" pt="10" spacing={6}>
-            <Text>{t('dashboard.redirectionMessage')}</Text>
-            <Spinner />
-          </VStack>
-        ) : (
-          <FolderContent folder={null} />
+    <DashboardSearchProvider>
+      <Stack minH="100vh">
+        <Seo title={workspace?.name ?? t('dashboard.title')} />
+        <DashboardHeader />
+        {!workspace?.stripeId && (
+          <ParentModalProvider>
+            <PreCheckoutModal
+              selectedSubscription={preCheckoutPlan}
+              existingEmail={user?.email ?? undefined}
+              existingCompany={workspace?.name ?? undefined}
+              onClose={() => setPreCheckoutPlan(undefined)}
+            />
+          </ParentModalProvider>
         )}
-      </TypebotDndProvider>
-    </Stack>
+        <TypebotDndProvider>
+          {isLoading ? (
+            <VStack w="full" justifyContent="center" pt="10" spacing={6}>
+              <Text>{t('dashboard.redirectionMessage')}</Text>
+              <Spinner />
+            </VStack>
+          ) : (
+            <FolderContent folder={null} />
+          )}
+        </TypebotDndProvider>
+        <DashboardSearchPanel />
+      </Stack>
+    </DashboardSearchProvider>
   )
 }

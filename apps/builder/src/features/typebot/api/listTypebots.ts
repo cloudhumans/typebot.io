@@ -36,7 +36,12 @@ export const listTypebots = authenticatedProcedure
             icon: true,
             id: true,
           })
-          .merge(z.object({ publishedTypebotId: z.string().optional() }))
+          .merge(
+            z.object({
+              publishedTypebotId: z.string().optional(),
+              folderId: z.string().nullable().optional(),
+            })
+          )
       ),
     })
   )
@@ -82,8 +87,9 @@ export const listTypebots = authenticatedProcedure
         publishedTypebot: { select: { id: true } },
         id: true,
         icon: true,
+        folderId: true,
       },
-    })) as (Pick<Typebot, 'name' | 'id' | 'icon'> & {
+    })) as (Pick<Typebot, 'name' | 'id' | 'icon' | 'folderId'> & {
       publishedTypebot: Pick<PublicTypebot, 'id'>
     })[]
 
