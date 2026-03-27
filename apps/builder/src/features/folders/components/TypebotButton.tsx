@@ -9,6 +9,7 @@ import {
   Stack,
   Tag,
   Text,
+  useColorModeValue,
   useDisclosure,
   VStack,
   WrapItem,
@@ -29,6 +30,7 @@ import {
   NodePosition,
   useDragDistance,
 } from '@/features/graph/providers/GraphDndProvider'
+import { useDashboardSearch } from '@/features/dashboard/providers/DashboardSearchProvider'
 
 type Props = {
   typebot: TypebotInDashboard
@@ -60,6 +62,18 @@ const TypebotButton = ({
     onDrag,
     deps: [],
   })
+
+  const { highlightedTypebotId } = useDashboardSearch()
+  const isHighlighted = highlightedTypebotId === typebot.id
+
+  const searchHighlightBorderColor = useColorModeValue(
+    'orange.400',
+    'orange.300'
+  )
+  const searchHighlightShadow = useColorModeValue(
+    '0 0 0 3px var(--chakra-colors-orange-400)',
+    '0 0 0 3px var(--chakra-colors-orange-300)'
+  )
 
   const { showToast } = useToast()
 
@@ -148,6 +162,11 @@ const TypebotButton = ({
       whiteSpace="normal"
       opacity={draggedTypebot ? 0.3 : 1}
       cursor="pointer"
+      id={`typebot-${typebot.id}`}
+      borderColor={isHighlighted ? searchHighlightBorderColor : undefined}
+      borderWidth={isHighlighted ? '2px' : undefined}
+      boxShadow={isHighlighted ? searchHighlightShadow : undefined}
+      transition="border-color 0.2s, box-shadow 0.2s"
     >
       {typebot.publishedTypebotId && (
         <Tag
@@ -235,13 +254,4 @@ const TypebotButton = ({
   )
 }
 
-export default memo(
-  TypebotButton,
-  (prev, next) =>
-    prev.draggedTypebot?.id === next.draggedTypebot?.id &&
-    prev.typebot.id === next.typebot.id &&
-    prev.isReadOnly === next.isReadOnly &&
-    prev.typebot.name === next.typebot.name &&
-    prev.typebot.icon === next.typebot.icon &&
-    prev.typebot.publishedTypebotId === next.typebot.publishedTypebotId
-)
+export default memo(TypebotButton)
