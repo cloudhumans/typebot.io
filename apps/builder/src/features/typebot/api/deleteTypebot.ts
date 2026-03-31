@@ -1,10 +1,8 @@
 import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
-import { Typebot } from '@typebot.io/schemas'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
-import { archiveResults } from '@typebot.io/results/archiveResults'
 
 export const deleteTypebot = authenticatedProcedure
   .meta({
@@ -37,7 +35,6 @@ export const deleteTypebot = authenticatedProcedure
       },
       select: {
         id: true,
-        groups: true,
         workspace: {
           select: {
             id: true,
@@ -66,24 +63,12 @@ export const deleteTypebot = authenticatedProcedure
     )
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
 
-    const { success } = await archiveResults(prisma)({
-      typebot: {
-        groups: existingTypebot.groups,
-      } as Pick<Typebot, 'groups'>,
-      resultsFilter: { typebotId },
+    await prisma.typebotEditQueue.deleteMany({ where: { typebotId } })
+    await prisma.bannedIp.deleteMany({
+      where: { responsibleTypebotId: typebotId },
     })
-    if (!success)
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to archive results',
-      })
-    await prisma.publicTypebot.deleteMany({
-      where: { typebotId },
-    })
-    await prisma.typebot.updateMany({
-      where: { id: typebotId },
-      data: { isArchived: true, publicId: null, customDomain: null },
-    })
+    await prisma.typebot.delete({ where: { id: typebotId } })
+
     return {
       message: 'success',
     }
