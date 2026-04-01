@@ -2,6 +2,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import prisma from '@typebot.io/lib/prisma'
+import { Prisma } from '@typebot.io/prisma'
 import { isWriteTypebotForbidden } from '@/features/typebot/helpers/isWriteTypebotForbidden'
 
 export const deleteResults = authenticatedProcedure
@@ -63,10 +64,25 @@ export const deleteResults = authenticatedProcedure
     if (!typebot || (await isWriteTypebotForbidden(typebot, user)))
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
 
-    await prisma.result.deleteMany({
-      where: {
-        typebotId,
-        id: (idsArray?.length ?? 0) > 0 ? { in: idsArray } : undefined,
-      },
-    })
+    await prisma.$transaction([
+      prisma.$executeRaw`
+        DELETE FROM "ChatSession"
+        WHERE id IN (
+          SELECT "lastChatSessionId" FROM "Result"
+          WHERE "typebotId" = ${typebotId}
+          ${
+            idsArray?.length
+              ? Prisma.sql`AND id = ANY(${idsArray}::text[])`
+              : Prisma.empty
+          }
+          AND "lastChatSessionId" IS NOT NULL
+        )
+      `,
+      prisma.result.deleteMany({
+        where: {
+          typebotId,
+          id: (idsArray?.length ?? 0) > 0 ? { in: idsArray } : undefined,
+        },
+      }),
+    ])
   })

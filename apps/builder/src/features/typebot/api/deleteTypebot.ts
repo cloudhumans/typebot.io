@@ -63,11 +63,21 @@ export const deleteTypebot = authenticatedProcedure
     )
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
 
-    await prisma.typebotEditQueue.deleteMany({ where: { typebotId } })
-    await prisma.bannedIp.deleteMany({
-      where: { responsibleTypebotId: typebotId },
-    })
-    await prisma.typebot.delete({ where: { id: typebotId } })
+    await prisma.$transaction([
+      prisma.$executeRaw`
+        DELETE FROM "ChatSession"
+        WHERE id IN (
+          SELECT "lastChatSessionId" FROM "Result"
+          WHERE "typebotId" = ${typebotId}
+          AND "lastChatSessionId" IS NOT NULL
+        )
+      `,
+      prisma.typebotEditQueue.deleteMany({ where: { typebotId } }),
+      prisma.bannedIp.deleteMany({
+        where: { responsibleTypebotId: typebotId },
+      }),
+      prisma.typebot.delete({ where: { id: typebotId } }),
+    ])
 
     return {
       message: 'success',
