@@ -21,24 +21,15 @@ export async function executeWorkflow({
       : 0,
   })
 
-  try {
-    const result = await startChat({
-      origin: undefined,
-      isOnlyRegistering: false,
-      publicId,
-      isStreamEnabled: false,
-      prefilledVariables,
-      textBubbleContentFormat: 'markdown',
-    })
+  const result = await startChat({
+    origin: undefined,
+    isOnlyRegistering: false,
+    publicId,
+    isStreamEnabled: false,
+    prefilledVariables,
+    textBubbleContentFormat: 'markdown',
+  })
 
-    logger.info('executeWorkflow: completed', { publicId })
-    return result
-  } catch (error) {
-    logger.error('executeWorkflow: failed', {
-      publicId,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    })
-    throw error
-  }
+  logger.info('executeWorkflow: completed', { publicId })
+  return result
 }
