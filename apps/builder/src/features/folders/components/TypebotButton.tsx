@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo, useState, useEffect } from 'react'
 import {
   Alert,
   AlertIcon,
@@ -10,6 +10,9 @@ import {
   Tag,
   Text,
   useDisclosure,
+  Input,
+  FormControl,
+  FormLabel,
   VStack,
   WrapItem,
 } from '@chakra-ui/react'
@@ -53,6 +56,7 @@ const TypebotButton = ({
     onOpen: onDeleteOpen,
     onClose: onDeleteClose,
   } = useDisclosure()
+  const [confirmInput, setConfirmInput] = useState('')
   const buttonRef = React.useRef<HTMLDivElement>(null)
 
   useDragDistance({
@@ -127,6 +131,10 @@ const TypebotButton = ({
     e.stopPropagation()
     onDeleteOpen()
   }
+
+  useEffect(() => {
+    if (!isDeleteOpen) setConfirmInput('')
+  }, [isDeleteOpen])
 
   const handleUnpublishClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -223,9 +231,24 @@ const TypebotButton = ({
                 <AlertIcon />
                 {t('folders.typebotButton.deleteConfirmationMessageWarning')}
               </Alert>
+              {typebot.publishedTypebotId && (
+                <FormControl>
+                  <FormLabel>
+                    {t('folders.typebotButton.deleteConfirmationLabel')}
+                  </FormLabel>
+                  <Input
+                    value={confirmInput}
+                    onChange={(e) => setConfirmInput(e.target.value)}
+                    placeholder={typebot.name}
+                  />
+                </FormControl>
+              )}
             </Stack>
           }
           confirmButtonLabel={t('delete')}
+          confirmButtonDisabled={
+            typebot.publishedTypebotId ? confirmInput !== typebot.name : false
+          }
           onConfirm={handleDeleteTypebotClick}
           isOpen={isDeleteOpen}
           onClose={onDeleteClose}
