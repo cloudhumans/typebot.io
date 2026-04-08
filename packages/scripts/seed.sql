@@ -4,6 +4,15 @@ INSERT INTO "User" (id, email, name, "emailVerified", "onboardingCategories")
 SELECT 'claudia-user-id', 'claudia@acme.inc', 'Claudia System User', NOW(), '[]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'claudia@acme.inc');
 
+-- 1b. Create additional users matching CloudChat seed (for embedded auth in dev)
+INSERT INTO "User" (id, email, name, "emailVerified", "onboardingCategories")
+SELECT 'john-user-id', 'john@acme.inc', 'John', NOW(), '[]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'john@acme.inc');
+
+INSERT INTO "User" (id, email, name, "emailVerified", "onboardingCategories")
+SELECT 'olivia-user-id', 'olivia@acme.inc', 'Olivia', NOW(), '[]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'olivia@acme.inc');
+
 -- 2. Create workspace if not exists
 INSERT INTO "Workspace" (id, name, plan)
 SELECT 'claudia-workspace-id', 'claudia_project', 'FREE'
@@ -15,6 +24,21 @@ SELECT 'claudia-user-id', 'claudia-workspace-id', 'ADMIN'
 WHERE NOT EXISTS (
   SELECT 1 FROM "MemberInWorkspace"
   WHERE "userId" = 'claudia-user-id' AND "workspaceId" = 'claudia-workspace-id'
+);
+
+-- 3b. Add CloudChat users to workspace
+INSERT INTO "MemberInWorkspace" ("userId", "workspaceId", role)
+SELECT 'john-user-id', 'claudia-workspace-id', 'ADMIN'
+WHERE NOT EXISTS (
+  SELECT 1 FROM "MemberInWorkspace"
+  WHERE "userId" = 'john-user-id' AND "workspaceId" = 'claudia-workspace-id'
+);
+
+INSERT INTO "MemberInWorkspace" ("userId", "workspaceId", role)
+SELECT 'olivia-user-id', 'claudia-workspace-id', 'ADMIN'
+WHERE NOT EXISTS (
+  SELECT 1 FROM "MemberInWorkspace"
+  WHERE "userId" = 'olivia-user-id' AND "workspaceId" = 'claudia-workspace-id'
 );
 
 -- 3a. Create API token for claudia user matching docker-compose config

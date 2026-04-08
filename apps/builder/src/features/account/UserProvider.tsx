@@ -72,7 +72,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const isPathPublicFriendly = /\/typebots\/.+\/(edit|theme|settings)/.test(
       router.pathname
     )
-    if (isSignInPath || isPathPublicFriendly) return
+    const isEmbedded = router.query.embedded === 'true'
+    if (isSignInPath || isPathPublicFriendly || isEmbedded) return
 
     if (!user && status === 'unauthenticated') {
       router.replace({
