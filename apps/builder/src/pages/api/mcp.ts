@@ -96,12 +96,22 @@ export default async function handler(
           })
         }
 
-        logger.info('MCP tools/list', { tenant, requestId: id })
-        const { tools } = await getWorkflowTools({ tenant })
+        // `includeDrafts` opts the caller into receiving unpublished
+        // tools too. Agents leave this undefined/false so they never
+        // see drafts (which would fail at runtime anyway — executeWorkflow
+        // requires a public flow). The claudia-app Tools page passes
+        // true so users can spot their work-in-progress tools in the
+        // list with a "not published" badge. Each returned tool's
+        // `_meta.isPublished` reflects the true state regardless.
+        const includeDrafts = params?.includeDrafts === true
+
+        logger.info('MCP tools/list', { tenant, includeDrafts, requestId: id })
+        const { tools } = await getWorkflowTools({ tenant, includeDrafts })
 
         const mcpTools = tools.map(transformToMCPTool)
         logger.info('MCP tools/list completed', {
           tenant,
+          includeDrafts,
           toolCount: mcpTools.length,
           requestId: id,
         })
