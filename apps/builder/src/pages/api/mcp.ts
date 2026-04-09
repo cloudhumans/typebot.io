@@ -26,7 +26,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type, x-tenant, tenant, mcp-session-id, Authorization, X-MCP-Access-Token'
+    'Content-Type, x-tenant, tenant, mcp-session-id, Authorization, X-MCP-Access-Token, x-include-drafts'
   )
 
   if (req.method === 'OPTIONS') {
@@ -103,7 +103,9 @@ export default async function handler(
         // true so users can spot their work-in-progress tools in the
         // list with a "not published" badge. Each returned tool's
         // `_meta.isPublished` reflects the true state regardless.
-        const includeDrafts = params?.includeDrafts === true
+        const includeDrafts =
+          params?.includeDrafts === true ||
+          req.headers['x-include-drafts'] === 'true'
 
         logger.info('MCP tools/list', { tenant, includeDrafts, requestId: id })
         const { tools } = await getWorkflowTools({ tenant, includeDrafts })
