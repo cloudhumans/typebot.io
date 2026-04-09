@@ -14,9 +14,6 @@ export const DashboardHeader = () => {
   const { t } = useTranslate()
   const { user, logOut } = useUser()
   const { workspace, switchWorkspace, createWorkspace } = useWorkspace()
-
-  const isEmbedded = user?.cloudChatAuthorization === true
-
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   const handleCreateNewWorkspace = () =>
@@ -31,7 +28,7 @@ export const DashboardHeader = () => {
         maxW="1000px"
         flex="1"
       >
-        {!isEmbedded && (
+        {!user?.cloudChatAuthorization && (
           <Link href="/typebots" data-testid="typebot-logo">
             <EmojiOrImageIcon
               boxSize="30px"
@@ -49,7 +46,7 @@ export const DashboardHeader = () => {
               workspace={workspace}
             />
           )}
-          {!workspace?.isPastDue && !isEmbedded && (
+          {!workspace?.isPastDue && !user?.cloudChatAuthorization && (
             <Button
               leftIcon={<SettingsIcon />}
               onClick={onOpen}
