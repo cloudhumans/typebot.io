@@ -73,9 +73,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       router.pathname
     )
     const isEmbedded = router.query.embedded === 'true'
-    if (isSignInPath || isPathPublicFriendly || isEmbedded) return
+    if (isSignInPath || isPathPublicFriendly) return
 
-    if (!user && status === 'unauthenticated') {
+    if (!isEmbedded && !user && status === 'unauthenticated') {
       router.replace({
         pathname: '/signin',
         query: {

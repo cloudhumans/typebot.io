@@ -4,7 +4,6 @@ import { HardDriveIcon, SettingsIcon } from '@/components/icons'
 import { useUser } from '@/features/account/hooks/useUser'
 import { isNotDefined } from '@typebot.io/lib'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import { EmojiOrImageIcon } from '@/components/EmojiOrImageIcon'
 import { useTranslate } from '@tolgee/react'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
@@ -15,10 +14,8 @@ export const DashboardHeader = () => {
   const { t } = useTranslate()
   const { user, logOut } = useUser()
   const { workspace, switchWorkspace, createWorkspace } = useWorkspace()
-  const router = useRouter()
 
-  const isEmbedded =
-    user?.cloudChatAuthorization || router.query.embedded === 'true'
+  const isEmbedded = user?.cloudChatAuthorization === true
 
   const { isOpen, onOpen, onClose } = useDisclosure()
 

@@ -35,13 +35,6 @@ export const CreateNewTypebotButtons = () => {
 
   const { showToast } = useToast()
 
-  const buildEditQuery = () => {
-    const query: Record<string, string> = {}
-    if (router.query.isFirstBot === 'true') query.isFirstBot = 'true'
-    if (router.query.embedded === 'true') query.embedded = 'true'
-    return query
-  }
-
   const { mutate: createTypebot } = trpc.typebot.createTypebot.useMutation({
     onMutate: () => {
       setIsLoading(true)
@@ -55,7 +48,12 @@ export const CreateNewTypebotButtons = () => {
     onSuccess: (data) => {
       router.push({
         pathname: `/typebots/${data.typebot.id}/edit`,
-        query: buildEditQuery(),
+        query:
+          router.query.isFirstBot === 'true'
+            ? {
+                isFirstBot: 'true',
+              }
+            : {},
       })
     },
     onSettled: () => {
@@ -76,7 +74,12 @@ export const CreateNewTypebotButtons = () => {
     onSuccess: (data) => {
       router.push({
         pathname: `/typebots/${data.typebot.id}/edit`,
-        query: buildEditQuery(),
+        query:
+          router.query.isFirstBot === 'true'
+            ? {
+                isFirstBot: 'true',
+              }
+            : {},
       })
     },
     onSettled: () => {

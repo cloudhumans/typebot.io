@@ -19,18 +19,22 @@ export const verifyCognitoToken = async ({
 }): Promise<JWTPayload & CognitoJWTPayload> => {
   if (process.env.NODE_ENV === 'development') {
     // Dev bypass: decode JWT payload without signature verification
-    const parts = cognitoToken.split('.')
-    if (parts.length === 3) {
+    try {
+      const parts = cognitoToken.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64url').toString('utf-8')
+        )
+        return payload as JWTPayload & CognitoJWTPayload
+      }
+      // Fallback: treat the whole token as a base64-encoded JSON payload
       const payload = JSON.parse(
-        Buffer.from(parts[1], 'base64url').toString('utf-8')
+        Buffer.from(cognitoToken, 'base64url').toString('utf-8')
       )
       return payload as JWTPayload & CognitoJWTPayload
+    } catch (e) {
+      throw new Error(`[dev] Failed to decode token payload: ${e}`)
     }
-    // Fallback: treat the whole token as a base64-encoded JSON payload
-    const payload = JSON.parse(
-      Buffer.from(cognitoToken, 'base64url').toString('utf-8')
-    )
-    return payload as JWTPayload & CognitoJWTPayload
   }
 
   const jwks = createRemoteJWKSet(
