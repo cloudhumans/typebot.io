@@ -443,6 +443,19 @@ const TypebotNav = ({
           {t('editor.header.resultsButton.label')}
         </Button>
       )}
+      {router.query.embedded !== 'true' && (
+        <Button
+          as={Link}
+          href={t(
+            'editor.gettingStartedModal.editorBasics.list.faq-by-language'
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          size="sm"
+        >
+          {t('FAQ')}
+        </Button>
+      )}
     </HStack>
   )
 }
