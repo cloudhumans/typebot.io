@@ -13,7 +13,7 @@
     "apps/*"
   ],
   "scripts": {
-    "prepare": "husky install",
+    "prepare": "git config core.hooksPath .githooks",
     "docker:up": "docker compose -f docker-compose.dev.yml up -d && node scripts/wait-for-postgres.mjs",
     "docker:nuke": "docker compose -f docker-compose.dev.yml down --volumes --remove-orphans",
     "lint": "turbo run lint",

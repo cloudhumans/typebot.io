@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# Pre-push hook: blocks pushes to the upstream (public) typebot.io repository.
+# Prevents accidental exposure of internal secrets and code.
+#
+# Install:
+#   git config core.hooksPath .githooks
+#
+
+BLOCKED_REPOS=(
+  "baptisteArno/typebot.io"
+)
+
+REMOTE_NAME="$1"
+REMOTE_URL="$2"
+
+for repo in "${BLOCKED_REPOS[@]}"; do
+  if echo "$REMOTE_URL" | grep -qi "$repo"; then
+    echo ""
+    echo "  =============================================="
+    echo "  PUSH BLOQUEADO"
+    echo "  =============================================="
+    echo ""
+    echo "  Remote:  $REMOTE_NAME ($REMOTE_URL)"
+    echo "  Motivo:  Push para o repo upstream publico"
+    echo "           nao e permitido."
+    echo ""
+    echo "  Use o remote do fork da CloudHumans."
+    echo ""
+    echo "  =============================================="
+    echo ""
+    exit 1
+  fi
+done
+
+exit 0
