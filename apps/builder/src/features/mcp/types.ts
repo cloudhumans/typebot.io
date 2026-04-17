@@ -12,9 +12,7 @@ export interface WorkflowTool {
     description?: string
   }>
   publicName: string
-  /** Creation timestamp from the underlying Typebot row. */
   createdAt: Date
-  /** Last-update timestamp from the underlying Typebot row. */
   updatedAt: Date
 }
 
