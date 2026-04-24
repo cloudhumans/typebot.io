@@ -35,6 +35,8 @@ export const deleteTypebot = authenticatedProcedure
       },
       select: {
         id: true,
+        publicId: true,
+        name: true,
         workspace: {
           select: {
             id: true,
@@ -62,6 +64,10 @@ export const deleteTypebot = authenticatedProcedure
       (await isWriteTypebotForbidden(existingTypebot, user))
     )
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
+
+    console.log(
+      `[DELETE_TYPEBOT] User "${user.email}" deleted typebot "${existingTypebot.name}" (id: ${typebotId}, publicId: ${existingTypebot.publicId ?? 'N/A'}) from workspace "${existingTypebot.workspace.name}"`
+    )
 
     await prisma.$transaction([
       prisma.$executeRaw`
