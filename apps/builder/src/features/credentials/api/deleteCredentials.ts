@@ -27,7 +27,7 @@ export const deleteCredentials = authenticatedProcedure
   )
   .mutation(
     async ({ input: { credentialsId, workspaceId }, ctx: { user } }) => {
-      const workspace = await prisma.workspace.findFirst({
+      const workspace = await prisma.workspace.findUnique({
         where: {
           id: workspaceId,
         },
