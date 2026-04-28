@@ -16,9 +16,6 @@ export const deleteCredentials = authenticatedProcedure
       const workspace = await prisma.workspace.findFirst({
         where: {
           id: workspaceId,
-          members: {
-            some: { userId: user.id, role: { in: ['ADMIN', 'MEMBER'] } },
-          },
         },
         select: { id: true, members: true },
       })
@@ -28,11 +25,17 @@ export const deleteCredentials = authenticatedProcedure
           message: 'Workspace not found',
         })
 
-      await prisma.credentials.delete({
+      const deletedCount = await prisma.credentials.deleteMany({
         where: {
           id: credentialsId,
+          workspaceId,
         },
       })
+      if (deletedCount.count === 0)
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Credentials not found',
+        })
       return { credentialsId }
     }
   )
