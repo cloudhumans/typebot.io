@@ -8,6 +8,8 @@ import { TypebotDndProvider } from '../TypebotDndProvider'
 import { FolderContent } from './FolderContent'
 import { trpc } from '@/lib/trpc'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
+import { DashboardSearchProvider } from '@/features/dashboard/providers/DashboardSearchProvider'
+import { DashboardSearchPanel } from '@/features/dashboard/components/DashboardSearchPanel'
 
 export const FolderPage = () => {
   const { t } = useTranslate()
@@ -34,18 +36,21 @@ export const FolderPage = () => {
   )
 
   return (
-    <Stack minH="100vh">
-      <Seo title={t('dashboard.title')} />
-      <DashboardHeader />
-      <TypebotDndProvider>
-        {!folder ? (
-          <Flex flex="1">
-            <Spinner mx="auto" />
-          </Flex>
-        ) : (
-          <FolderContent folder={folder} />
-        )}
-      </TypebotDndProvider>
-    </Stack>
+    <DashboardSearchProvider>
+      <Stack minH="100vh">
+        <Seo title={t('dashboard.title')} />
+        <DashboardHeader />
+        <TypebotDndProvider>
+          {!folder ? (
+            <Flex flex="1">
+              <Spinner mx="auto" />
+            </Flex>
+          ) : (
+            <FolderContent folder={folder} />
+          )}
+        </TypebotDndProvider>
+        <DashboardSearchPanel />
+      </Stack>
+    </DashboardSearchProvider>
   )
 }
