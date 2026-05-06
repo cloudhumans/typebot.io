@@ -2,6 +2,7 @@ import { parseVariables } from './parseVariables'
 import { extractVariablesFromText } from './extractVariablesFromText'
 import { parseGuessedValueType } from './parseGuessedValueType'
 import { isDefined } from '@typebot.io/lib'
+import logger from '@typebot.io/lib/logger'
 import { safeStringify } from '@typebot.io/lib/safeStringify'
 import { Variable } from './types'
 import ivm from 'isolated-vm'
@@ -10,16 +11,30 @@ import jwt from 'jsonwebtoken'
 
 const defaultTimeout = 10 * 1000
 
+export type ExecuteFunctionContext = {
+  typebotId?: string
+  sessionId?: string
+  workspaceId?: string
+  workspaceName?: string
+  groupId?: string
+  groupName?: string
+}
+
 type Props = {
   variables: Variable[]
   body: string
   args?: Record<string, unknown>
+  errorContext?: ExecuteFunctionContext
 }
+
+const stripPaths = (s: string | undefined): string | undefined =>
+  s?.replace(/\/(home|app|usr|var|opt|tmp)\/[^\s)]+/g, '<path>')
 
 export const executeFunction = async ({
   variables,
   body,
   args: initialArgs,
+  errorContext,
 }: Props) => {
   const parsedBody = parseVariables(variables, {
     fieldToParse: 'id',
@@ -86,7 +101,6 @@ export const executeFunction = async ({
       )
 
     const output = await run(parsedBody)
-    console.log('Output', output)
     return {
       output: safeStringify(output) ?? '',
       newVariables: Object.entries(updatedVariables)
@@ -102,15 +116,21 @@ export const executeFunction = async ({
         .filter(isDefined),
     }
   } catch (e) {
-    console.log('Error while executing script')
-    console.error(e)
-
     const error =
       typeof e === 'string'
         ? e
         : e instanceof Error
           ? e.message
-          : JSON.stringify(e)
+          : (safeStringify(e) ?? String(e))
+
+    logger.warn('Error while executing script', {
+      ...errorContext,
+      error: {
+        name: e instanceof Error ? e.name : 'Unknown',
+        message: error,
+        stack: stripPaths(e instanceof Error ? e.stack : undefined),
+      },
+    })
 
     return {
       error,

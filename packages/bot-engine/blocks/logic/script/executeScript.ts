@@ -9,9 +9,12 @@ import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesI
 
 export const executeScript = async (
   state: SessionState,
-  block: ScriptBlock
+  block: ScriptBlock,
+  sessionId?: string,
+  group?: { id: string; title?: string }
 ): Promise<ExecuteLogicResponse> => {
-  const { variables } = state.typebotsQueue[0].typebot
+  const typebot = state.typebotsQueue[0].typebot
+  const { variables } = typebot
   if (!block.options?.content || state.whatsApp)
     return { outgoingEdgeId: block.outgoingEdgeId }
 
@@ -22,6 +25,14 @@ export const executeScript = async (
     const { newVariables, error } = await executeFunction({
       variables,
       body: block.options.content,
+      errorContext: {
+        typebotId: typebot.id,
+        sessionId,
+        workspaceId: typebot.workspaceId ?? undefined,
+        workspaceName: typebot.workspaceName ?? undefined,
+        groupId: group?.id,
+        groupName: group?.title,
+      },
     })
 
     const updateVarResults = newVariables
