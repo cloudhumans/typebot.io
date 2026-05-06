@@ -14,7 +14,7 @@ import { executeDeclareVariables } from './blocks/logic/declareVariables/execute
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 
 export const executeLogic =
-  (state: SessionState) =>
+  (state: SessionState, sessionId?: string) =>
   async (block: LogicBlock): Promise<ExecuteLogicResponse> => {
     switch (block.type) {
       case LogicBlockType.SET_VARIABLE:
@@ -28,7 +28,7 @@ export const executeLogic =
       case LogicBlockType.REDIRECT:
         return executeRedirect(state, block)
       case LogicBlockType.SCRIPT:
-        return executeScript(state, block)
+        return executeScript(state, block, sessionId)
       case LogicBlockType.TYPEBOT_LINK:
         return executeTypebotLink(state, block)
       case LogicBlockType.WAIT:
