@@ -26,13 +26,9 @@ export const executeScript = async (
       body: block.options.content,
       errorContext: {
         typebotId: typebot.id,
-        typebotName: typebot.name,
         sessionId,
         workspaceId: typebot.workspaceId ?? undefined,
         workspaceName: typebot.workspaceName ?? undefined,
-        blockId: block.id,
-        blockType: block.type,
-        source: 'script',
       },
     })
 

@@ -10,18 +10,12 @@ import { parseTransferrableValue } from './codeRunners'
 import jwt from 'jsonwebtoken'
 
 const defaultTimeout = 10 * 1000
-const valuePreviewMaxChars = 200
-const bodyPreviewMaxChars = 600
 
 export type ExecuteFunctionContext = {
   typebotId?: string
-  typebotName?: string
   sessionId?: string
   workspaceId?: string
   workspaceName?: string
-  blockId?: string
-  blockType?: string
-  source?: string
 }
 
 type Props = {
@@ -29,23 +23,6 @@ type Props = {
   body: string
   args?: Record<string, unknown>
   errorContext?: ExecuteFunctionContext
-}
-
-const previewValue = (value: unknown): string => {
-  if (value === undefined) return 'undefined'
-  if (value === null) return 'null'
-  let str: string
-  if (typeof value === 'string') str = value
-  else {
-    try {
-      str = JSON.stringify(value) ?? String(value)
-    } catch {
-      str = String(value)
-    }
-  }
-  return str.length > valuePreviewMaxChars
-    ? `${str.slice(0, valuePreviewMaxChars)}…(+${str.length - valuePreviewMaxChars} chars)`
-    : str
 }
 
 export const executeFunction = async ({
@@ -140,17 +117,7 @@ export const executeFunction = async ({
         ? e
         : e instanceof Error
           ? e.message
-          : JSON.stringify(e)
-
-    const variablePreview = args.reduce<Record<string, string>>(
-      (acc, { id, value }) => {
-        const variable = variables.find((v) => v.id === id)
-        const name = variable?.name ?? id
-        acc[name] = previewValue(value)
-        return acc
-      },
-      {}
-    )
+          : (safeStringify(e) ?? String(e))
 
     logger.error('Error while executing script', {
       ...errorContext,
@@ -159,11 +126,6 @@ export const executeFunction = async ({
         message: error,
         stack: e instanceof Error ? e.stack : undefined,
       },
-      bodyPreview:
-        body.length > bodyPreviewMaxChars
-          ? `${body.slice(0, bodyPreviewMaxChars)}…(+${body.length - bodyPreviewMaxChars} chars)`
-          : body,
-      variables: variablePreview,
     })
 
     return {
