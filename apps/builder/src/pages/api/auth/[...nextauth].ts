@@ -30,7 +30,7 @@ import {
   CognitoClaims,
 } from '@/features/auth/types/cognito'
 import logger from '@/helpers/logger'
-import { verifyCognitoToken } from '@/features/auth/helpers/verifyCognitoToken'
+import { cloudchatEmbeddedAuthorize } from '@/features/auth/helpers/cloudchatEmbeddedAuthorize'
 
 const providers: Provider[] = []
 
@@ -159,52 +159,8 @@ providers.push(
     credentials: {
       token: { label: 'Token', type: 'text' },
     },
-    async authorize(
-      credentials
-    ): Promise<Pick<
-      DatabaseUserWithCognito,
-      | 'id'
-      | 'name'
-      | 'email'
-      | 'image'
-      | 'emailVerified'
-      | 'cognitoClaims'
-      | 'cloudChatAuthorization'
-      | 'cognitoTokenExp'
-    > | null> {
-      try {
-        if (!credentials?.token) return null
-
-        const payload = await verifyCognitoToken({
-          cognitoAppClientId: env.CLOUDCHAT_COGNITO_APP_CLIENT_ID,
-          cognitoIssuerUrl: env.COGNITO_ISSUER_URL,
-          cognitoToken: credentials.token,
-        })
-
-        const user = await prisma.user.findUnique({
-          where: { email: payload.email },
-        })
-
-        if (!user) return null
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          emailVerified: user.emailVerified,
-          cognitoClaims: {
-            'custom:hub_role': payload['custom:hub_role'],
-            'custom:eddie_workspaces': payload['custom:eddie_workspaces'],
-          },
-          cloudChatAuthorization: true,
-          cognitoTokenExp: payload.exp,
-        }
-      } catch (error) {
-        logger.error('Error in cloudchat-embedded authorize', { error })
-        return null
-      }
-    },
+    authorize: (credentials) =>
+      cloudchatEmbeddedAuthorize(prisma, credentials ?? undefined),
   })
 )
 
