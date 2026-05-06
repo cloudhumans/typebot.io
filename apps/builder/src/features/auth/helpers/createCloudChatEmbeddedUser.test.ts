@@ -13,7 +13,8 @@ const trackEventsMock = trackEvents as ReturnType<typeof vi.fn>
 const buildPrismaMock = (overrides?: { create?: ReturnType<typeof vi.fn> }) => {
   const create =
     overrides?.create ??
-    vi.fn(async ({ data }) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.fn(async ({ data }: { data: any }) => ({
       id: 'user-fixture-id',
       email: data.email,
       name: data.name ?? null,
