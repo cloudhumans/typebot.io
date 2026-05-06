@@ -42,6 +42,7 @@ const userFixture = {
   name: 'JIT',
   image: null,
   emailVerified: new Date('2026-05-06T00:00:00Z'),
+  createdAt: new Date('2026-05-05T12:00:00Z'),
 }
 
 const buildPrismaMock = (
@@ -201,14 +202,14 @@ describe('cloudchatEmbeddedAuthorize', () => {
     verifyMock.mockResolvedValueOnce(basePayload)
     const findUnique = vi.fn(async () => null)
     const p = buildPrismaMock(findUnique)
-    createMock.mockRejectedValueOnce(new Error('telemetry endpoint down'))
+    createMock.mockRejectedValueOnce(new Error('db: connection lost'))
 
     const result = await cloudchatEmbeddedAuthorize(p, { token: 't' })
 
     expect(result).toBeNull()
     expect(loggerWarn).toHaveBeenCalledWith('cloudchat-embedded JIT refused', {
       email: 'jit@local.test',
-      reason: 'telemetry endpoint down',
+      reason: 'db: connection lost',
     })
     expect(loggerError).not.toHaveBeenCalled()
   })
@@ -226,6 +227,7 @@ describe('cloudchatEmbeddedAuthorize', () => {
       name: 'JIT',
       image: null,
       emailVerified: userFixture.emailVerified,
+      createdAt: userFixture.createdAt,
       cognitoClaims: {
         'custom:hub_role': 'CLIENT',
         'custom:eddie_workspaces': 'ws-a,ws-b',
@@ -233,6 +235,16 @@ describe('cloudchatEmbeddedAuthorize', () => {
       cloudChatAuthorization: true,
       cognitoTokenExp: 9999999999,
     })
+  })
+
+  it("forwards user.createdAt so signIn callback's isNewUser check works for returning users", async () => {
+    verifyMock.mockResolvedValueOnce(basePayload)
+    const findUnique = vi.fn(async () => userFixture)
+    const p = buildPrismaMock(findUnique)
+
+    const result = await cloudchatEmbeddedAuthorize(p, { token: 't' })
+
+    expect(result?.createdAt).toEqual(userFixture.createdAt)
   })
 
   it('maps email_verified=true to emailVerified Date; false/undefined to null', async () => {

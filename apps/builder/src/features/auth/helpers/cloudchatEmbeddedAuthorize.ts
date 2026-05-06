@@ -15,6 +15,7 @@ type AuthorizedUser = Pick<
   | 'email'
   | 'image'
   | 'emailVerified'
+  | 'createdAt'
   | 'cognitoClaims'
   | 'cloudChatAuthorization'
   | 'cognitoTokenExp'
@@ -86,6 +87,11 @@ export const cloudchatEmbeddedAuthorize = async (
       name: user.name,
       image: user.image,
       emailVerified: user.emailVerified,
+      // Forwarded so the signIn callback's `isNewUser` check evaluates correctly.
+      // Without this, every cloudchat-embedded login (new AND returning) is treated
+      // as a new user, triggering the disposable-email blocklist GitHub fetch on
+      // the auth hot path.
+      createdAt: user.createdAt,
       cognitoClaims: {
         'custom:hub_role': payload['custom:hub_role'],
         'custom:eddie_workspaces': payload['custom:eddie_workspaces'],
