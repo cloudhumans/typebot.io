@@ -4,11 +4,21 @@ vi.mock('@typebot.io/telemetry/trackEvents', () => ({
   trackEvents: vi.fn(),
 }))
 
+vi.mock('@/helpers/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
 import { describe, it, expect, beforeEach } from 'vitest'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
+import logger from '@/helpers/logger'
 import { createCloudChatEmbeddedUser } from './createCloudChatEmbeddedUser'
 
 const trackEventsMock = trackEvents as ReturnType<typeof vi.fn>
+const loggerWarn = logger.warn as unknown as ReturnType<typeof vi.fn>
 
 const buildPrismaMock = (overrides?: { create?: ReturnType<typeof vi.fn> }) => {
   const create =
@@ -34,6 +44,7 @@ describe('createCloudChatEmbeddedUser', () => {
   beforeEach(() => {
     trackEventsMock.mockReset()
     trackEventsMock.mockResolvedValue(undefined)
+    loggerWarn.mockReset()
   })
 
   it('creates a User row with email + name + emailVerified + image', async () => {
@@ -128,12 +139,23 @@ describe('createCloudChatEmbeddedUser', () => {
     expect(trackEventsMock).not.toHaveBeenCalled()
   })
 
-  it('propagates trackEvents errors (does not swallow)', async () => {
+  it('swallows trackEvents errors and returns the user (telemetry is best-effort)', async () => {
     trackEventsMock.mockRejectedValueOnce(new Error('telemetry endpoint down'))
     const p = buildPrismaMock()
 
-    await expect(
-      createCloudChatEmbeddedUser({ p, email: 'tele@local.test' })
-    ).rejects.toThrow('telemetry endpoint down')
+    const user = await createCloudChatEmbeddedUser({
+      p,
+      email: 'tele@local.test',
+    })
+
+    expect(user.email).toBe('tele@local.test')
+    expect(loggerWarn).toHaveBeenCalledWith(
+      'cloudchat-embedded telemetry failed (user provisioned)',
+      {
+        userId: 'user-fixture-id',
+        email: 'tele@local.test',
+        error: 'telemetry endpoint down',
+      }
+    )
   })
 })

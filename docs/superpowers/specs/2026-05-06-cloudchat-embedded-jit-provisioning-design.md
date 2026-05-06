@@ -239,9 +239,13 @@ NextAuth signIn → { ok: false }
 useEmbeddedAuth → setAuthError('Failed to load flow builder. Please reload the page.')
 ```
 
-Note: if `trackEvents` throws after `user.create` succeeded, the user row already
-exists in the DB. The next attempt by the same email will hit the `findUnique` happy
-path. Mirrors the loose atomicity already present in `customAdapter.createUser`.
+Note: telemetry calls are best-effort inside `createCloudChatEmbeddedUser` —
+the helper wraps `trackEvents` in a try/catch. A telemetry outage logs
+`warn 'cloudchat-embedded telemetry failed (user provisioned)'` and the helper
+still returns the freshly-created user, so the auth path completes successfully.
+This deviates intentionally from `customAdapter.createUser`, which propagates
+telemetry errors. The JIT path is on the critical-auth hot path; we do not want
+a Datadog/StatsD hiccup to look like an authentication failure to the user.
 
 ### Refusal — invalid JWT (existing behavior)
 
@@ -274,7 +278,7 @@ path. Mirrors the loose atomicity already present in `customAdapter.createUser`.
 | Race — P2002 caught, refetch returns user | inner catch | `return user` | `info 'cloudchat-embedded JIT race resolved'` |
 | Race — P2002 caught, refetch returns null | inner catch (rare/strange) | `throw` (caught by outer, returns null) | `error` outer |
 | Other Prisma error during create | inner catch | `return null` | `warn 'cloudchat-embedded JIT refused' { email, reason }` |
-| `trackEvents` throws (after user.create OK) | inner catch (non-P2002) | `return null`; user already in DB | `warn 'cloudchat-embedded JIT refused (telemetry)'` |
+| `trackEvents` throws (after user.create OK) | inner catch in `createCloudChatEmbeddedUser` | swallowed; user returned; auth proceeds | `warn 'cloudchat-embedded telemetry failed (user provisioned)' { userId, email, error }` |
 
 ### Final shape of the modified `authorize` block
 
@@ -514,7 +518,10 @@ they should be approximately equal (allowing for OAuth-path users in the gap).
 
 ### Ongoing alerts
 
-- Spike in `'cloudchat-embedded JIT refused'` → investigate (DB issue or claim shape change).
+- Spike in `'cloudchat-embedded JIT refused'` → investigate. Possible causes (oncall triage order):
+  1. DB issue — `prisma.user.create` failing for a non-`P2002` reason (connection pool, constraint other than unique-email).
+  2. Claim shape change — Cognito payload missing fields the code path expects after passing the email guard.
+- Spike in `'cloudchat-embedded telemetry failed (user provisioned)'` → telemetry/Datadog outage. Auth still works; no user-facing impact, but observability is degraded. Out of band of the auth path.
 - Sustained ratio of `JIT-provisioned` to total `cloudchat-embedded` auth attempts
   > expected onboarding rate → indicates `findUnique` may be missing existing rows
   (data skew or migration regression).
