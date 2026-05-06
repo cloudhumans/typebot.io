@@ -27,6 +27,9 @@ type Props = {
   errorContext?: ExecuteFunctionContext
 }
 
+const stripPaths = (s: string | undefined): string | undefined =>
+  s?.replace(/\/(home|app|usr|var|opt|tmp)\/[^\s)]+/g, '<path>')
+
 export const executeFunction = async ({
   variables,
   body,
@@ -98,7 +101,6 @@ export const executeFunction = async ({
       )
 
     const output = await run(parsedBody)
-    console.log('Output', output)
     return {
       output: safeStringify(output) ?? '',
       newVariables: Object.entries(updatedVariables)
@@ -121,12 +123,12 @@ export const executeFunction = async ({
           ? e.message
           : (safeStringify(e) ?? String(e))
 
-    logger.error('Error while executing script', {
+    logger.warn('Error while executing script', {
       ...errorContext,
       error: {
         name: e instanceof Error ? e.name : 'Unknown',
         message: error,
-        stack: e instanceof Error ? e.stack : undefined,
+        stack: stripPaths(e instanceof Error ? e.stack : undefined),
       },
     })
 
