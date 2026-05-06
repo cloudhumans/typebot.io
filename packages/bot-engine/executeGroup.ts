@@ -188,7 +188,10 @@ export const executeGroup = async (
 
     const executionResponse = (
       isLogicBlock(block)
-        ? await executeLogic(newSessionState, sessionId)(block)
+        ? await executeLogic(newSessionState, sessionId, {
+            id: group.id,
+            title: group.title,
+          })(block)
         : isIntegrationBlock(block)
         ? await executeIntegration(newSessionState, sessionId)(block)
         : null

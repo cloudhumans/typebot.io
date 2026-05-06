@@ -16,6 +16,8 @@ export type ExecuteFunctionContext = {
   sessionId?: string
   workspaceId?: string
   workspaceName?: string
+  groupId?: string
+  groupName?: string
 }
 
 type Props = {

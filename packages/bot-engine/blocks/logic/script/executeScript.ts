@@ -10,7 +10,8 @@ import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesI
 export const executeScript = async (
   state: SessionState,
   block: ScriptBlock,
-  sessionId?: string
+  sessionId?: string,
+  group?: { id: string; title?: string }
 ): Promise<ExecuteLogicResponse> => {
   const typebot = state.typebotsQueue[0].typebot
   const { variables } = typebot
@@ -29,6 +30,8 @@ export const executeScript = async (
         sessionId,
         workspaceId: typebot.workspaceId ?? undefined,
         workspaceName: typebot.workspaceName ?? undefined,
+        groupId: group?.id,
+        groupName: group?.title,
       },
     })
 
