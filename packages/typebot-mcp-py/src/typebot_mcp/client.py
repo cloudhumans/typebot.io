@@ -323,8 +323,18 @@ class TypebotClient:
         *,
         result_ids: Iterable[str] | None = None,
     ) -> dict[str, Any]:
-        """Wraps ``DELETE /api/v1/typebots/{typebotId}/results``."""
-        params = {"resultIds": ",".join(result_ids)} if result_ids is not None else None
+        """Wraps ``DELETE /api/v1/typebots/{typebotId}/results``.
+
+        ``result_ids=None`` deletes every result for the typebot (caller
+        opted in to bulk delete). An **empty** list is treated as a no-op
+        and short-circuits without hitting the API — sending
+        ``?resultIds=`` would otherwise be ambiguous and risks deleting
+        every result on backends that ignore the empty value.
+        """
+        ids = list(result_ids) if result_ids is not None else None
+        if ids is not None and not ids:
+            return {}
+        params = {"resultIds": ",".join(ids)} if ids is not None else None
         return await self._request(
             self._builder,
             "DELETE",

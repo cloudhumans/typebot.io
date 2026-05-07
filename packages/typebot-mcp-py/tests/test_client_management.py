@@ -158,6 +158,19 @@ async def test_delete_results_with_ids(settings: Settings) -> None:
 
 
 @respx.mock
+async def test_delete_results_empty_list_is_noop(settings: Settings) -> None:
+    route = respx.delete(f"{BUILDER}/api/v1/typebots/tb_1/results").mock(
+        return_value=httpx.Response(200, json={"count": 999})
+    )
+
+    async with TypebotClient(settings) as client:
+        result = await client.delete_results("tb_1", result_ids=[])
+
+    assert result == {}
+    assert not route.called
+
+
+@respx.mock
 async def test_get_analytics_stats(settings: Settings) -> None:
     route = respx.get(f"{BUILDER}/api/v1/typebots/tb_1/analytics/stats").mock(
         return_value=httpx.Response(200, json={"totalViews": 42})
