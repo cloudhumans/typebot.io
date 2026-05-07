@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
+from mcp.server.fastmcp.exceptions import ToolError
 
 from typebot_mcp.config import Settings
 from typebot_mcp.server import build_server
@@ -69,17 +71,16 @@ async def test_start_chat_tool_invokes_client(settings: Settings) -> None:
 
 
 @respx.mock
-async def test_http_error_returns_structured_payload(settings: Settings) -> None:
+async def test_http_error_raises_tool_error(settings: Settings) -> None:
     respx.post("http://typebot.test/api/v1/typebots/x/startChat").mock(
         return_value=httpx.Response(500, text="boom")
     )
 
     mcp = build_server(settings)
-    result = await mcp.call_tool("start_chat", {"public_id": "x"})
+    with pytest.raises(ToolError) as exc_info:
+        await mcp.call_tool("start_chat", {"public_id": "x"})
 
-    text = str(result)
-    assert "500" in text
-    assert '"ok": false' in text or "'ok': False" in text
+    assert "500" in str(exc_info.value)
 
 
 @respx.mock

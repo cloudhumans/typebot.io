@@ -315,16 +315,19 @@ Or interactively: `codex mcp` walks you through it.
 
 ## Programmatic use
 
-If you'd rather skip MCP entirely and call the underlying client from Python:
+If you'd rather skip MCP entirely and call the underlying services from Python:
 
 ```python
 import asyncio
 
-from typebot_mcp import Settings, TypebotClient
+from typebot_mcp import Settings
+from typebot_mcp.lifespan import app_lifespan
+from typebot_mcp.services import chat
 
 async def main() -> None:
-    async with TypebotClient(Settings()) as client:
-        result = await client.start_chat(
+    async with app_lifespan(Settings()) as app:
+        result = await chat.start_chat(
+            app.viewer,
             "my-public-id",
             message="hello",
             prefilled_variables={"Name": "Ada"},
@@ -334,7 +337,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-`TypebotClient` is fully async, raises `TypebotHTTPError` on non-2xx, and otherwise returns the parsed JSON body verbatim.
+Services are stateless async functions grouped by domain (`chat`, `typebots`, `results`, `analytics`, `folders`, `workspaces`). Each takes the appropriate `httpx.AsyncClient` (`app.viewer` for chat, `app.builder` for management) plus its inputs, raises `TypebotHTTPError` on non-2xx, and returns the parsed JSON body verbatim.
 
 ---
 
@@ -352,18 +355,28 @@ All tests are hermetic — `respx` intercepts every HTTP call. No live Typebot i
 
 ```
 src/typebot_mcp/
-├── __init__.py        re-exports
+├── __init__.py        re-exports (Settings, build_server, exceptions)
 ├── __main__.py        CLI entry
 ├── config.py          Settings (pydantic-settings)
-├── client.py          TypebotClient (httpx)
-├── server.py          FastMCP server + tools
-└── exceptions.py      TypebotError hierarchy
+├── context.py         AppContext dataclass (settings + viewer + builder)
+├── lifespan.py        open_clients + app_lifespan async context manager
+├── transport.py       build_headers + pure async request() helper
+├── errors.py          http_errors_as_tool_errors → mcp.ToolError adapter
+├── exceptions.py      TypebotError hierarchy
+├── server.py          FastMCP factory (build_server)
+├── services/          stateless REST wrappers (chat, typebots, results, analytics, folders, workspaces)
+└── tools/             MCP tool definitions, one module per domain (register_all)
 tests/
-├── conftest.py
-├── test_client.py
-├── test_client_management.py
-└── test_server.py
+├── conftest.py                    settings + settings_writable fixtures
+├── test_services_chat.py          chat respx tests
+├── test_services_management.py    management/results/analytics/folders/workspaces respx tests
+├── test_lifespan.py               open + close of both upstream clients
+├── test_errors.py                 TypebotHTTPError → ToolError + protocol-correct isError
+├── test_annotations.py            readOnly/destructive/idempotent hints per tool
+└── test_server.py                 FastMCP tool registration + invocation tests
 ```
+
+Three layers, in dependency order: `transport.py` (pure HTTP) → `services/*.py` (stateless domain wrappers) → `tools/*.py` (MCP tool definitions). `server.py` opens both `httpx.AsyncClient`s eagerly into an `AppContext` and calls `register_all(mcp, cfg, app)`.
 
 ---
 
@@ -376,6 +389,10 @@ tests/
 - **Writes off by default.** Because letting an agent freely `delete_typebot` on first contact is one of those decisions you'd un-make in a heartbeat.
 
 ---
+
+## Contributing
+
+When you change layout, tools, env vars, conventions, or workflow, **update both `CLAUDE.md` and `README.md` in the same change.** They are the two sources of truth — one for Claude Code, one for humans — and drift between them costs more than the edit. The four-check pipeline (`ruff check`, `ruff format`, `pyright`, `pytest`) must stay green; see `CLAUDE.md` for the full conventions.
 
 ## License
 
