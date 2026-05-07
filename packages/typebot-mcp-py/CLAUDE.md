@@ -20,7 +20,7 @@ packages/typebot-mcp-py/
 │   ├── config.py           Settings via pydantic-settings, env prefix TYPEBOT_
 │   ├── client.py           TypebotClient (async httpx wrapper)
 │   ├── server.py           build_server() — FastMCP + tool definitions
-│   └── exceptions.py       TypebotError / TypebotHTTPError / TypebotConfigError
+│   └── exceptions.py       TypebotError / TypebotHTTPError
 └── tests/
     ├── conftest.py                   settings + settings_writable fixtures
     ├── test_client.py                chat respx tests

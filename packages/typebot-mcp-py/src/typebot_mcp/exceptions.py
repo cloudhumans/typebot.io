@@ -23,7 +23,3 @@ class TypebotHTTPError(TypebotError):
         self.body = body
         suffix = f" ({url})" if url else ""
         super().__init__(f"HTTP {status_code}: {message}{suffix}")
-
-
-class TypebotConfigError(TypebotError):
-    """Raised when configuration is missing or invalid."""
