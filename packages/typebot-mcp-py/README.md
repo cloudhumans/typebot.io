@@ -12,7 +12,7 @@
         Claude Desktop
 ```
 
-If your editor speaks **MCP**, this package gives it 17 tools to drive Typebot like a human would: start chats, walk through flows, pull results, peek at analytics, and (if you're brave enough to flip a flag) create / edit / publish / delete typebots.
+If your editor speaks **MCP**, this package gives it 19 tools to drive Typebot like a human would: start chats, walk through flows, pull results, peek at analytics, and (if you're brave enough to flip a flag) create / edit / publish / delete typebots.
 
 It is **not** a fork of `apps/builder/src/pages/api/mcp.ts`. That one is a Next.js handler bolted onto Prisma. This is plain HTTP-over-REST, written in async Python, and depends on **nothing** from the TS monorepo at runtime.
 
@@ -29,7 +29,7 @@ No framework drama, no hand-rolled JSON-RPC, no clever metaclasses.
 
 ---
 
-## What you get (17 tools)
+## What you get (19 tools — 13 always on, 6 gated)
 
 The catalog is split by which Typebot host the tool talks to:
 
@@ -108,7 +108,7 @@ export TYPEBOT_TIMEOUT_SECONDS="30"
 
 | Var | Default | What it does |
 |---|---|---|
-| `TYPEBOT_API_BASE_URL` | _required_ | Viewer host; chat tools target it. |
+| `TYPEBOT_API_BASE_URL` | `http://localhost:3003` | Viewer host; chat tools target it. Override for any non-local Typebot. |
 | `TYPEBOT_BUILDER_BASE_URL` | falls back to `TYPEBOT_API_BASE_URL` | Builder host; management/results/analytics tools target it. |
 | `TYPEBOT_API_TOKEN` | _empty_ | Bearer token. Empty means anonymous. |
 | `TYPEBOT_TENANT` | _empty_ | Sent as `x-tenant`. Required for multi-tenant Typebot deployments. |
@@ -379,4 +379,4 @@ tests/
 
 ## License
 
-MIT, same as the rest of the Typebot fork.
+AGPL-3.0-or-later, same as the rest of the Typebot fork (and as declared in `pyproject.toml`).

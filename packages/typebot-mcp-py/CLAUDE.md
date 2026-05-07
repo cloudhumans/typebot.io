@@ -67,10 +67,10 @@ The catalog is split by host:
 - **Chat tools** target the **viewer** (`TYPEBOT_API_BASE_URL`, e.g. `http://localhost:3003`). Wired through `self._chat` in `client.py`.
 - **Management/results/analytics tools** target the **builder** (`TYPEBOT_BUILDER_BASE_URL`, e.g. `http://localhost:3002`). Wired through `self._builder` in `client.py`. `builder_url_str` falls back to `base_url_str` when the env var is unset.
 
-### Always registered (11)
+### Always registered (13)
 
 Chat (3): `start_chat`, `continue_chat`, `start_chat_preview`.
-Read (8): `list_typebots`, `get_typebot`, `get_published_typebot`, `list_results`, `get_result`, `get_result_logs`, `get_analytics_stats`, `list_folders`.
+Read (10): `list_typebots`, `get_typebot`, `get_published_typebot`, `list_results`, `get_result`, `get_result_logs`, `get_analytics_stats`, `list_folders`, `list_workspaces`, `list_credentials`.
 
 ### Gated behind `TYPEBOT_ALLOW_WRITES=true` (6)
 
