@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -24,22 +26,39 @@ def build_server(
     Always registers the chat + read tools. Mutating tools
     (create/update/delete/publish/unpublish) are only registered when
     ``settings.allow_writes`` is ``True``.
+
+    A single :class:`TypebotClient` is shared across every tool call so
+    the underlying ``httpx`` connection pool is reused. The client is
+    closed on FastMCP shutdown via the registered ``lifespan`` hook.
     """
     cfg = settings or Settings()
-    mcp = FastMCP(name, stateless_http=stateless_http, json_response=json_response)
+    client = TypebotClient(cfg)
+
+    @asynccontextmanager
+    async def lifespan(_: FastMCP) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            await client.aclose()
+
+    mcp = FastMCP(
+        name,
+        stateless_http=stateless_http,
+        json_response=json_response,
+        lifespan=lifespan,
+    )
 
     async def _call(operation: str, fn: Any) -> dict[str, Any]:
-        async with TypebotClient(cfg) as client:
-            try:
-                return await fn(client)
-            except TypebotHTTPError as exc:
-                return {
-                    "ok": False,
-                    "operation": operation,
-                    "status": exc.status_code,
-                    "error": str(exc),
-                    "body": exc.body,
-                }
+        try:
+            return await fn(client)
+        except TypebotHTTPError as exc:
+            return {
+                "ok": False,
+                "operation": operation,
+                "status": exc.status_code,
+                "error": str(exc),
+                "body": exc.body,
+            }
 
     # ------------------------------------------------------------------
     # Chat tools (always registered)
