@@ -22,9 +22,13 @@ async def start_chat(
     is_stream_enabled: bool = False,
     text_bubble_content_format: ContentFormat = "markdown",
 ) -> dict[str, Any]:
-    """Wraps ``POST /api/v1/typebots/{publicId}/startChat``."""
+    """Wraps ``POST /api/v1/typebots/{publicId}/startChat``.
+
+    ``publicId`` is in the URL path — the trpc-openapi adapter merges
+    it into the validated input before the handler runs, so the body
+    only needs to carry the genuinely body-only fields.
+    """
     payload: dict[str, Any] = {
-        "publicId": public_id,
         "message": message,
         "prefilledVariables": prefilled_variables,
         "resultId": result_id,
@@ -74,9 +78,13 @@ async def start_chat_preview(
     is_stream_enabled: bool = False,
     text_bubble_content_format: ContentFormat = "markdown",
 ) -> dict[str, Any]:
-    """Wraps ``POST /api/v1/typebots/{typebotId}/preview/startChat``."""
+    """Wraps ``POST /api/v1/typebots/{typebotId}/preview/startChat``.
+
+    ``typebotId`` is in the URL path — the trpc-openapi adapter merges
+    it into the validated input before the handler runs, so the body
+    only needs to carry the genuinely body-only fields.
+    """
     payload: dict[str, Any] = {
-        "typebotId": typebot_id,
         "message": message,
         "prefilledVariables": prefilled_variables,
         "isStreamEnabled": is_stream_enabled,

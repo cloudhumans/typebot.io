@@ -28,7 +28,7 @@ async def test_start_chat_posts_to_public_id(settings: Settings) -> None:
 
     assert result == {"sessionId": "sess_42"}
     body = route.calls.last.request.read().decode()
-    assert "sample-public" in body
+    assert "sample-public" not in body
     assert "hi" in body
     assert "prefilledVariables" in body
 
