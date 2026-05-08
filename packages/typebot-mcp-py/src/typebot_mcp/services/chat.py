@@ -47,9 +47,13 @@ async def continue_chat(
     message: str | None = None,
     text_bubble_content_format: ContentFormat = "markdown",
 ) -> dict[str, Any]:
-    """Wraps ``POST /api/v1/sessions/{sessionId}/continueChat``."""
+    """Wraps ``POST /api/v1/sessions/{sessionId}/continueChat``.
+
+    ``sessionId`` lives in the URL path — the trpc-openapi adapter
+    merges it into the validated input before the handler runs, so the
+    body only needs to carry the genuinely body-only fields.
+    """
     payload: dict[str, Any] = {
-        "sessionId": session_id,
         "message": message,
         "textBubbleContentFormat": text_bubble_content_format,
     }
