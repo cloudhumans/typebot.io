@@ -1,12 +1,14 @@
 """Typed application context yielded by the FastMCP lifespan.
 
-Tools reach the active :class:`AppContext` through the FastMCP
-``Context`` parameter::
+Tools in this package do **not** take a FastMCP ``Context`` parameter —
+that path doesn't survive ``mcp.call_tool()`` from tests. Each tool
+module exposes a ``register(mcp, app)`` function and the inner tool
+closes over ``app`` directly::
 
-    @mcp.tool()
-    async def my_tool(ctx: Context) -> dict[str, Any]:
-        app: AppContext = ctx.request_context.lifespan_context
-        return await some_service.do(app.viewer)
+    def register(mcp: FastMCP, app: AppContext) -> None:
+        @mcp.tool()
+        async def my_tool() -> dict[str, Any]:
+            return await some_service.do(app.viewer)
 """
 
 from __future__ import annotations
