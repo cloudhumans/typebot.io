@@ -47,8 +47,8 @@ reportMissingTypeStubs = "none"
 typebot-mcp = "typebot_mcp.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/baptisteArno/typebot.io"
-Repository = "https://github.com/baptisteArno/typebot.io"
+Homepage = "https://github.com/cloudhumans/typebot.io"
+Repository = "https://github.com/cloudhumans/typebot.io"
 
 [build-system]
 requires = ["hatchling>=1.24"]
