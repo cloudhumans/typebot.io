@@ -7,8 +7,12 @@ import logging
 import sys
 from collections.abc import Sequence
 
+from pydantic import ValidationError
+
 from typebot_mcp.config import Settings
 from typebot_mcp.server import build_server
+
+logger = logging.getLogger("typebot_mcp")
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -59,19 +63,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
-    settings = Settings()
+    try:
+        settings = Settings()
+    except ValidationError as exc:
+        print(
+            f"typebot-mcp: invalid configuration ({exc.error_count()} error(s)):\n{exc}",
+            file=sys.stderr,
+        )
+        return 1
+
     mcp = build_server(
         settings,
         stateless_http=not args.stateful,
         json_response=not args.sse_responses,
     )
 
-    if args.transport == "stdio":
-        mcp.run(transport="stdio")
-    else:
-        mcp.settings.host = args.host
-        mcp.settings.port = args.port
-        mcp.run(transport=args.transport)
+    try:
+        if args.transport == "stdio":
+            mcp.run(transport="stdio")
+        else:
+            mcp.settings.host = args.host
+            mcp.settings.port = args.port
+            mcp.run(transport=args.transport)
+    except Exception:
+        logger.exception("typebot-mcp: server crashed")
+        return 1
     return 0
 
 
