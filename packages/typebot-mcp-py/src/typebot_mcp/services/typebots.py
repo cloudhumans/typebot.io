@@ -21,15 +21,20 @@ async def list_typebots(
     The upstream REST endpoint ignores the ``X-Include-Drafts`` header
     (only the TS ``/api/mcp`` handler honours it), so the draft filter
     runs client-side after the call.
+
+    Handles both response shapes: the documented ``{typebots: [...]}``
+    contract and the bare-array shape that ``transport.request`` wraps
+    as ``{items: [...]}``. Without the second branch a future contract
+    drift could let drafts leak with ``include_drafts=False``.
     """
     params = {"workspaceId": workspace_id, "folderId": folder_id}
     data = await request(builder, "GET", "/api/v1/typebots", params=params)
-    if not include_drafts:
-        typebots = data.get("typebots")
-        if isinstance(typebots, list):
-            data["typebots"] = [
-                tb for tb in typebots if isinstance(tb, dict) and tb.get("publishedTypebotId")
-            ]
+    if include_drafts:
+        return data
+    for key in ("typebots", "items"):
+        bots = data.get(key)
+        if isinstance(bots, list):
+            data[key] = [tb for tb in bots if isinstance(tb, dict) and tb.get("publishedTypebotId")]
     return data
 
 

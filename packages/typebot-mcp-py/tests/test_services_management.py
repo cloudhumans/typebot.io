@@ -40,6 +40,30 @@ async def test_list_typebots_filters_drafts(settings: Settings) -> None:
 
 
 @respx.mock
+async def test_list_typebots_filters_drafts_when_response_is_array(
+    settings: Settings,
+) -> None:
+    """Defensive: bare-array responses are wrapped as ``{items: [...]}``
+    by ``transport.request``. The filter must apply to that shape too —
+    otherwise a contract drift would silently expose drafts."""
+    respx.get(f"{BUILDER}/api/v1/typebots").mock(
+        return_value=httpx.Response(
+            200,
+            json=[
+                {"id": "tb_a", "publishedTypebotId": "pt_a"},
+                {"id": "tb_draft", "publishedTypebotId": None},
+            ],
+        )
+    )
+
+    async with app_lifespan(settings) as app:
+        data = await typebots.list_typebots(app.builder, include_drafts=False)
+
+    ids = [tb["id"] for tb in data["items"]]
+    assert ids == ["tb_a"]
+
+
+@respx.mock
 async def test_list_typebots_includes_drafts_when_enabled(settings: Settings) -> None:
     respx.get(f"{BUILDER}/api/v1/typebots").mock(
         return_value=httpx.Response(
