@@ -28,11 +28,13 @@ def open_clients(settings: Settings) -> AppContext:
         base_url=settings.base_url_str,
         timeout=settings.timeout_seconds,
         headers=headers,
+        follow_redirects=True,
     )
     builder = httpx.AsyncClient(
         base_url=settings.builder_url_str,
         timeout=settings.timeout_seconds,
         headers=headers,
+        follow_redirects=True,
     )
     return AppContext(settings=settings, viewer=viewer, builder=builder)
 
