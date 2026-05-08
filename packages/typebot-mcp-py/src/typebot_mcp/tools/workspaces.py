@@ -65,5 +65,7 @@ def register(mcp: FastMCP, app: AppContext) -> None:
         """
         async with http_errors_as_tool_errors("list_credentials"):
             return await workspaces_service.list_credentials(
-                app.builder, workspace_id=workspace_id, type=credential_type
+                app.builder,
+                workspace_id=workspace_id,
+                credential_type=credential_type,
             )

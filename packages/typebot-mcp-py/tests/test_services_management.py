@@ -261,7 +261,7 @@ async def test_list_credentials(settings: Settings) -> None:
 
     async with app_lifespan(settings) as app:
         result = await workspaces.list_credentials(
-            app.builder, workspace_id="ws_1", type="google sheets"
+            app.builder, workspace_id="ws_1", credential_type="google sheets"
         )
 
     assert result["credentials"][0]["id"] == "c_a"
