@@ -1,8 +1,11 @@
 """Pure async HTTP helper used by every service module.
 
 Owns nothing — takes a configured ``httpx.AsyncClient`` and returns parsed
-JSON. ``None`` values are stripped from payload + params before sending.
-List responses are wrapped as ``{"items": [...]}`` for caller convenience.
+JSON. ``None`` values are stripped from payload + params recursively before
+sending, so callers can safely build nested PATCH bodies with optional
+fields without accidentally clearing remote state via JSON ``null``.
+Top-level array responses are wrapped as ``{"items": [...]}`` for caller
+convenience — every other response is returned as the parsed JSON object.
 Non-2xx, transport, and decode failures are surfaced as
 :class:`TypebotHTTPError`.
 """
@@ -36,6 +39,21 @@ def build_headers(
     return headers
 
 
+def _drop_nones(value: Any) -> Any:
+    """Return ``value`` with every ``None`` removed from nested dicts/lists.
+
+    Services build PATCH bodies like
+    ``{"typebot": {"name": "X", "folderId": None}}`` — a shallow filter
+    would forward the inner ``None`` as JSON ``null`` and could clear
+    ``folderId`` upstream silently. Strings/bytes/scalars pass through.
+    """
+    if isinstance(value, dict):
+        return {k: _drop_nones(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [_drop_nones(v) for v in value if v is not None]
+    return value
+
+
 async def request(
     client: httpx.AsyncClient,
     method: str,
@@ -44,11 +62,18 @@ async def request(
     payload: dict[str, Any] | None = None,
     params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Issue a Typebot REST call and return the parsed JSON object."""
+    """Issue a Typebot REST call and return the parsed JSON object.
+
+    Top-level array responses are wrapped as ``{"items": [...]}`` so
+    every caller can rely on a dict shape; non-array, non-object JSON
+    payloads are rejected with :class:`TypebotHTTPError`.
+    """
     body: dict[str, Any] | None = None
     if payload is not None:
-        body = {k: v for k, v in payload.items() if v is not None}
-    clean_params = {k: v for k, v in params.items() if v is not None} if params else None
+        body = _drop_nones(payload)
+    clean_params = (
+        {k: _drop_nones(v) for k, v in params.items() if v is not None} if params else None
+    )
 
     try:
         response = await client.request(method, path, json=body, params=clean_params)
