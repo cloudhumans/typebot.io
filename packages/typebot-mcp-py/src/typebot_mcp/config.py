@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     - ``TYPEBOT_TIMEOUT_SECONDS`` — request timeout for the underlying
       ``httpx.AsyncClient``.
     - ``TYPEBOT_INCLUDE_DRAFTS`` — when ``true`` the server adds the
-      ``X-Include-Drafts`` header on discovery requests.
+      ``X-Include-Drafts: true`` header on every upstream request
+      (viewer + builder). Honoured only by the TS ``/api/mcp`` proxy;
+      the REST handlers ignore it, but it is forwarded uniformly.
     - ``TYPEBOT_BUILDER_BASE_URL`` — base URL of the Typebot builder API
       (management endpoints — typebot CRUD, results, analytics, folders).
       Falls back to ``TYPEBOT_API_BASE_URL`` when unset (single-host
