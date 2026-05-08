@@ -27,4 +27,4 @@ async def http_errors_as_tool_errors(operation: str) -> AsyncGenerator[None]:
         yield
     except TypebotHTTPError as exc:
         body = (exc.body or "")[:500]
-        raise ToolError(f"{operation} failed: HTTP {exc.status_code} {exc} body={body!r}") from exc
+        raise ToolError(f"{operation} failed: {exc} body={body!r}") from exc
