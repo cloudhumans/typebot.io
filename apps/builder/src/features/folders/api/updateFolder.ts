@@ -39,7 +39,12 @@ export const updateFolder = authenticatedProcedure
         where: { id: workspaceId },
         select: { id: true, members: true, plan: true },
       })
-      const userRole = getUserRoleInWorkspace(user.id, workspace?.members)
+      const userRole = getUserRoleInWorkspace(
+        user.id,
+        workspace?.members,
+        workspaceId,
+        user
+      )
       if (
         userRole === undefined ||
         userRole === WorkspaceRole.GUEST ||
