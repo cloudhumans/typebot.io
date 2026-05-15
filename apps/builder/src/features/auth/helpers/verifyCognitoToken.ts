@@ -1,6 +1,23 @@
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose'
 import { CognitoJWTPayload } from '../types/cognito'
 
+// Cache one JWKS instance per issuer for the lifetime of the process so that
+// jose's internal key cache survives across requests. Recreating per call
+// triggers a JWKS fetch on every auth callback, which compounds with CPU
+// throttling on the builder pods.
+const jwksByIssuer = new Map<string, ReturnType<typeof createRemoteJWKSet>>()
+
+const getJwks = (cognitoIssuerUrl: string) => {
+  let jwks = jwksByIssuer.get(cognitoIssuerUrl)
+  if (!jwks) {
+    jwks = createRemoteJWKSet(
+      new URL(`${cognitoIssuerUrl}/.well-known/jwks.json`)
+    )
+    jwksByIssuer.set(cognitoIssuerUrl, jwks)
+  }
+  return jwks
+}
+
 /**
  * In development, skip real JWKS verification and decode the JWT payload directly.
  * The token is expected to be a standard JWT (header.payload.signature) where the
@@ -37,14 +54,14 @@ export const verifyCognitoToken = async ({
     }
   }
 
-  const jwks = createRemoteJWKSet(
-    new URL(`${cognitoIssuerUrl}/.well-known/jwks.json`)
+  const { payload } = await jwtVerify<CognitoJWTPayload>(
+    cognitoToken,
+    getJwks(cognitoIssuerUrl),
+    {
+      issuer: cognitoIssuerUrl,
+      audience: cognitoAppClientId,
+    }
   )
-
-  const { payload } = await jwtVerify<CognitoJWTPayload>(cognitoToken, jwks, {
-    issuer: cognitoIssuerUrl,
-    audience: cognitoAppClientId,
-  })
 
   return payload
 }
