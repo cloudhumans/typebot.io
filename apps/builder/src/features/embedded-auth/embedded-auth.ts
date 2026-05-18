@@ -35,7 +35,7 @@ export const handleEmbeddedAuthentication = async ({
     return true
   } catch (error) {
     logger.error('Error during embedded authentication', {
-      error: error instanceof Error ? error.message : String(error),
+      error: String(error),
     })
     return false
   }
