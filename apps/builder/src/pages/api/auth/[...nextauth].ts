@@ -17,6 +17,7 @@ import { getAtPath, isDefined, emailIsCloudhumans } from '@typebot.io/lib'
 import { mockedUser } from '@typebot.io/lib/mockedUser'
 import { getNewUserInvitations } from '@/features/auth/helpers/getNewUserInvitations'
 import { sendVerificationRequest } from '@/features/auth/helpers/sendVerificationRequest'
+import { patchSetCookieForPartitioned } from '@/features/auth/helpers/cookiePartitioning'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis/nodejs'
 import ky from 'ky'
@@ -365,6 +366,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!success) restricted = 'rate-limited'
     }
   }
+
+  patchSetCookieForPartitioned(res)
 
   return await NextAuth(req, res, getAuthOptions({ restricted }))
 }

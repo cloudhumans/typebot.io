@@ -8,6 +8,7 @@ import { mockedUser } from '@typebot.io/lib/mockedUser'
 import { emailIsCloudhumans } from '@typebot.io/lib'
 import { DatabaseUserWithCognito } from '../types/cognito'
 import { verifyCognitoToken } from './verifyCognitoToken'
+import { patchSetCookieForPartitioned } from './cookiePartitioning'
 import logger from '@/helpers/logger'
 
 export const getAuthenticatedUser = async (
@@ -21,6 +22,7 @@ export const getAuthenticatedUser = async (
 
   if (bearerToken) return authenticateByToken(bearerToken)
 
+  if (!env.NEXT_PUBLIC_E2E_TEST) patchSetCookieForPartitioned(res)
   const session = env.NEXT_PUBLIC_E2E_TEST
     ? { user: mockedUser }
     : await getServerSession(req, res, getAuthOptions({}))
