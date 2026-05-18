@@ -25,6 +25,14 @@ export const listTypebots = authenticatedProcedure
           '[Where to find my workspace ID?](../how-to#how-to-find-my-workspaceid)'
         ),
       folderId: z.string().optional(),
+      search: z.string().optional(),
+      filters: z
+        .object({
+          status: z.array(z.enum(['ativo', 'inativo'])).optional(),
+          createdAtFrom: z.string().datetime().optional(),
+          createdAtTo: z.string().datetime().optional(),
+        })
+        .optional(),
     })
   )
   .output(
@@ -35,65 +43,106 @@ export const listTypebots = authenticatedProcedure
             name: true,
             icon: true,
             id: true,
+            createdAt: true,
           })
           .merge(z.object({ publishedTypebotId: z.string().optional() }))
       ),
     })
   )
-  .query(async ({ input: { workspaceId, folderId }, ctx: { user } }) => {
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { id: true, name: true, members: true },
-    })
+  .query(
+    async ({
+      input: { workspaceId, folderId, search, filters },
+      ctx: { user },
+    }) => {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { id: true, name: true, members: true },
+      })
 
-    if (!workspace) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' })
-    }
+      if (!workspace) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        })
+      }
 
-    const userRole = getUserRoleInWorkspace(
-      user.id,
-      workspace.members,
-      workspaceId,
-      user
-    )
-
-    if (!userRole) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' })
-    }
-
-    const typebots = (await prisma.typebot.findMany({
-      where: {
-        isArchived: { not: true },
-        folderId:
-          userRole === WorkspaceRole.GUEST
-            ? undefined
-            : folderId === 'root'
-            ? null
-            : folderId,
+      const userRole = getUserRoleInWorkspace(
+        user.id,
+        workspace.members,
         workspaceId,
-        collaborators:
-          userRole === WorkspaceRole.GUEST
-            ? { some: { userId: user.id } }
-            : undefined,
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        name: true,
-        publishedTypebot: { select: { id: true } },
-        id: true,
-        icon: true,
-      },
-    })) as (Pick<Typebot, 'name' | 'id' | 'icon'> & {
-      publishedTypebot: Pick<PublicTypebot, 'id'>
-    })[]
+        user
+      )
 
-    if (!typebots)
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'No typebots found' })
+      if (!userRole) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        })
+      }
 
-    return {
-      typebots: typebots.map((typebot) => ({
-        publishedTypebotId: typebot.publishedTypebot?.id,
-        ...omit(typebot, 'publishedTypebot'),
-      })),
+      const statusConditions: { publishedTypebotId: null | { not: null } }[] = (
+        filters?.status ?? []
+      ).map((s) =>
+        s === 'ativo'
+          ? { publishedTypebotId: { not: null } }
+          : { publishedTypebotId: null }
+      )
+
+      const createdAtFilter =
+        filters?.createdAtFrom || filters?.createdAtTo
+          ? {
+              ...(filters.createdAtFrom
+                ? { gte: new Date(filters.createdAtFrom) }
+                : {}),
+              ...(filters.createdAtTo
+                ? { lte: new Date(filters.createdAtTo) }
+                : {}),
+            }
+          : undefined
+
+      const typebots = (await prisma.typebot.findMany({
+        where: {
+          isArchived: { not: true },
+          folderId:
+            userRole === WorkspaceRole.GUEST
+              ? undefined
+              : folderId === 'root'
+              ? null
+              : folderId,
+          workspaceId,
+          collaborators:
+            userRole === WorkspaceRole.GUEST
+              ? { some: { userId: user.id } }
+              : undefined,
+          ...(search
+            ? { name: { contains: search, mode: 'insensitive' as const } }
+            : {}),
+          ...(statusConditions.length > 0 ? { OR: statusConditions } : {}),
+          ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          name: true,
+          publishedTypebot: { select: { id: true } },
+          id: true,
+          icon: true,
+          createdAt: true,
+        },
+      })) as (Pick<Typebot, 'name' | 'id' | 'icon' | 'createdAt'> & {
+        publishedTypebot: Pick<PublicTypebot, 'id'>
+      })[]
+
+      if (!typebots)
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'No typebots found',
+        })
+
+      return {
+        typebots: typebots.map((typebot) => ({
+          publishedTypebotId: typebot.publishedTypebot?.id,
+          ...omit(typebot, 'publishedTypebot'),
+        })),
+      }
     }
-  })
+  )
