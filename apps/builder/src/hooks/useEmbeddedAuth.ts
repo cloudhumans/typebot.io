@@ -1,4 +1,7 @@
-import { handleEmbeddedAuthentication } from '@/features/embedded-auth'
+import {
+  handleEmbeddedAuthentication,
+  buildEmbeddedCallbackUrl,
+} from '@/features/embedded-auth'
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -25,7 +28,11 @@ export const useEmbeddedAuth = () => {
     // only attempt auth once
     authAttempted.current = true
 
-    handleEmbeddedAuthentication({ session: sessionData, token: embeddedJwt })
+    handleEmbeddedAuthentication({
+      session: sessionData,
+      token: embeddedJwt,
+      callbackUrl: buildEmbeddedCallbackUrl(window.location),
+    })
       .then((success) => {
         if (!success)
           setAuthError('Failed to load flow builder. Please reload the page.')
