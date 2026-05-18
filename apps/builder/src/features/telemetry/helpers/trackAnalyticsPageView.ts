@@ -1,4 +1,5 @@
 import { getAuthOptions } from '@/pages/api/auth/[...nextauth]'
+import { patchSetCookieForPartitioned } from '@/features/auth/helpers/cookiePartitioning'
 import prisma from '@typebot.io/lib/prisma'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { User } from '@typebot.io/schemas'
@@ -15,6 +16,7 @@ export const trackAnalyticsPageView = async (
     select: { workspaceId: true },
   })
   if (!typebot) return
+  patchSetCookieForPartitioned(context.res)
   const session = await getServerSession(
     context.req,
     context.res,

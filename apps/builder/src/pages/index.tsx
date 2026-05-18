@@ -1,6 +1,7 @@
 import { GetServerSidePropsContext } from 'next'
 import { getServerSession } from 'next-auth'
 import { getAuthOptions } from './api/auth/[...nextauth]'
+import { patchSetCookieForPartitioned } from '@/features/auth/helpers/cookiePartitioning'
 
 export default function Page() {
   return null
@@ -9,6 +10,7 @@ export default function Page() {
 export const getServerSideProps = async (
   context: GetServerSidePropsContext
 ) => {
+  patchSetCookieForPartitioned(context.res)
   const session = await getServerSession(
     context.req,
     context.res,

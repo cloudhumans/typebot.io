@@ -3,6 +3,7 @@ import { User } from '@typebot.io/prisma'
 import { isNotDefined } from '@typebot.io/lib'
 import { sign } from 'jsonwebtoken'
 import { getAuthOptions } from '../api/auth/[...nextauth]'
+import { patchSetCookieForPartitioned } from '@/features/auth/helpers/cookiePartitioning'
 import { GetServerSidePropsContext } from 'next'
 import { env } from '@typebot.io/env'
 
@@ -11,6 +12,7 @@ export default function Page() {
 }
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
+  patchSetCookieForPartitioned(context.res)
   const session = await getServerSession(
     context.req,
     context.res,
