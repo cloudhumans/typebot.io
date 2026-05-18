@@ -1,6 +1,7 @@
 import { signIn, signOut } from 'next-auth/react'
 import { Session } from 'next-auth'
 import { trpcVanilla } from '@/lib/trpc'
+import logger from '@/helpers/logger'
 
 export const handleEmbeddedAuthentication = async ({
   session,
@@ -27,11 +28,15 @@ export const handleEmbeddedAuthentication = async ({
     })
 
     if (!result?.ok) {
+      logger.error('Embedded authentication failed', { result })
       return false
     }
 
     return true
   } catch (error) {
+    logger.error('Error during embedded authentication', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return false
   }
 }
