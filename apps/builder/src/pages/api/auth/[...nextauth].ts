@@ -17,6 +17,7 @@ import { getAtPath, isDefined, emailIsCloudhumans } from '@typebot.io/lib'
 import { mockedUser } from '@typebot.io/lib/mockedUser'
 import { getNewUserInvitations } from '@/features/auth/helpers/getNewUserInvitations'
 import { sendVerificationRequest } from '@/features/auth/helpers/sendVerificationRequest'
+import { patchSetCookieForPartitioned } from '@/features/auth/helpers/cookiePartitioning'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis/nodejs'
 import ky from 'ky'
@@ -342,45 +343,6 @@ export const getAuthOptions = ({
     },
   },
 })
-
-// CHIPS (Cookies Having Independent Partitioned State): append the `Partitioned`
-// attribute to NextAuth cookies so they survive Chrome's third-party cookie
-// phaseout when the builder is embedded inside CloudChat via iframe. Without
-// this, the CSRF cookie is dropped in the partitioned context, `getCsrfToken()`
-// on the client returns null, and `signIn('cloudchat-embedded', { redirect: false })`
-// crashes inside next-auth/react with `new URL(undefined)` → "Failed to construct
-// 'URL': Invalid URL".
-//
-// We patch `Set-Cookie` at the response layer because next-auth 4.22.1 depends on
-// `cookie@^0.5.0`, which predates `Partitioned` support (added in cookie@0.7.0),
-// so the `cookies` option in AuthOptions cannot emit the attribute itself.
-//
-// Refs:
-//   - https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Privacy_sandbox/Partitioned_cookies
-//   - https://developers.google.com/privacy-sandbox/cookies/chips
-//   - https://datatracker.ietf.org/doc/draft-cutler-httpbis-partitioned-cookies/
-const NEXT_AUTH_COOKIE_RE = /next-auth\.(session-token|callback-url|csrf-token)/
-
-const addPartitionedAttribute = (cookie: string): string =>
-  NEXT_AUTH_COOKIE_RE.test(cookie) && !/;\s*Partitioned/i.test(cookie)
-    ? `${cookie}; Partitioned`
-    : cookie
-
-const patchSetCookieForPartitioned = (res: NextApiResponse) => {
-  const origSetHeader = res.setHeader.bind(res)
-  res.setHeader = ((
-    name: string,
-    value: number | string | readonly string[]
-  ) => {
-    if (name.toLowerCase() === 'set-cookie' && value !== undefined) {
-      const patched = Array.isArray(value)
-        ? value.map(addPartitionedAttribute)
-        : addPartitionedAttribute(String(value))
-      return origSetHeader(name, patched)
-    }
-    return origSetHeader(name, value as never)
-  }) as typeof res.setHeader
-}
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const isMockingSession =
