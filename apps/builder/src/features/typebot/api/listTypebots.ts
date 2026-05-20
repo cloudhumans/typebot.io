@@ -26,13 +26,17 @@ export const listTypebots = authenticatedProcedure
         ),
       folderId: z.string().optional(),
       search: z.string().optional(),
-      filters: z
-        .object({
-          status: z.array(z.enum(['ativo', 'inativo'])).optional(),
-          createdAtFrom: z.string().datetime().optional(),
-          createdAtTo: z.string().datetime().optional(),
-        })
+      status: z
+        .preprocess(
+          (val) =>
+            typeof val === 'string'
+              ? val.split(',').filter(Boolean)
+              : val,
+          z.array(z.enum(['ativo', 'inativo']))
+        )
         .optional(),
+      createdAtFrom: z.string().datetime().optional(),
+      createdAtTo: z.string().datetime().optional(),
     })
   )
   .output(
@@ -51,7 +55,14 @@ export const listTypebots = authenticatedProcedure
   )
   .query(
     async ({
-      input: { workspaceId, folderId, search, filters },
+      input: {
+        workspaceId,
+        folderId,
+        search,
+        status,
+        createdAtFrom,
+        createdAtTo,
+      },
       ctx: { user },
     }) => {
       const workspace = await prisma.workspace.findUnique({
@@ -81,7 +92,7 @@ export const listTypebots = authenticatedProcedure
       }
 
       const statusConditions: { publishedTypebotId: null | { not: null } }[] = (
-        filters?.status ?? []
+        status ?? []
       ).map((s) =>
         s === 'ativo'
           ? { publishedTypebotId: { not: null } }
@@ -89,14 +100,10 @@ export const listTypebots = authenticatedProcedure
       )
 
       const createdAtFilter =
-        filters?.createdAtFrom || filters?.createdAtTo
+        createdAtFrom || createdAtTo
           ? {
-              ...(filters.createdAtFrom
-                ? { gte: new Date(filters.createdAtFrom) }
-                : {}),
-              ...(filters.createdAtTo
-                ? { lte: new Date(filters.createdAtTo) }
-                : {}),
+              ...(createdAtFrom ? { gte: new Date(createdAtFrom) } : {}),
+              ...(createdAtTo ? { lte: new Date(createdAtTo) } : {}),
             }
           : undefined
 
