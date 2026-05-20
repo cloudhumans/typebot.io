@@ -1,10 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import {
-  initGraceful,
-  isDraining,
-  healthSnapshot,
-  beginRequest,
-} from '@typebot.io/lib'
 import { startBotFlow } from '@typebot.io/bot-engine/startBotFlow'
 import { SessionState, TypebotInSession } from '@typebot.io/schemas'
 import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
@@ -12,30 +6,19 @@ import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/consta
 
 import { EventType } from '@typebot.io/schemas/features/events/constants'
 
-initGraceful({ component: 'viewer' })
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const end = beginRequest({ kind: 'probe', track: false })
+  // Prevent any intermediary caching; probes must reflect real-time state.
   res.setHeader('Cache-Control', 'no-store')
-  if (isDraining()) {
-    const snap = healthSnapshot()
-    end()
-    return res.status(503).json(snap)
-  }
   if (req.query.mode === 'deep') {
     const isHealthy = await checkResponsiveness()
     if (!isHealthy) {
-      end()
       return res.status(503).json({ status: 'unhealthy' })
     }
   }
-
-  const snap = healthSnapshot()
-  end()
-  return res.status(200).json(snap)
+  return res.status(200).json({ status: 'ok' })
 }
 
 const checkResponsiveness = async () => {
