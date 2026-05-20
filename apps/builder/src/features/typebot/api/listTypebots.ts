@@ -1,8 +1,8 @@
 import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
-import { WorkspaceRole } from '@typebot.io/prisma'
-import { PublicTypebot, Typebot, typebotV5Schema } from '@typebot.io/schemas'
+import { Prisma, WorkspaceRole } from '@typebot.io/prisma'
+import { typebotV5Schema } from '@typebot.io/schemas'
 import { omit } from '@typebot.io/lib'
 import { z } from 'zod'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
@@ -29,10 +29,8 @@ export const listTypebots = authenticatedProcedure
       status: z
         .preprocess(
           (val) =>
-            typeof val === 'string'
-              ? val.split(',').filter(Boolean)
-              : val,
-          z.array(z.enum(['ativo', 'inativo']))
+            typeof val === 'string' ? val.split(',').filter(Boolean) : val,
+          z.array(z.enum(['active', 'inactive']))
         )
         .optional(),
       createdAtFrom: z.string().datetime().optional(),
@@ -91,12 +89,11 @@ export const listTypebots = authenticatedProcedure
         })
       }
 
-      const statusConditions: { publishedTypebotId: null | { not: null } }[] = (
-        status ?? []
-      ).map((s) =>
-        s === 'ativo'
-          ? { publishedTypebotId: { not: null } }
-          : { publishedTypebotId: null }
+      const statusConditions: Prisma.TypebotWhereInput[] = (status ?? []).map(
+        (s) =>
+          s === 'active'
+            ? { publishedTypebot: { isNot: null } }
+            : { publishedTypebot: null }
       )
 
       const createdAtFilter =
@@ -107,7 +104,7 @@ export const listTypebots = authenticatedProcedure
             }
           : undefined
 
-      const typebots = (await prisma.typebot.findMany({
+      const typebots = await prisma.typebot.findMany({
         where: {
           isArchived: { not: true },
           folderId:
@@ -135,9 +132,7 @@ export const listTypebots = authenticatedProcedure
           icon: true,
           createdAt: true,
         },
-      })) as (Pick<Typebot, 'name' | 'id' | 'icon' | 'createdAt'> & {
-        publishedTypebot: Pick<PublicTypebot, 'id'>
-      })[]
+      })
 
       if (!typebots)
         throw new TRPCError({
