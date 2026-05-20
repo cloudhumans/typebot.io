@@ -97,10 +97,6 @@ const nextConfig = {
             source: '/healthsql',
             destination: '/api/healthsql',
           },
-          {
-            source: '/drain',
-            destination: '/api/drain',
-          },
         ]
       : [
           {
@@ -110,10 +106,6 @@ const nextConfig = {
           {
             source: '/healthsql',
             destination: '/api/healthsql',
-          },
-          {
-            source: '/drain',
-            destination: '/api/drain',
           },
         ]
   },
