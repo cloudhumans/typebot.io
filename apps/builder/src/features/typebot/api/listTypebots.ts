@@ -96,13 +96,24 @@ export const listTypebots = authenticatedProcedure
             : { publishedTypebot: null }
       )
 
+      const fromDate = createdAtFrom ? new Date(createdAtFrom) : undefined
+      const toDate = createdAtTo ? new Date(createdAtTo) : undefined
+
+      if (fromDate && toDate && fromDate > toDate)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'createdAtFrom must be before or equal to createdAtTo',
+        })
+
       const createdAtFilter =
-        createdAtFrom || createdAtTo
+        fromDate || toDate
           ? {
-              ...(createdAtFrom ? { gte: new Date(createdAtFrom) } : {}),
-              ...(createdAtTo ? { lte: new Date(createdAtTo) } : {}),
+              ...(fromDate ? { gte: fromDate } : {}),
+              ...(toDate ? { lte: toDate } : {}),
             }
           : undefined
+
+      const trimmedSearch = search?.trim()
 
       const typebots = await prisma.typebot.findMany({
         where: {
@@ -118,8 +129,10 @@ export const listTypebots = authenticatedProcedure
             userRole === WorkspaceRole.GUEST
               ? { some: { userId: user.id } }
               : undefined,
-          ...(search
-            ? { name: { contains: search, mode: 'insensitive' as const } }
+          ...(trimmedSearch
+            ? {
+                name: { contains: trimmedSearch, mode: 'insensitive' as const },
+              }
             : {}),
           ...(statusConditions.length > 0 ? { OR: statusConditions } : {}),
           ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
@@ -133,12 +146,6 @@ export const listTypebots = authenticatedProcedure
           createdAt: true,
         },
       })
-
-      if (!typebots)
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'No typebots found',
-        })
 
       return {
         typebots: typebots.map((typebot) => ({
