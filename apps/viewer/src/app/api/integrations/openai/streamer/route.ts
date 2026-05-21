@@ -127,7 +127,21 @@ export async function POST(req: Request) {
     )
 
   try {
-    if (!block.options.credentialsId) return
+    if (!block.options.credentialsId) {
+      const typebot = state.typebotsQueue[0]?.typebot
+      logger.warn('No credentialsId configured on block', {
+        typebotId: typebot?.typebotId,
+        workspaceId: typebot?.workspaceId,
+        workspaceName: typebot?.workspaceName,
+        sessionId,
+        blockId: block.id,
+        blockType: block.type,
+      })
+      return NextResponse.json(
+        { message: 'No credentialsId configured on block' },
+        { status: 400, headers: responseHeaders }
+      )
+    }
     const credentials = (
       await conn.execute('select data, iv from Credentials where id=?', [
         block.options.credentialsId,
