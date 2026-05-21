@@ -134,7 +134,16 @@ export async function POST(req: Request) {
       ])
     ).rows.at(0) as { data: string; iv: string } | undefined
     if (!credentials) {
-      logger.error('Could not find credentials in database')
+      const typebot = state.typebotsQueue[0]?.typebot
+      logger.error('Could not find credentials in database', {
+        credentialsId: block.options.credentialsId,
+        typebotId: typebot?.id,
+        workspaceId: typebot?.workspaceId,
+        workspaceName: typebot?.workspaceName,
+        sessionId,
+        blockId: block.id,
+        blockType: block.type,
+      })
       return
     }
     const decryptedCredentials = await decryptV2(
