@@ -138,7 +138,6 @@ export async function POST(req: Request) {
       logger.error('Could not find credentials in database', {
         credentialsId: block.options.credentialsId,
         typebotId: typebot?.typebotId,
-        publicTypebotId: typebot?.id,
         workspaceId: typebot?.workspaceId,
         workspaceName: typebot?.workspaceName,
         sessionId,

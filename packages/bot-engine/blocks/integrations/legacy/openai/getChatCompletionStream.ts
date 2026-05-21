@@ -30,7 +30,6 @@ export const getChatCompletionStream =
       logger.error('Could not find credentials in database', {
         credentialsId: options.credentialsId,
         typebotId: typebot?.typebotId,
-        publicTypebotId: typebot?.id,
         workspaceId: typebot?.workspaceId,
         workspaceName: typebot?.workspaceName,
         blockType: 'OpenAI (legacy, planetscale stream)',

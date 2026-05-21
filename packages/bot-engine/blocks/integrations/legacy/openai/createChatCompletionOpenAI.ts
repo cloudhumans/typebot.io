@@ -58,7 +58,6 @@ export const createChatCompletionOpenAI = async (
     logger.error('Could not find credentials in database', {
       credentialsId: options.credentialsId,
       typebotId: typebot?.typebotId,
-      publicTypebotId: typebot?.id,
       workspaceId: typebot?.workspaceId,
       workspaceName: typebot?.workspaceName,
       blockId,
