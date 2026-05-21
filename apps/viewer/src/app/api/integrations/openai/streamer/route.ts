@@ -137,14 +137,18 @@ export async function POST(req: Request) {
       const typebot = state.typebotsQueue[0]?.typebot
       logger.error('Could not find credentials in database', {
         credentialsId: block.options.credentialsId,
-        typebotId: typebot?.id,
+        typebotId: typebot?.typebotId,
+        publicTypebotId: typebot?.id,
         workspaceId: typebot?.workspaceId,
         workspaceName: typebot?.workspaceName,
         sessionId,
         blockId: block.id,
         blockType: block.type,
       })
-      return
+      return NextResponse.json(
+        { message: 'Could not find credentials in database' },
+        { status: 400, headers: responseHeaders }
+      )
     }
     const decryptedCredentials = await decryptV2(
       credentials.data,

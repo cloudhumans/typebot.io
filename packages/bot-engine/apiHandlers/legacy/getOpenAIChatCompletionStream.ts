@@ -23,7 +23,8 @@ export const getOpenAIChatCompletionStream = async (
     const typebot = state.typebotsQueue[0]?.typebot
     logger.error('Could not find credentials in database', {
       credentialsId: options.credentialsId,
-      typebotId: typebot?.id,
+      typebotId: typebot?.typebotId,
+      publicTypebotId: typebot?.id,
       workspaceId: typebot?.workspaceId,
       workspaceName: typebot?.workspaceName,
       blockType: 'OpenAI (legacy, apiHandler stream)',
