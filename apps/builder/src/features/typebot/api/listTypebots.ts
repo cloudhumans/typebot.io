@@ -35,6 +35,8 @@ export const listTypebots = authenticatedProcedure
         .optional(),
       createdAtFrom: z.string().datetime().optional(),
       createdAtTo: z.string().datetime().optional(),
+      page: z.coerce.number().int().positive().optional(),
+      per_page: z.coerce.number().int().positive().max(500).optional(),
     })
   )
   .output(
@@ -46,9 +48,16 @@ export const listTypebots = authenticatedProcedure
             icon: true,
             id: true,
             createdAt: true,
+            updatedAt: true,
           })
           .merge(z.object({ publishedTypebotId: z.string().optional() }))
       ),
+      meta: z.object({
+        total_count: z.number().int().nonnegative(),
+        current_page: z.number().int().positive(),
+        per_page: z.number().int().positive(),
+        total_pages: z.number().int().nonnegative(),
+      }),
     })
   )
   .query(
@@ -60,6 +69,8 @@ export const listTypebots = authenticatedProcedure
         status,
         createdAtFrom,
         createdAtTo,
+        page,
+        per_page,
       },
       ctx: { user },
     }) => {
@@ -115,43 +126,61 @@ export const listTypebots = authenticatedProcedure
 
       const trimmedSearch = search?.trim()
 
-      const typebots = await prisma.typebot.findMany({
-        where: {
-          isArchived: { not: true },
-          folderId:
-            userRole === WorkspaceRole.GUEST
-              ? undefined
-              : folderId === 'root'
-              ? null
-              : folderId,
-          workspaceId,
-          collaborators:
-            userRole === WorkspaceRole.GUEST
-              ? { some: { userId: user.id } }
-              : undefined,
-          ...(trimmedSearch
-            ? {
-                name: { contains: trimmedSearch, mode: 'insensitive' as const },
-              }
-            : {}),
-          ...(statusConditions.length > 0 ? { OR: statusConditions } : {}),
-          ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-        select: {
-          name: true,
-          publishedTypebot: { select: { id: true } },
-          id: true,
-          icon: true,
-          createdAt: true,
-        },
-      })
+      const where = {
+        isArchived: { not: true },
+        folderId:
+          userRole === WorkspaceRole.GUEST
+            ? undefined
+            : folderId === 'root'
+            ? null
+            : folderId,
+        workspaceId,
+        collaborators:
+          userRole === WorkspaceRole.GUEST
+            ? { some: { userId: user.id } }
+            : undefined,
+        ...(trimmedSearch
+          ? {
+              name: { contains: trimmedSearch, mode: 'insensitive' as const },
+            }
+          : {}),
+        ...(statusConditions.length > 0 ? { OR: statusConditions } : {}),
+        ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+      }
+
+      const currentPage = page ?? 1
+      const perPage = per_page ?? 25
+      const skip = (currentPage - 1) * perPage
+
+      const [totalCount, typebots] = await prisma.$transaction([
+        prisma.typebot.count({ where }),
+        prisma.typebot.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: perPage,
+          select: {
+            name: true,
+            publishedTypebot: { select: { id: true } },
+            id: true,
+            icon: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ])
 
       return {
         typebots: typebots.map((typebot) => ({
           publishedTypebotId: typebot.publishedTypebot?.id,
           ...omit(typebot, 'publishedTypebot'),
         })),
+        meta: {
+          total_count: totalCount,
+          current_page: currentPage,
+          per_page: perPage,
+          total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / perPage),
+        },
       }
     }
   )

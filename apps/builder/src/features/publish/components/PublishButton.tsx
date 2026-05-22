@@ -95,6 +95,16 @@ export const PublishButton = ({
         invalidateTypebotHistory({
           typebotId: typebot?.id as string,
         })
+        // In embedded mode, notify the host so it can show feedback and navigate
+        if (query.embedded && typeof window !== 'undefined' && window.parent) {
+          window.parent.postMessage(
+            {
+              type: 'typebot:published',
+              typebotId: typebot?.id ?? (query.typebotId as string | undefined),
+            },
+            '*'
+          )
+        }
         // Only redirect if not in embedded mode
         if (!publishedTypebot && !pathname.endsWith('share') && !query.embedded)
           push(`/typebots/${query.typebotId}/share`)
