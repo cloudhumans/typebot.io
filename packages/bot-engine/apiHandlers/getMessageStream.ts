@@ -57,7 +57,8 @@ export const getMessageStream = async ({
       const stream = await getOpenAIChatCompletionStream(
         session.state,
         block.options as ChatCompletionOpenAIOptions,
-        messages
+        messages,
+        { sessionId, blockId: block.id }
       )
       if (!stream)
         return {

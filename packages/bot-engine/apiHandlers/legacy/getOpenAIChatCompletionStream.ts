@@ -15,9 +15,21 @@ import logger from '@typebot.io/lib/logger'
 export const getOpenAIChatCompletionStream = async (
   state: SessionState,
   options: ChatCompletionOpenAIOptions,
-  messages: OpenAI.Chat.ChatCompletionMessageParam[]
+  messages: OpenAI.Chat.ChatCompletionMessageParam[],
+  ctx?: { sessionId?: string; blockId?: string }
 ) => {
-  if (!options.credentialsId) return
+  if (!options.credentialsId) {
+    const typebot = state.typebotsQueue[0]?.typebot
+    logger.warn('No credentialsId configured on block', {
+      typebotId: typebot?.typebotId,
+      workspaceId: typebot?.workspaceId,
+      workspaceName: typebot?.workspaceName,
+      sessionId: ctx?.sessionId,
+      blockId: ctx?.blockId,
+      blockType: 'legacy.openai.api_handler_stream',
+    })
+    return
+  }
   const credentials = await getCredentials(options.credentialsId)
   if (!credentials) {
     const typebot = state.typebotsQueue[0]?.typebot
@@ -26,7 +38,9 @@ export const getOpenAIChatCompletionStream = async (
       typebotId: typebot?.typebotId,
       workspaceId: typebot?.workspaceId,
       workspaceName: typebot?.workspaceName,
-      blockType: 'OpenAI (legacy, apiHandler stream)',
+      sessionId: ctx?.sessionId,
+      blockId: ctx?.blockId,
+      blockType: 'legacy.openai.api_handler_stream',
     })
     return
   }

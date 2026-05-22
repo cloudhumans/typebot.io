@@ -88,7 +88,8 @@ export async function POST(req: Request) {
       const stream = await getChatCompletionStream(conn)(
         state,
         block.options as ChatCompletionOpenAIOptions,
-        messages
+        messages,
+        { sessionId, blockId: block.id }
       )
       if (!stream)
         return NextResponse.json(
@@ -138,8 +139,8 @@ export async function POST(req: Request) {
         blockType: block.type,
       })
       return NextResponse.json(
-        { message: 'No credentialsId configured on block' },
-        { status: 400, headers: responseHeaders }
+        { message: 'Block configuration error' },
+        { status: 422, headers: responseHeaders }
       )
     }
     const credentials = (
@@ -159,8 +160,8 @@ export async function POST(req: Request) {
         blockType: block.type,
       })
       return NextResponse.json(
-        { message: 'Could not find credentials in database' },
-        { status: 400, headers: responseHeaders }
+        { message: 'Block configuration error' },
+        { status: 422, headers: responseHeaders }
       )
     }
     const decryptedCredentials = await decryptV2(

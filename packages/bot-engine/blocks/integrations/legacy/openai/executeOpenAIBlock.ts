@@ -6,7 +6,8 @@ import { createSpeechOpenAI } from './audio/createSpeechOpenAI'
 
 export const executeOpenAIBlock = async (
   state: SessionState,
-  block: OpenAIBlock
+  block: OpenAIBlock,
+  sessionId?: string
 ): Promise<ExecuteIntegrationResponse> => {
   switch (block.options?.task) {
     case 'Create chat completion':
@@ -14,11 +15,14 @@ export const executeOpenAIBlock = async (
         options: block.options,
         outgoingEdgeId: block.outgoingEdgeId,
         blockId: block.id,
+        sessionId,
       })
     case 'Create speech':
       return createSpeechOpenAI(state, {
         options: block.options,
         outgoingEdgeId: block.outgoingEdgeId,
+        blockId: block.id,
+        sessionId,
       })
     case 'Create image':
     case undefined:

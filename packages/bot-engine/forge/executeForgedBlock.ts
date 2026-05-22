@@ -43,6 +43,15 @@ export const executeForgedBlock = async (
   let credentials: { data: string; iv: string } | null = null
   if (blockDef.auth) {
     if (!block.options.credentialsId) {
+      const typebot = state.typebotsQueue[0]?.typebot
+      logger.warn('No credentialsId configured on block', {
+        typebotId: typebot?.typebotId,
+        workspaceId: typebot?.workspaceId,
+        workspaceName: typebot?.workspaceName,
+        sessionId,
+        blockId: block.id,
+        blockType: `forge.${block.type}`,
+      })
       return {
         outgoingEdgeId: block.outgoingEdgeId,
         logs: [noCredentialsError],
@@ -58,7 +67,7 @@ export const executeForgedBlock = async (
         workspaceName: typebot?.workspaceName,
         sessionId,
         blockId: block.id,
-        blockType: block.type,
+        blockType: `forge.${block.type}`,
       })
       return {
         outgoingEdgeId: block.outgoingEdgeId,

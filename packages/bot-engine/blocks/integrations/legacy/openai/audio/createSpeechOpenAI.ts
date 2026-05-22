@@ -20,9 +20,13 @@ export const createSpeechOpenAI = async (
   {
     outgoingEdgeId,
     options,
+    blockId,
+    sessionId,
   }: {
     outgoingEdgeId?: string
     options: CreateSpeechOpenAIOptions
+    blockId?: string
+    sessionId?: string
   }
 ): Promise<ExecuteIntegrationResponse> => {
   let newSessionState = state
@@ -45,6 +49,15 @@ export const createSpeechOpenAI = async (
   }
 
   if (!options.credentialsId) {
+    const typebot = newSessionState.typebotsQueue[0]?.typebot
+    logger.warn('No credentialsId configured on block', {
+      typebotId: typebot?.typebotId,
+      workspaceId: typebot?.workspaceId,
+      workspaceName: typebot?.workspaceName,
+      sessionId,
+      blockId,
+      blockType: 'legacy.openai.speech',
+    })
     return {
       outgoingEdgeId,
       logs: [noCredentialsError],
@@ -62,7 +75,9 @@ export const createSpeechOpenAI = async (
       typebotId: typebot?.typebotId,
       workspaceId: typebot?.workspaceId,
       workspaceName: typebot?.workspaceName,
-      blockType: 'OpenAI Speech (legacy)',
+      sessionId,
+      blockId,
+      blockType: 'legacy.openai.speech',
     })
     return { outgoingEdgeId, logs: [noCredentialsError] }
   }
