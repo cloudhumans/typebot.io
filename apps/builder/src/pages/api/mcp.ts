@@ -26,7 +26,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type, x-tenant, tenant, mcp-session-id, Authorization, X-MCP-Access-Token, x-include-drafts'
+    'Content-Type, x-tenant, tenant, mcp-session-id, Authorization, X-MCP-Access-Token, x-include-drafts, x-eddie-workspace-id'
   )
 
   if (req.method === 'OPTIONS') {
@@ -142,6 +142,9 @@ export default async function handler(
         }
 
         const { name, arguments: args } = params || {}
+        const eddieWorkspaceId = req.headers['x-eddie-workspace-id'] as
+          | string
+          | undefined
         logger.info('MCP tools/call', { tenant, toolName: name, requestId: id })
 
         const { tools } = await getWorkflowTools({ tenant })
@@ -164,10 +167,17 @@ export default async function handler(
           })
         }
 
+        const prefilledVariables: Record<string, unknown> = {
+          ...(args as Record<string, unknown>),
+          ...(eddieWorkspaceId
+            ? { _eddie_workspace_id: eddieWorkspaceId }
+            : {}),
+        }
+
         const startTime = Date.now()
         const result = await executeWorkflow({
           publicId: tool.publicName,
-          prefilledVariables: args as Record<string, unknown>,
+          prefilledVariables,
         })
         const durationMs = Date.now() - startTime
 
