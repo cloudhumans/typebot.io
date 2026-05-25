@@ -142,10 +142,21 @@ export default async function handler(
         }
 
         const { name, arguments: args } = params || {}
-        const eddieWorkspaceId = req.headers['x-eddie-workspace-id'] as
-          | string
-          | undefined
-        logger.info('MCP tools/call', { tenant, toolName: name, requestId: id })
+        // Header values can be `string | string[] | undefined` (e.g. when a
+        // misconfigured proxy sends the header twice). Normalize to a single
+        // string before propagating; an empty string also collapses to
+        // undefined so the prefilled variable is never set to "".
+        const rawEddieHeader = req.headers['x-eddie-workspace-id']
+        const eddieWorkspaceId =
+          (Array.isArray(rawEddieHeader)
+            ? rawEddieHeader[0]
+            : rawEddieHeader) || undefined
+        logger.info('MCP tools/call', {
+          tenant,
+          toolName: name,
+          eddieWorkspaceId,
+          requestId: id,
+        })
 
         const { tools } = await getWorkflowTools({ tenant })
         const tool = tools.find((t) => sanitizeToolName(t.name) === name)
@@ -167,8 +178,26 @@ export default async function handler(
           })
         }
 
+        // `args` originates from the JSON-RPC body, which is caller-controlled
+        // (LLM tool call arguments or direct MCP client). Workspace identity
+        // is an infra decision that must come from the header — strip the
+        // reserved `_eddie_workspace_id` so a caller cannot spoof it via the
+        // body. Also defends against prototype pollution via `__proto__` /
+        // `constructor` / `prototype` keys leaking into the prefilled
+        // variables map.
+        const RESERVED_PREFILLED_KEYS = new Set([
+          '_eddie_workspace_id',
+          '__proto__',
+          'constructor',
+          'prototype',
+        ])
+        const sanitizedArgs = Object.fromEntries(
+          Object.entries((args as Record<string, unknown>) ?? {}).filter(
+            ([key]) => !RESERVED_PREFILLED_KEYS.has(key)
+          )
+        )
         const prefilledVariables: Record<string, unknown> = {
-          ...(args as Record<string, unknown>),
+          ...sanitizedArgs,
           ...(eddieWorkspaceId
             ? { _eddie_workspace_id: eddieWorkspaceId }
             : {}),
