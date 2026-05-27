@@ -20,6 +20,7 @@ export const listFolders = authenticatedProcedure
     z.object({
       workspaceId: z.string(),
       parentFolderId: z.string().optional(),
+      search: z.string().optional(),
     })
   )
   .output(
@@ -27,44 +28,57 @@ export const listFolders = authenticatedProcedure
       folders: z.array(folderSchema),
     })
   )
-  .query(async ({ input: { workspaceId, parentFolderId }, ctx: { user } }) => {
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { id: true, name: true, members: true, plan: true },
-    })
-
-    if (!workspace) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Workspace not found',
+  .query(
+    async ({
+      input: { workspaceId, parentFolderId, search },
+      ctx: { user },
+    }) => {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { id: true, name: true, members: true, plan: true },
       })
-    }
 
-    const userRole = getUserRoleInWorkspace(
-      user.id,
-      workspace.members,
-      workspaceId,
-      user
-    )
+      if (!workspace) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        })
+      }
 
-    const hasAccess = userRole !== undefined && userRole !== WorkspaceRole.GUEST
-
-    if (!hasAccess) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Workspace not found',
-      })
-    }
-
-    const folders = await prisma.dashboardFolder.findMany({
-      where: {
+      const userRole = getUserRoleInWorkspace(
+        user.id,
+        workspace.members,
         workspaceId,
-        parentFolderId: parentFolderId ?? null,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
+        user
+      )
 
-    return { folders }
-  })
+      const hasAccess =
+        userRole !== undefined && userRole !== WorkspaceRole.GUEST
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workspace not found',
+        })
+      }
+
+      const trimmedSearch = search?.trim()
+
+      const folders = await prisma.dashboardFolder.findMany({
+        where: {
+          workspaceId,
+          ...(trimmedSearch ? {} : { parentFolderId: parentFolderId ?? null }),
+          ...(trimmedSearch
+            ? {
+                name: { contains: trimmedSearch, mode: 'insensitive' as const },
+              }
+            : {}),
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+
+      return { folders }
+    }
+  )
