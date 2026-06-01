@@ -120,7 +120,7 @@ export const executeGroup = async (
       const offendingTypebot = newSessionState.typebotsQueue[0].typebot
       logger.error('Block visit limit exceeded — terminating run', {
         typebotId: offendingTypebot.id,
-        sessionId,
+        sessionId: sessionId ?? 'preview',
         workspaceId: offendingTypebot.workspaceId ?? undefined,
         workspaceName: offendingTypebot.workspaceName ?? undefined,
         groupId: group.id,
@@ -135,6 +135,7 @@ export const executeGroup = async (
         newSessionState: {
           ...newSessionState,
           currentBlockId: undefined,
+          visitedBlockCounts: {},
         },
         clientSideActions,
         logs,
