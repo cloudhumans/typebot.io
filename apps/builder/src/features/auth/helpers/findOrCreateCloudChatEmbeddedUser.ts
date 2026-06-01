@@ -49,6 +49,7 @@ export const findOrCreateCloudChatEmbeddedUser = async (
         })
         return raced
       }
+      throw err
     }
     logger.warn('cloudchat-embedded JIT refused', {
       email: payload.email,
