@@ -47,7 +47,12 @@ export const listTypebots = authenticatedProcedure
             id: true,
             createdAt: true,
           })
-          .merge(z.object({ publishedTypebotId: z.string().optional() }))
+          .merge(
+            z.object({
+              publishedTypebotId: z.string().optional(),
+              isTool: z.boolean(),
+            })
+          )
       ),
     })
   )
@@ -144,14 +149,23 @@ export const listTypebots = authenticatedProcedure
           id: true,
           icon: true,
           createdAt: true,
+          settings: true,
+          toolDescription: true,
         },
       })
 
       return {
-        typebots: typebots.map((typebot) => ({
-          publishedTypebotId: typebot.publishedTypebot?.id,
-          ...omit(typebot, 'publishedTypebot'),
-        })),
+        typebots: typebots.map((typebot) => {
+          const settings = typebot.settings as { general?: { type?: string } }
+          const isTool =
+            settings?.general?.type === 'TOOL' &&
+            Boolean(typebot.toolDescription)
+          return {
+            publishedTypebotId: typebot.publishedTypebot?.id,
+            isTool,
+            ...omit(typebot, 'publishedTypebot', 'settings', 'toolDescription'),
+          }
+        }),
       }
     }
   )
