@@ -151,7 +151,6 @@ export const executeGroup = async (
         newSessionState: {
           ...newSessionState,
           currentBlockId: undefined,
-          visitedBlockCounts: {},
         },
         clientSideActions,
         logs,
