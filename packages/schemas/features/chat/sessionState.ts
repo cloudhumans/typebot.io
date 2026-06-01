@@ -107,6 +107,7 @@ const sessionStateSchemaV3 = sessionStateSchemaV2
       })
       .optional(),
     lastEndpointResponse: z.any().optional(),
+    visitedBlockCounts: z.record(z.string(), z.number()).optional(),
   })
 
 export type SessionState = z.infer<typeof sessionStateSchemaV3>

@@ -107,6 +107,42 @@ export const executeGroup = async (
     // Skip NOTE blocks during execution
     if (block.type === BubbleBlockType.NOTE) continue
 
+    const visitCount = (newSessionState.visitedBlockCounts?.[block.id] ?? 0) + 1
+    newSessionState = {
+      ...newSessionState,
+      visitedBlockCounts: {
+        ...(newSessionState.visitedBlockCounts ?? {}),
+        [block.id]: visitCount,
+      },
+    }
+
+    if (visitCount > env.MAX_BLOCK_VISITS_PER_SESSION) {
+      const offendingTypebot = newSessionState.typebotsQueue[0].typebot
+      logger.error('Block visit limit exceeded — terminating run', {
+        typebotId: offendingTypebot.id,
+        sessionId,
+        workspaceId: offendingTypebot.workspaceId ?? undefined,
+        workspaceName: offendingTypebot.workspaceName ?? undefined,
+        groupId: group.id,
+        groupName: group.title,
+        blockId: block.id,
+        blockType: block.type,
+        visitCount,
+        limit: env.MAX_BLOCK_VISITS_PER_SESSION,
+      })
+      return {
+        messages,
+        newSessionState: {
+          ...newSessionState,
+          currentBlockId: undefined,
+        },
+        clientSideActions,
+        logs,
+        visitedEdges,
+        setVariableHistory,
+      }
+    }
+
     if (isBubbleBlock(block)) {
       if (!block.content || (firstBubbleWasStreamed && index === 0)) {
         continue

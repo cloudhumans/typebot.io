@@ -82,6 +82,7 @@ const baseEnv = {
       .default('FREE'),
     DEBUG: boolean.optional().default('false'),
     CHAT_API_TIMEOUT: z.coerce.number().optional(),
+    MAX_BLOCK_VISITS_PER_SESSION: z.coerce.number().default(500),
     // Datadog logging configuration
     DD_LOGS_ENABLED: boolean.optional().default('false'),
     LOG_LEVEL: z
