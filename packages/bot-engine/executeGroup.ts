@@ -118,18 +118,34 @@ export const executeGroup = async (
 
     if (visitCount > env.MAX_BLOCK_VISITS_PER_SESSION) {
       const offendingTypebot = newSessionState.typebotsQueue[0].typebot
-      logger.error('Block visit limit exceeded — terminating run', {
-        typebotId: offendingTypebot.id,
-        sessionId: sessionId ?? 'preview',
-        workspaceId: offendingTypebot.workspaceId ?? undefined,
-        workspaceName: offendingTypebot.workspaceName ?? undefined,
-        groupId: group.id,
-        groupName: group.title,
-        blockId: block.id,
-        blockType: block.type,
-        visitCount,
-        limit: env.MAX_BLOCK_VISITS_PER_SESSION,
-      })
+      const offendingWorkspaceName =
+        offendingTypebot.workspaceName ?? 'unknown'
+      logger.error(
+        `${offendingWorkspaceName} - Block visit limit exceeded`,
+        {
+          workspace: {
+            id: offendingTypebot.workspaceId ?? 'unknown',
+            name: offendingWorkspaceName,
+          },
+          workflow: {
+            id: offendingTypebot.id,
+            name: offendingTypebot.name ?? 'unknown',
+            schema_version: String(offendingTypebot.version ?? 'unknown'),
+            execution_id: sessionId ?? 'preview',
+            version_id: offendingTypebot.typebotHistoryId ?? 'unknown',
+          },
+          typebot_block: {
+            id: block.id,
+            type: block.type,
+          },
+          typebot_group: {
+            id: group.id,
+            name: group.title,
+          },
+          visit_count: visitCount,
+          limit: env.MAX_BLOCK_VISITS_PER_SESSION,
+        }
+      )
       return {
         messages,
         newSessionState: {
