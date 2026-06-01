@@ -107,55 +107,58 @@ export const executeGroup = async (
     // Skip NOTE blocks during execution
     if (block.type === BubbleBlockType.NOTE) continue
 
-    const visitCount = (newSessionState.visitedBlockCounts?.[block.id] ?? 0) + 1
-    newSessionState = {
-      ...newSessionState,
-      visitedBlockCounts: {
-        ...(newSessionState.visitedBlockCounts ?? {}),
-        [block.id]: visitCount,
-      },
-    }
-
-    if (visitCount > env.MAX_BLOCK_VISITS_PER_SESSION) {
-      const offendingTypebot = newSessionState.typebotsQueue[0].typebot
-      const offendingWorkspaceName =
-        offendingTypebot.workspaceName ?? 'unknown'
-      logger.error(
-        `${offendingWorkspaceName} - Block visit limit exceeded`,
-        {
-          workspace: {
-            id: offendingTypebot.workspaceId ?? 'unknown',
-            name: offendingWorkspaceName,
-          },
-          workflow: {
-            id: offendingTypebot.id,
-            name: offendingTypebot.name ?? 'unknown',
-            schema_version: String(offendingTypebot.version ?? 'unknown'),
-            execution_id: sessionId ?? 'preview',
-            version_id: offendingTypebot.typebotHistoryId ?? 'unknown',
-          },
-          typebot_block: {
-            id: block.id,
-            type: block.type,
-          },
-          typebot_group: {
-            id: group.id,
-            name: group.title,
-          },
-          visit_count: visitCount,
-          limit: env.MAX_BLOCK_VISITS_PER_SESSION,
-        }
-      )
-      return {
-        messages,
-        newSessionState: {
-          ...newSessionState,
-          currentBlockId: undefined,
+    if (env.BLOCK_VISIT_LIMIT_ENABLED) {
+      const visitCount =
+        (newSessionState.visitedBlockCounts?.[block.id] ?? 0) + 1
+      newSessionState = {
+        ...newSessionState,
+        visitedBlockCounts: {
+          ...(newSessionState.visitedBlockCounts ?? {}),
+          [block.id]: visitCount,
         },
-        clientSideActions,
-        logs,
-        visitedEdges,
-        setVariableHistory,
+      }
+
+      if (visitCount > env.MAX_BLOCK_VISITS_PER_SESSION) {
+        const offendingTypebot = newSessionState.typebotsQueue[0].typebot
+        const offendingWorkspaceName =
+          offendingTypebot.workspaceName ?? 'unknown'
+        logger.error(
+          `${offendingWorkspaceName} - Block visit limit exceeded`,
+          {
+            workspace: {
+              id: offendingTypebot.workspaceId ?? 'unknown',
+              name: offendingWorkspaceName,
+            },
+            workflow: {
+              id: offendingTypebot.id,
+              name: offendingTypebot.name ?? 'unknown',
+              schema_version: String(offendingTypebot.version ?? 'unknown'),
+              execution_id: sessionId ?? 'preview',
+              version_id: offendingTypebot.typebotHistoryId ?? 'unknown',
+            },
+            typebot_block: {
+              id: block.id,
+              type: block.type,
+            },
+            typebot_group: {
+              id: group.id,
+              name: group.title,
+            },
+            visit_count: visitCount,
+            limit: env.MAX_BLOCK_VISITS_PER_SESSION,
+          }
+        )
+        return {
+          messages,
+          newSessionState: {
+            ...newSessionState,
+            currentBlockId: undefined,
+          },
+          clientSideActions,
+          logs,
+          visitedEdges,
+          setVariableHistory,
+        }
       }
     }
 
