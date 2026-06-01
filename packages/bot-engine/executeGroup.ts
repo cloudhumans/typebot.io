@@ -107,7 +107,11 @@ export const executeGroup = async (
     // Skip NOTE blocks during execution
     if (block.type === BubbleBlockType.NOTE) continue
 
-    if (env.BLOCK_VISIT_LIMIT_ENABLED) {
+    const willSkipBubble =
+      isBubbleBlock(block) &&
+      (!block.content || (firstBubbleWasStreamed && index === 0))
+
+    if (env.BLOCK_VISIT_LIMIT_ENABLED && !willSkipBubble) {
       const visitCount =
         (newSessionState.visitedBlockCounts?.[block.id] ?? 0) + 1
       newSessionState = {
