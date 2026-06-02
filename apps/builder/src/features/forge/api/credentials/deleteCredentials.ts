@@ -38,7 +38,7 @@ export const deleteCredentials = authenticatedProcedure
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
               message: `Credential in use by ${usages.length} flow(s). Detach it from every flow before deleting.`,
-              cause: { usages },
+              cause: { _credentialInUse: true, usages },
             })
           }
 

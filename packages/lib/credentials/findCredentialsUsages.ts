@@ -55,6 +55,7 @@ export const findCredentialsUsages = async (
     where: {
       workspaceId,
       whatsAppCredentialsId: credentialsId,
+      isArchived: false,
     },
     select: { id: true, publicId: true, name: true },
   })

@@ -62,7 +62,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         code: 'credential_delete_failed',
         credentialsId,
         workspaceId,
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : { message: String(error) },
       })
       throw error
     }

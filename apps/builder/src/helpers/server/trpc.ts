@@ -7,27 +7,33 @@ import { ZodError } from 'zod'
 import { createDatadogLoggerMiddleware } from '@typebot.io/lib/trpc/createDatadogLoggerMiddleware'
 import { User } from '@typebot.io/prisma'
 
+// Discriminates a TRPCError cause produced by the credential-in-use guard,
+// so the errorFormatter only forwards `usages` for that intentional code path
+// and stays safe when other procedures pass primitives or unrelated objects as
+// cause (e.g. custom domain procedures pass a string).
+const isCredentialInUseCause = (
+  cause: unknown
+): cause is { _credentialInUse: true; usages: unknown } =>
+  typeof cause === 'object' &&
+  cause !== null &&
+  '_credentialInUse' in cause &&
+  (cause as { _credentialInUse: unknown })._credentialInUse === true
+
 const t = initTRPC
   .context<Context>()
   .meta<OpenApiMeta>()
   .create({
     transformer: superjson,
     errorFormatter({ shape, error }) {
-      const cause = error.cause as
-        | { usages?: unknown }
-        | ZodError
-        | undefined
-        | null
       return {
         ...shape,
         data: {
           ...shape.data,
           zodError:
             error.cause instanceof ZodError ? error.cause.flatten() : null,
-          usages:
-            cause && !(cause instanceof ZodError) && 'usages' in cause
-              ? cause.usages
-              : null,
+          usages: isCredentialInUseCause(error.cause)
+            ? error.cause.usages
+            : null,
         },
       }
     },
