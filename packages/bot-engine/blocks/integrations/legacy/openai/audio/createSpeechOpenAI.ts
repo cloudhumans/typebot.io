@@ -13,6 +13,7 @@ import { uploadFileToBucket } from '@typebot.io/lib/s3/uploadFileToBucket'
 import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesInSession'
 import { createId } from '@paralleldrive/cuid2'
 import { parseVariables } from '@typebot.io/variables/parseVariables'
+import logger from '@typebot.io/lib/logger'
 
 export const createSpeechOpenAI = async (
   state: SessionState,
@@ -55,7 +56,14 @@ export const createSpeechOpenAI = async (
     },
   })
   if (!credentials) {
-    console.error('Could not find credentials in database')
+    logger.error('Could not find credentials in database', {
+      code: 'credential_not_found',
+      credentialsId: options.credentialsId,
+      typebotId: state.typebotsQueue[0]?.typebot.id,
+      publicId: state.typebotsQueue[0]?.typebot.publicId,
+      workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
+      integration: 'openai-legacy-speech',
+    })
     return { outgoingEdgeId, logs: [noCredentialsError] }
   }
   const { apiKey } = (await decrypt(

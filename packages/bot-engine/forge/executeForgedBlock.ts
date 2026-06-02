@@ -50,7 +50,18 @@ export const executeForgedBlock = async (
     }
     credentials = await getCredentials(block.options.credentialsId)
     if (!credentials) {
-      logger.error('Could not find credentials in database')
+      logger.error('Could not find credentials in database', {
+        code: 'credential_not_found',
+        credentialsId: block.options.credentialsId,
+        blockId: block.id,
+        blockType: block.type,
+        action: block.options?.action,
+        sessionId,
+        typebotId: state.typebotsQueue[0]?.typebot.id,
+        publicId: state.typebotsQueue[0]?.typebot.publicId,
+        workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
+        integration: 'forge',
+      })
       return {
         outgoingEdgeId: block.outgoingEdgeId,
         logs: [noCredentialsError],

@@ -17,6 +17,7 @@ import { updateVariablesInSession } from '@typebot.io/variables/updateVariablesI
 import { updateSession } from '../queries/updateSession'
 import { deepParseVariables } from '@typebot.io/variables/deepParseVariables'
 import { saveSetVariableHistoryItems } from '../queries/saveSetVariableHistoryItems'
+import logger from '@typebot.io/lib/logger'
 
 type Props = {
   sessionId: string
@@ -94,11 +95,38 @@ export const getMessageStream = async ({
     }
 
   try {
-    if (!block.options.credentialsId)
+    if (!block.options.credentialsId) {
+      logger.error('Could not find credentials in database', {
+        code: 'credential_not_found',
+        reason: 'missing_id',
+        sessionId,
+        blockId: block.id,
+        blockType: block.type,
+        action: block.options?.action,
+        typebotId: session.state.typebotsQueue[0]?.typebot.id,
+        publicId: session.state.typebotsQueue[0]?.typebot.publicId,
+        workspaceId: session.state.typebotsQueue[0]?.typebot.workspaceId,
+        integration: 'forge-stream-handler',
+      })
       return { status: 404, message: 'Could not find credentials' }
+    }
     const credentials = await getCredentials(block.options.credentialsId)
-    if (!credentials)
+    if (!credentials) {
+      logger.error('Could not find credentials in database', {
+        code: 'credential_not_found',
+        reason: 'not_found',
+        credentialsId: block.options.credentialsId,
+        sessionId,
+        blockId: block.id,
+        blockType: block.type,
+        action: block.options?.action,
+        typebotId: session.state.typebotsQueue[0]?.typebot.id,
+        publicId: session.state.typebotsQueue[0]?.typebot.publicId,
+        workspaceId: session.state.typebotsQueue[0]?.typebot.workspaceId,
+        integration: 'forge-stream-handler',
+      })
       return { status: 404, message: 'Could not find credentials' }
+    }
     const decryptedCredentials = await decryptV2(
       credentials.data,
       credentials.iv
