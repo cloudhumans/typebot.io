@@ -14,6 +14,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
 
 export type CredentialUsage = {
   source: 'Typebot' | 'PublicTypebot'
@@ -38,6 +39,7 @@ export const CredentialInUseModal = ({
   usages,
   credentialName,
 }: Props) => {
+  const { t } = useTranslate()
   const closeRef = useRef(null)
 
   return (
@@ -50,24 +52,20 @@ export const CredentialInUseModal = ({
       <AlertDialogOverlay>
         <AlertDialogContent>
           <AlertDialogHeader fontSize="lg" fontWeight="bold">
-            Não é possível deletar essa credencial
+            {t('credentialInUse.title')}
           </AlertDialogHeader>
 
           <AlertDialogBody>
             <Stack spacing={4}>
-              <Text>
-                {credentialName ? (
-                  <>
-                    A credencial <strong>{credentialName}</strong> está sendo
-                    usada por <strong>{usages.length}</strong> fluxo(s):
-                  </>
-                ) : (
-                  <>
-                    Essa credencial está sendo usada por{' '}
-                    <strong>{usages.length}</strong> fluxo(s):
-                  </>
-                )}
-              </Text>
+              {credentialName && (
+                <Text fontWeight="medium">
+                  {t('credentialInUse.credentialName', {
+                    name: credentialName,
+                  })}
+                </Text>
+              )}
+
+              <Text>{t('credentialInUse.body', { count: usages.length })}</Text>
 
               <List spacing={2} maxH="40vh" overflowY="auto">
                 {usages.map((u) => (
@@ -79,8 +77,8 @@ export const CredentialInUseModal = ({
                         }
                       >
                         {u.source === 'PublicTypebot'
-                          ? 'publicado'
-                          : 'rascunho'}
+                          ? t('credentialInUse.published')
+                          : t('credentialInUse.draft')}
                       </Badge>
                       <Text fontWeight="medium">{u.name}</Text>
                       {u.publicId && (
@@ -94,15 +92,14 @@ export const CredentialInUseModal = ({
               </List>
 
               <Text fontSize="sm" color="gray.600">
-                Para deletar essa credencial, primeiro remova ou substitua ela
-                nos blocos de todos os fluxos listados acima.
+                {t('credentialInUse.instructions')}
               </Text>
             </Stack>
           </AlertDialogBody>
 
           <AlertDialogFooter>
             <Button ref={closeRef} colorScheme="blue" onClick={onClose}>
-              Entendi
+              {t('credentialInUse.acknowledge')}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
