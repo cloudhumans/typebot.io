@@ -6,6 +6,7 @@ import { Block, Group, SessionState } from '@typebot.io/schemas'
 // Legacy schema enum value (`OpenAI`) plus forge block ids (lowercase, kebab).
 const LLM_BLOCK_TYPES = new Set<string>([
   'OpenAI',
+  'Zemantic AI',
   'openai',
   'anthropic',
   'mistral',
@@ -69,6 +70,10 @@ export const enforceBlockVisitLimit = ({
   const warnThreshold = isLlm
     ? env.LLM_BLOCK_VISIT_WARN_THRESHOLD
     : env.BLOCK_VISIT_WARN_THRESHOLD
+
+  // Fast path for the common case: nothing to log this visit.
+  if (visitCount !== warnThreshold && visitCount <= limit)
+    return { kind: 'continue', state: newState }
 
   const typebot = newState.typebotsQueue[0].typebot
   const workspaceName = typebot.workspaceName ?? 'unknown'
