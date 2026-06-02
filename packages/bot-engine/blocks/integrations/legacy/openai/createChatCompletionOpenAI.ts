@@ -59,7 +59,6 @@ export const createChatCompletionOpenAI = async (
       credentialsId: options.credentialsId,
       blockId,
       typebotId: state.typebotsQueue[0]?.typebot.id,
-      publicId: state.typebotsQueue[0]?.typebot.publicId,
       workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
       integration: 'openai-legacy-chat',
     })

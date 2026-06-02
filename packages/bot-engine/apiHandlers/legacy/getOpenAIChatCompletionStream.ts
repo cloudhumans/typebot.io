@@ -24,7 +24,6 @@ export const getOpenAIChatCompletionStream = async (
       code: 'credential_not_found',
       credentialsId: options.credentialsId,
       typebotId: state.typebotsQueue[0]?.typebot.id,
-      publicId: state.typebotsQueue[0]?.typebot.publicId,
       workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
       integration: 'openai-legacy-handler-stream',
     })

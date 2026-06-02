@@ -58,7 +58,6 @@ export const executeForgedBlock = async (
         action: block.options?.action,
         sessionId,
         typebotId: state.typebotsQueue[0]?.typebot.id,
-        publicId: state.typebotsQueue[0]?.typebot.publicId,
         workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
         integration: 'forge',
       })

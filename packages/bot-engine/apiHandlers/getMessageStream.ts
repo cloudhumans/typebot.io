@@ -104,7 +104,6 @@ export const getMessageStream = async ({
         blockType: block.type,
         action: block.options?.action,
         typebotId: session.state.typebotsQueue[0]?.typebot.id,
-        publicId: session.state.typebotsQueue[0]?.typebot.publicId,
         workspaceId: session.state.typebotsQueue[0]?.typebot.workspaceId,
         integration: 'forge-stream-handler',
       })
@@ -121,7 +120,6 @@ export const getMessageStream = async ({
         blockType: block.type,
         action: block.options?.action,
         typebotId: session.state.typebotsQueue[0]?.typebot.id,
-        publicId: session.state.typebotsQueue[0]?.typebot.publicId,
         workspaceId: session.state.typebotsQueue[0]?.typebot.workspaceId,
         integration: 'forge-stream-handler',
       })
