@@ -17,7 +17,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'DELETE') {
     const credentialsId = req.query.credentialsId as string | undefined
     if (!credentialsId) return badRequest(res)
-    const force = req.query.force === 'true'
 
     const membership = await prisma.memberInWorkspace.findFirst({
       where: { workspaceId, userId: user.id },
@@ -35,30 +34,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             tx
           )
 
-          if (usages.length > 0 && !force) {
+          if (usages.length > 0) {
             return {
               precondition: 'in_use' as const,
               usages,
               deletedCount: 0,
             }
-          }
-
-          if (usages.length > 0 && force) {
-            logger.warn('credential_force_deleted', {
-              code: 'credential_force_deleted',
-              credentialsId,
-              workspaceId,
-              userId: user.id,
-              userEmail: user.email,
-              usagesCount: usages.length,
-              affectedFlows: usages.map((u) => ({
-                source: u.source,
-                typebotId: u.typebotId,
-                publicId: u.publicId,
-                name: u.name,
-              })),
-              endpoint: 'pages.api.credentials.[credentialsId]',
-            })
           }
 
           const deleted = await tx.credentials.deleteMany({
@@ -71,7 +52,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       if (result.precondition === 'in_use')
         return res.status(412).send({
-          message: `Credential in use by ${result.usages.length} flow(s).`,
+          message: `Credential in use by ${result.usages.length} flow(s). Detach it from every flow before deleting.`,
           usages: result.usages,
         })
 

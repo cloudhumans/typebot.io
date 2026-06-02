@@ -25,36 +25,32 @@ export type CredentialUsage = {
 type Props = {
   isOpen: boolean
   onClose: () => void
-  onConfirmForceDelete: () => void
   usages: CredentialUsage[]
-  isForcing: boolean
   credentialName?: string
 }
 
-// Lists the flows that reference a credential the user just tried to delete,
-// and offers a "force delete" override. The override triggers a
-// credential_force_deleted audit log on the server.
+// Informs the user that a credential cannot be deleted because it is still
+// referenced by flows in the workspace. The user must detach the credential
+// from every listed flow before deletion is allowed.
 export const CredentialInUseModal = ({
   isOpen,
   onClose,
-  onConfirmForceDelete,
   usages,
-  isForcing,
   credentialName,
 }: Props) => {
-  const cancelRef = useRef(null)
+  const closeRef = useRef(null)
 
   return (
     <AlertDialog
       isOpen={isOpen}
-      leastDestructiveRef={cancelRef}
+      leastDestructiveRef={closeRef}
       onClose={onClose}
       size="lg"
     >
       <AlertDialogOverlay>
         <AlertDialogContent>
           <AlertDialogHeader fontSize="lg" fontWeight="bold">
-            Essa credencial está em uso
+            Não é possível deletar essa credencial
           </AlertDialogHeader>
 
           <AlertDialogBody>
@@ -97,24 +93,16 @@ export const CredentialInUseModal = ({
                 ))}
               </List>
 
-              <Text fontSize="sm" color="orange.600">
-                Deletar mesmo assim vai quebrar esses fluxos até que você
-                associe outra credencial nos blocos afetados.
+              <Text fontSize="sm" color="gray.600">
+                Para deletar essa credencial, primeiro remova ou substitua ela
+                nos blocos de todos os fluxos listados acima.
               </Text>
             </Stack>
           </AlertDialogBody>
 
           <AlertDialogFooter>
-            <Button ref={cancelRef} onClick={onClose} isDisabled={isForcing}>
-              Cancelar
-            </Button>
-            <Button
-              colorScheme="red"
-              onClick={onConfirmForceDelete}
-              ml={3}
-              isLoading={isForcing}
-            >
-              Deletar mesmo assim
+            <Button ref={closeRef} colorScheme="blue" onClick={onClose}>
+              Entendi
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

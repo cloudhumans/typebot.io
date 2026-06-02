@@ -4,7 +4,6 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { isWriteWorkspaceForbidden } from '@/features/workspace/helpers/isWriteWorkspaceForbidden'
 import { findCredentialsUsages } from '@typebot.io/lib/credentials/findCredentialsUsages'
-import logger from '@typebot.io/lib/logger'
 
 export const deleteCredentials = authenticatedProcedure
   .meta({
@@ -20,7 +19,6 @@ export const deleteCredentials = authenticatedProcedure
     z.object({
       credentialsId: z.string(),
       workspaceId: z.string(),
-      force: z.boolean().optional(),
     })
   )
   .output(
@@ -29,7 +27,7 @@ export const deleteCredentials = authenticatedProcedure
     })
   )
   .mutation(
-    async ({ input: { credentialsId, workspaceId, force }, ctx: { user } }) => {
+    async ({ input: { credentialsId, workspaceId }, ctx: { user } }) => {
       const workspace = await prisma.workspace.findUnique({
         where: {
           id: workspaceId,
@@ -50,29 +48,11 @@ export const deleteCredentials = authenticatedProcedure
             tx
           )
 
-          if (usages.length > 0 && !force) {
+          if (usages.length > 0) {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
-              message: `Credential in use by ${usages.length} flow(s).`,
+              message: `Credential in use by ${usages.length} flow(s). Detach it from every flow before deleting.`,
               cause: { usages },
-            })
-          }
-
-          if (usages.length > 0 && force) {
-            logger.warn('credential_force_deleted', {
-              code: 'credential_force_deleted',
-              credentialsId,
-              workspaceId,
-              userId: user.id,
-              userEmail: user.email,
-              usagesCount: usages.length,
-              affectedFlows: usages.map((u) => ({
-                source: u.source,
-                typebotId: u.typebotId,
-                publicId: u.publicId,
-                name: u.name,
-              })),
-              endpoint: 'credentials.deleteCredentials',
             })
           }
 

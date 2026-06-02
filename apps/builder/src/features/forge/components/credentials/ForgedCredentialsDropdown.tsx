@@ -48,11 +48,9 @@ export const ForgedCredentialsDropdown = ({
   const [isDeleting, setIsDeleting] = useState<string>()
 
   const [inUseModalState, setInUseModalState] = useState<{
-    credentialsId: string
     credentialName?: string
     usages: CredentialUsage[]
   } | null>(null)
-  const [isForcing, setIsForcing] = useState(false)
 
   const { mutate } = trpc.credentials.deleteCredentials.useMutation({
     onMutate: ({ credentialsId }) => {
@@ -66,7 +64,6 @@ export const ForgedCredentialsDropdown = ({
           (c) => c.id === variables.credentialsId
         )?.name
         setInUseModalState({
-          credentialsId: variables.credentialsId,
           credentialName,
           usages,
         })
@@ -79,23 +76,11 @@ export const ForgedCredentialsDropdown = ({
     onSuccess: ({ credentialsId }) => {
       if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
       refetch()
-      setInUseModalState(null)
     },
     onSettled: () => {
       setIsDeleting(undefined)
-      setIsForcing(false)
     },
   })
-
-  const handleConfirmForceDelete = () => {
-    if (!inUseModalState || !workspace) return
-    setIsForcing(true)
-    mutate({
-      workspaceId: workspace.id,
-      credentialsId: inUseModalState.credentialsId,
-      force: true,
-    })
-  }
 
   const currentCredential = data?.credentials.find(
     (c) => c.id === currentCredentialsId
@@ -211,9 +196,7 @@ export const ForgedCredentialsDropdown = ({
       <CredentialInUseModal
         isOpen={inUseModalState !== null}
         onClose={() => setInUseModalState(null)}
-        onConfirmForceDelete={handleConfirmForceDelete}
         usages={inUseModalState?.usages ?? []}
-        isForcing={isForcing}
         credentialName={inUseModalState?.credentialName}
       />
     </>
