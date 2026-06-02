@@ -13,12 +13,21 @@ const t = initTRPC
   .create({
     transformer: superjson,
     errorFormatter({ shape, error }) {
+      const cause = error.cause as
+        | { usages?: unknown }
+        | ZodError
+        | undefined
+        | null
       return {
         ...shape,
         data: {
           ...shape.data,
           zodError:
             error.cause instanceof ZodError ? error.cause.flatten() : null,
+          usages:
+            cause && !(cause instanceof ZodError) && 'usages' in cause
+              ? cause.usages
+              : null,
         },
       }
     },
