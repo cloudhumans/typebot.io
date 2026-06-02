@@ -40,6 +40,7 @@ import {
   parseBubbleBlock,
 } from './parseBubbleBlock'
 import logger from '@typebot.io/lib/logger'
+import { enforceBlockVisitLimit } from './enforceBlockVisitLimit'
 
 type ContextProps = {
   version: 1 | 2
@@ -111,58 +112,22 @@ export const executeGroup = async (
       isBubbleBlock(block) &&
       (!block.content || (firstBubbleWasStreamed && index === 0))
 
-    if (env.BLOCK_VISIT_LIMIT_ENABLED && !willSkipBubble) {
-      const visitCount =
-        (newSessionState.visitedBlockCounts?.[block.id] ?? 0) + 1
-      newSessionState = {
-        ...newSessionState,
-        visitedBlockCounts: {
-          ...(newSessionState.visitedBlockCounts ?? {}),
-          [block.id]: visitCount,
-        },
-      }
-
-      if (visitCount > env.MAX_BLOCK_VISITS_PER_SESSION) {
-        const offendingTypebot = newSessionState.typebotsQueue[0].typebot
-        const offendingWorkspaceName =
-          offendingTypebot.workspaceName ?? 'unknown'
-        logger.error(
-          `${offendingWorkspaceName} - Block visit limit exceeded`,
-          {
-            workspace: {
-              id: offendingTypebot.workspaceId ?? 'unknown',
-              name: offendingWorkspaceName,
-            },
-            workflow: {
-              id: offendingTypebot.id,
-              name: offendingTypebot.name ?? 'unknown',
-              schema_version: String(offendingTypebot.version ?? 'unknown'),
-              execution_id: sessionId ?? 'preview',
-              version_id: offendingTypebot.typebotHistoryId ?? 'unknown',
-            },
-            typebot_block: {
-              id: block.id,
-              type: block.type,
-            },
-            typebot_group: {
-              id: group.id,
-              name: group.title,
-            },
-            visit_count: visitCount,
-            limit: env.MAX_BLOCK_VISITS_PER_SESSION,
-          }
-        )
-        return {
-          messages,
-          newSessionState: {
-            ...newSessionState,
-            currentBlockId: undefined,
-          },
-          clientSideActions,
-          logs,
-          visitedEdges,
-          setVariableHistory,
-        }
+    const visitLimitOutcome = enforceBlockVisitLimit({
+      state: newSessionState,
+      block,
+      group,
+      sessionId,
+      willSkipBubble,
+    })
+    newSessionState = visitLimitOutcome.state
+    if (visitLimitOutcome.kind === 'terminate') {
+      return {
+        messages,
+        newSessionState,
+        clientSideActions,
+        logs,
+        visitedEdges,
+        setVariableHistory,
       }
     }
 
