@@ -8,6 +8,7 @@ import { mockedUser } from '@typebot.io/lib/mockedUser'
 import { emailIsCloudhumans } from '@typebot.io/lib'
 import { DatabaseUserWithCognito } from '../types/cognito'
 import { verifyCognitoToken } from './verifyCognitoToken'
+import { findOrCreateCloudChatEmbeddedUser } from './findOrCreateCloudChatEmbeddedUser'
 import { patchSetCookieForPartitioned } from './cookiePartitioning'
 import logger from '@/helpers/logger'
 
@@ -43,9 +44,7 @@ const authenticateByEmbeddedToken = async (
       cognitoToken: token,
     })
 
-    const user = await prisma.user.findUnique({
-      where: { email: payload.email },
-    })
+    const user = await findOrCreateCloudChatEmbeddedUser(prisma, payload)
 
     if (!user) return
 
