@@ -165,6 +165,7 @@ export const startSession = async ({
       : undefined,
     setVariableIdsForHistory:
       extractVariableIdsUsedForTranscript(typebotInSession),
+    visitedBlockCounts: {},
     ...initialSessionState,
   }
 
