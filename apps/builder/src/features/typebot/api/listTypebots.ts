@@ -7,6 +7,13 @@ import { omit } from '@typebot.io/lib'
 import { z } from 'zod'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
 
+// Minimal, lenient schema: we only need `general.type` to decide if a typebot
+// is a tool. Validating the full settingsSchema would make an invalid sibling
+// field hide a legit TOOL (isTool: false), letting it leak past excludeTools.
+const toolSettingsSchema = z.object({
+  general: z.object({ type: z.string().nullish() }).nullish(),
+})
+
 export const listTypebots = authenticatedProcedure
   .meta({
     openapi: {
@@ -35,6 +42,13 @@ export const listTypebots = authenticatedProcedure
         .optional(),
       createdAtFrom: z.string().datetime().optional(),
       createdAtTo: z.string().datetime().optional(),
+      excludeTools: z
+        .preprocess(
+          (val) => (typeof val === 'string' ? val === 'true' : val),
+          z.boolean()
+        )
+        .optional()
+        .describe('When true, omit TOOL-type typebots from the response.'),
     })
   )
   .output(
@@ -47,7 +61,12 @@ export const listTypebots = authenticatedProcedure
             id: true,
             createdAt: true,
           })
-          .merge(z.object({ publishedTypebotId: z.string().optional() }))
+          .merge(
+            z.object({
+              publishedTypebotId: z.string().optional(),
+              isTool: z.boolean(),
+            })
+          )
       ),
     })
   )
@@ -60,6 +79,7 @@ export const listTypebots = authenticatedProcedure
         status,
         createdAtFrom,
         createdAtTo,
+        excludeTools,
       },
       ctx: { user },
     }) => {
@@ -144,14 +164,24 @@ export const listTypebots = authenticatedProcedure
           id: true,
           icon: true,
           createdAt: true,
+          settings: true,
         },
       })
 
       return {
-        typebots: typebots.map((typebot) => ({
-          publishedTypebotId: typebot.publishedTypebot?.id,
-          ...omit(typebot, 'publishedTypebot'),
-        })),
+        typebots: typebots
+          .map((typebot) => {
+            const parsedSettings = toolSettingsSchema.safeParse(typebot.settings)
+            const isTool =
+              parsedSettings.success &&
+              parsedSettings.data.general?.type === 'TOOL'
+            return {
+              publishedTypebotId: typebot.publishedTypebot?.id,
+              isTool,
+              ...omit(typebot, 'publishedTypebot', 'settings'),
+            }
+          })
+          .filter((typebot) => !excludeTools || !typebot.isTool),
       }
     }
   )
