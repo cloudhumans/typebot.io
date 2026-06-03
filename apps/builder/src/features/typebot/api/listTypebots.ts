@@ -2,7 +2,7 @@ import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { Prisma, WorkspaceRole } from '@typebot.io/prisma'
-import { typebotV5Schema } from '@typebot.io/schemas'
+import { typebotV5Schema, settingsSchema } from '@typebot.io/schemas'
 import { omit } from '@typebot.io/lib'
 import { z } from 'zod'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
@@ -35,6 +35,13 @@ export const listTypebots = authenticatedProcedure
         .optional(),
       createdAtFrom: z.string().datetime().optional(),
       createdAtTo: z.string().datetime().optional(),
+      excludeTools: z
+        .preprocess(
+          (val) => (typeof val === 'string' ? val === 'true' : val),
+          z.boolean()
+        )
+        .optional()
+        .describe('When true, omit TOOL-type typebots from the response.'),
     })
   )
   .output(
@@ -65,6 +72,7 @@ export const listTypebots = authenticatedProcedure
         status,
         createdAtFrom,
         createdAtTo,
+        excludeTools,
       },
       ctx: { user },
     }) => {
@@ -155,17 +163,24 @@ export const listTypebots = authenticatedProcedure
       })
 
       return {
-        typebots: typebots.map((typebot) => {
-          const settings = typebot.settings as { general?: { type?: string } }
-          const isTool =
-            settings?.general?.type === 'TOOL' &&
-            Boolean(typebot.toolDescription)
-          return {
-            publishedTypebotId: typebot.publishedTypebot?.id,
-            isTool,
-            ...omit(typebot, 'publishedTypebot', 'settings', 'toolDescription'),
-          }
-        }),
+        typebots: typebots
+          .map((typebot) => {
+            const parsedSettings = settingsSchema.safeParse(typebot.settings)
+            const isTool =
+              parsedSettings.success &&
+              parsedSettings.data.general?.type === 'TOOL'
+            return {
+              publishedTypebotId: typebot.publishedTypebot?.id,
+              isTool,
+              ...omit(
+                typebot,
+                'publishedTypebot',
+                'settings',
+                'toolDescription'
+              ),
+            }
+          })
+          .filter((typebot) => !excludeTools || !typebot.isTool),
       }
     }
   )
