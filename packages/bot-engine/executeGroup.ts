@@ -110,7 +110,7 @@ export const executeGroup = async (
 
     const willSkipBubble =
       isBubbleBlock(block) &&
-      (!block.content || (firstBubbleWasStreamed && index === 0))
+      (!block.content || (firstBubbleWasStreamed === true && index === 0))
 
     const visitLimitOutcome = enforceBlockVisitLimit({
       state: newSessionState,
