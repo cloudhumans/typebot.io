@@ -171,9 +171,7 @@ export const listTypebots = authenticatedProcedure
       return {
         typebots: typebots
           .map((typebot) => {
-            const parsedSettings = toolSettingsSchema.safeParse(
-              typebot.settings
-            )
+            const parsedSettings = toolSettingsSchema.safeParse(typebot.settings)
             const isTool =
               parsedSettings.success &&
               parsedSettings.data.general?.type === 'TOOL'
