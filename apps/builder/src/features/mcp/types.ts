@@ -10,7 +10,6 @@ export interface WorkflowTool {
   variables: Array<{
     name?: string
     description?: string
-    required?: boolean
   }>
   publicName: string
   createdAt: Date

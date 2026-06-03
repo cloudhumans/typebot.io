@@ -20,11 +20,7 @@ export function transformToMCPTool(tool: WorkflowTool) {
         type: 'string',
         description: v.description || `Input for ${v.name}`,
       }
-      // Only mandatory inputs go into `required`. A variable declared as
-      // optional in the editor (`required: false`) stays in `properties` but
-      // out of `required`, so the agent may omit it instead of sending "".
-      // `undefined`/`true` keeps the legacy default of mandatory.
-      if (v.required !== false) required.push(v.name)
+      required.push(v.name)
     }
   })
 
