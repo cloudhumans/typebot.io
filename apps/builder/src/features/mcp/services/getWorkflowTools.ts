@@ -90,13 +90,20 @@ export async function getWorkflowTools({
 
       let variables = declaredVariables
         .map((v) => {
-          const vObj = v as { variableId?: string; description?: string }
+          const vObj = v as {
+            variableId?: string
+            description?: string
+            required?: boolean
+          }
           const variable = typebotVariables.find(
             (tv) => tv.id === vObj.variableId
           )
           return {
             name: variable?.name,
             description: vObj.description,
+            // `required` defaults to true in the Declare Variables schema, so
+            // an absent flag (legacy tools) keeps the variable mandatory.
+            required: vObj.required ?? true,
           }
         })
         .filter((v) => v.name)
