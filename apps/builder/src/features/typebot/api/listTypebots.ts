@@ -2,10 +2,17 @@ import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { Prisma, WorkspaceRole } from '@typebot.io/prisma'
-import { typebotV5Schema, settingsSchema } from '@typebot.io/schemas'
+import { typebotV5Schema } from '@typebot.io/schemas'
 import { omit } from '@typebot.io/lib'
 import { z } from 'zod'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
+
+// Minimal, lenient schema: we only need `general.type` to decide if a typebot
+// is a tool. Validating the full settingsSchema would make an invalid sibling
+// field hide a legit TOOL (isTool: false), letting it leak past excludeTools.
+const toolSettingsSchema = z.object({
+  general: z.object({ type: z.string().nullish() }).nullish(),
+})
 
 export const listTypebots = authenticatedProcedure
   .meta({
@@ -158,26 +165,20 @@ export const listTypebots = authenticatedProcedure
           icon: true,
           createdAt: true,
           settings: true,
-          toolDescription: true,
         },
       })
 
       return {
         typebots: typebots
           .map((typebot) => {
-            const parsedSettings = settingsSchema.safeParse(typebot.settings)
+            const parsedSettings = toolSettingsSchema.safeParse(typebot.settings)
             const isTool =
               parsedSettings.success &&
               parsedSettings.data.general?.type === 'TOOL'
             return {
               publishedTypebotId: typebot.publishedTypebot?.id,
               isTool,
-              ...omit(
-                typebot,
-                'publishedTypebot',
-                'settings',
-                'toolDescription'
-              ),
+              ...omit(typebot, 'publishedTypebot', 'settings'),
             }
           })
           .filter((typebot) => !excludeTools || !typebot.isTool),
