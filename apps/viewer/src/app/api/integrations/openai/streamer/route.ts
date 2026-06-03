@@ -88,7 +88,8 @@ export async function POST(req: Request) {
       const stream = await getChatCompletionStream(conn)(
         state,
         block.options as ChatCompletionOpenAIOptions,
-        messages
+        messages,
+        { sessionId, blockId: block.id }
       )
       if (!stream)
         return NextResponse.json(
@@ -127,15 +128,41 @@ export async function POST(req: Request) {
     )
 
   try {
-    if (!block.options.credentialsId) return
+    if (!block.options.credentialsId) {
+      const typebot = state.typebotsQueue[0]?.typebot
+      logger.warn('No credentialsId configured on block', {
+        typebotId: typebot?.typebotId,
+        workspaceId: typebot?.workspaceId,
+        workspaceName: typebot?.workspaceName,
+        sessionId,
+        blockId: block.id,
+        blockType: block.type,
+      })
+      return NextResponse.json(
+        { message: 'Block configuration error' },
+        { status: 422, headers: responseHeaders }
+      )
+    }
     const credentials = (
       await conn.execute('select data, iv from Credentials where id=?', [
         block.options.credentialsId,
       ])
     ).rows.at(0) as { data: string; iv: string } | undefined
     if (!credentials) {
-      logger.error('Could not find credentials in database')
-      return
+      const typebot = state.typebotsQueue[0]?.typebot
+      logger.error('Could not find credentials in database', {
+        credentialsId: block.options.credentialsId,
+        typebotId: typebot?.typebotId,
+        workspaceId: typebot?.workspaceId,
+        workspaceName: typebot?.workspaceName,
+        sessionId,
+        blockId: block.id,
+        blockType: block.type,
+      })
+      return NextResponse.json(
+        { message: 'Block configuration error' },
+        { status: 422, headers: responseHeaders }
+      )
     }
     const decryptedCredentials = await decryptV2(
       credentials.data,

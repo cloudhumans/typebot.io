@@ -10,22 +10,44 @@ import { OpenAIStream } from 'ai'
 import { parseVariableNumber } from '@typebot.io/variables/parseVariableNumber'
 import { ClientOptions, OpenAI } from 'openai'
 import { defaultOpenAIOptions } from '@typebot.io/schemas/features/blocks/integrations/openai/constants'
+import logger from '@typebot.io/lib/logger'
 
 export const getChatCompletionStream =
   (conn: Connection) =>
   async (
     state: SessionState,
     options: ChatCompletionOpenAIOptions,
-    messages: OpenAI.Chat.ChatCompletionMessageParam[]
+    messages: OpenAI.Chat.ChatCompletionMessageParam[],
+    ctx?: { sessionId?: string; blockId?: string }
   ) => {
-    if (!options.credentialsId) return
+    if (!options.credentialsId) {
+      const typebot = state.typebotsQueue[0]?.typebot
+      logger.warn('No credentialsId configured on block', {
+        typebotId: typebot?.typebotId,
+        workspaceId: typebot?.workspaceId,
+        workspaceName: typebot?.workspaceName,
+        sessionId: ctx?.sessionId,
+        blockId: ctx?.blockId,
+        blockType: 'legacy.openai.chat_stream',
+      })
+      return
+    }
     const credentials = (
       await conn.execute('select data, iv from Credentials where id=?', [
         options.credentialsId,
       ])
     ).rows.at(0) as { data: string; iv: string } | undefined
     if (!credentials) {
-      console.error('Could not find credentials in database')
+      const typebot = state.typebotsQueue[0]?.typebot
+      logger.error('Could not find credentials in database', {
+        credentialsId: options.credentialsId,
+        typebotId: typebot?.typebotId,
+        workspaceId: typebot?.workspaceId,
+        workspaceName: typebot?.workspaceName,
+        sessionId: ctx?.sessionId,
+        blockId: ctx?.blockId,
+        blockType: 'legacy.openai.chat_stream',
+      })
       return
     }
     const { apiKey } = (await decryptV2(

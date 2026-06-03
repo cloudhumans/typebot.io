@@ -47,7 +47,7 @@ export const executeIntegration =
         }
       case IntegrationBlockType.OPEN_AI:
         return {
-          ...(await executeOpenAIBlock(state, block)),
+          ...(await executeOpenAIBlock(state, block, sessionId)),
           startTimeShouldBeUpdated: true,
         }
       case IntegrationBlockType.PIXEL:

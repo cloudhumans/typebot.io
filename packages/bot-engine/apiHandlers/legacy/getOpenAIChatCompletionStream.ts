@@ -15,12 +15,33 @@ import logger from '@typebot.io/lib/logger'
 export const getOpenAIChatCompletionStream = async (
   state: SessionState,
   options: ChatCompletionOpenAIOptions,
-  messages: OpenAI.Chat.ChatCompletionMessageParam[]
+  messages: OpenAI.Chat.ChatCompletionMessageParam[],
+  ctx?: { sessionId?: string; blockId?: string }
 ) => {
-  if (!options.credentialsId) return
+  if (!options.credentialsId) {
+    const typebot = state.typebotsQueue[0]?.typebot
+    logger.warn('No credentialsId configured on block', {
+      typebotId: typebot?.typebotId,
+      workspaceId: typebot?.workspaceId,
+      workspaceName: typebot?.workspaceName,
+      sessionId: ctx?.sessionId,
+      blockId: ctx?.blockId,
+      blockType: 'legacy.openai.api_handler_stream',
+    })
+    return
+  }
   const credentials = await getCredentials(options.credentialsId)
   if (!credentials) {
-    logger.error('Could not find credentials in database')
+    const typebot = state.typebotsQueue[0]?.typebot
+    logger.error('Could not find credentials in database', {
+      credentialsId: options.credentialsId,
+      typebotId: typebot?.typebotId,
+      workspaceId: typebot?.workspaceId,
+      workspaceName: typebot?.workspaceName,
+      sessionId: ctx?.sessionId,
+      blockId: ctx?.blockId,
+      blockType: 'legacy.openai.api_handler_stream',
+    })
     return
   }
   const { apiKey } = (await decryptV2(

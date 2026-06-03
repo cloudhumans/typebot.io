@@ -30,10 +30,12 @@ export const createChatCompletionOpenAI = async (
     outgoingEdgeId,
     options,
     blockId,
+    sessionId,
   }: {
     outgoingEdgeId?: string
     options: ChatCompletionOpenAIOptions
     blockId: string
+    sessionId?: string
   }
 ): Promise<ExecuteIntegrationResponse> => {
   let newSessionState = state
@@ -43,6 +45,15 @@ export const createChatCompletionOpenAI = async (
   }
 
   if (!options.credentialsId) {
+    const typebot = newSessionState.typebotsQueue[0]?.typebot
+    logger.warn('No credentialsId configured on block', {
+      typebotId: typebot?.typebotId,
+      workspaceId: typebot?.workspaceId,
+      workspaceName: typebot?.workspaceName,
+      sessionId,
+      blockId,
+      blockType: 'legacy.openai.chat_completion',
+    })
     return {
       outgoingEdgeId,
       logs: [noCredentialsError],
@@ -54,7 +65,16 @@ export const createChatCompletionOpenAI = async (
     },
   })
   if (!credentials) {
-    logger.error('Could not find credentials in database')
+    const typebot = newSessionState.typebotsQueue[0]?.typebot
+    logger.error('Could not find credentials in database', {
+      credentialsId: options.credentialsId,
+      typebotId: typebot?.typebotId,
+      workspaceId: typebot?.workspaceId,
+      workspaceName: typebot?.workspaceName,
+      sessionId,
+      blockId,
+      blockType: 'legacy.openai.chat_completion',
+    })
     return { outgoingEdgeId, logs: [noCredentialsError] }
   }
   const { apiKey } = (await decrypt(
