@@ -45,8 +45,10 @@ describe('listTypebots', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(prisma.workspace.findUnique).mockResolvedValue(mockWorkspace as any)
+    vi.mocked(prisma.workspace.findUnique).mockResolvedValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockWorkspace as any
+    )
     vi.mocked(getUserRoleInWorkspace).mockReturnValue(WorkspaceRole.ADMIN)
   })
 
