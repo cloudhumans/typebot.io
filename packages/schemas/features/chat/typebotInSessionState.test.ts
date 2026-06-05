@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { typebotInSessionStateSchema } from './shared'
 
 // Minimal valid v6 typebot-in-session object (the pick: version, id, groups,
-// events, edges, variables, typebotId). `settings` is intentionally NOT a pick
-// field — it is captured separately as an optional field, so legacy sessions
-// serialized before `settings` was carried must still parse.
+// events, edges, variables, typebotId). `isToolWorkflow` is NOT a pick field —
+// it is captured separately as an optional field, so legacy sessions serialized
+// before it was carried must still parse.
 const makeLegacyV6Typebot = () => ({
   version: '6' as const,
   id: 'typebot-1',
@@ -21,31 +21,32 @@ const makeLegacyV6Typebot = () => ({
   ],
 })
 
-describe('typebotInSessionStateSchema — settings back-compat', () => {
-  it('parses a legacy session typebot WITHOUT settings (no throw)', () => {
+describe('typebotInSessionStateSchema — isToolWorkflow back-compat', () => {
+  it('parses a legacy session typebot WITHOUT isToolWorkflow (no throw, resolves to non-TOOL)', () => {
     const result = typebotInSessionStateSchema.safeParse(makeLegacyV6Typebot())
 
     expect(result.success).toBe(true)
     if (result.success) {
-      // settings must be undefined, not a parse error — this is the exact
-      // failure mode that would 500 getSession (strict parse) on deploy if
-      // settings were carried as a REQUIRED pick field.
-      expect((result.data as { settings?: unknown }).settings).toBeUndefined()
+      // isToolWorkflow must be undefined, not a parse error — strict
+      // getSession() parse would 500 on every pre-deploy session if this were a
+      // REQUIRED field. undefined !== true → engine falls back to non-TOOL.
+      expect(
+        (result.data as { isToolWorkflow?: unknown }).isToolWorkflow
+      ).toBeUndefined()
     }
   })
 
-  it('parses a session typebot WITH settings and exposes the TOOL flag', () => {
+  it('parses a session typebot WITH isToolWorkflow: true', () => {
     const result = typebotInSessionStateSchema.safeParse({
       ...makeLegacyV6Typebot(),
-      settings: { general: { type: 'TOOL' } },
+      isToolWorkflow: true,
     })
 
     expect(result.success).toBe(true)
     if (result.success) {
-      const data = result.data as {
-        settings?: { general?: { type?: string } }
-      }
-      expect(data.settings?.general?.type).toBe('TOOL')
+      expect((result.data as { isToolWorkflow?: boolean }).isToolWorkflow).toBe(
+        true
+      )
     }
   })
 })

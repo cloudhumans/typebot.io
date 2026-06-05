@@ -15,8 +15,7 @@ export const executeDeclareVariables = async (
     }
   }
 
-  const isToolMode =
-    state.typebotsQueue[0]?.typebot.settings?.general?.type === 'TOOL'
+  const isToolMode = state.typebotsQueue[0]?.typebot.isToolWorkflow === true
 
   // Find the first variable that doesn't have a value yet
   for (const declaredVar of variables) {

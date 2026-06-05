@@ -5,14 +5,14 @@ import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/consta
 
 const makeState = (
   variables: Array<{ id: string; name: string; value?: unknown }>,
-  type: 'default' | 'TOOL' = 'default'
+  isToolWorkflow = false
 ): SessionState =>
   ({
     typebotsQueue: [
       {
         typebot: {
           variables,
-          settings: { general: { type } },
+          isToolWorkflow,
         },
       },
     ],
@@ -35,7 +35,7 @@ const makeBlock = (
 describe('executeDeclareVariables', () => {
   describe('TOOL mode (headless — never pauses)', () => {
     it('does not pause for an optional variable without a value', async () => {
-      const state = makeState([{ id: 'v1', name: 'optionalParam' }], 'TOOL')
+      const state = makeState([{ id: 'v1', name: 'optionalParam' }], true)
       const block = makeBlock([
         { variableId: 'v1', description: 'an optional param', required: false },
       ])
@@ -51,7 +51,7 @@ describe('executeDeclareVariables', () => {
       // arrive empty. Skipping it would silently produce an incomplete payload
       // ({{var}} === ""), so we fail loudly instead — surfaced as a JSON-RPC
       // error by the /api/mcp tools/call handler. This is NOT a pause.
-      const state = makeState([{ id: 'v1', name: 'requiredParam' }], 'TOOL')
+      const state = makeState([{ id: 'v1', name: 'requiredParam' }], true)
       const block = makeBlock([
         { variableId: 'v1', description: 'a required param', required: true },
       ])
@@ -63,8 +63,8 @@ describe('executeDeclareVariables', () => {
   })
 
   describe('interactive (non-TOOL) mode — behavior preserved (blast radius zero)', () => {
-    it('still pauses for an empty variable (default settings type)', async () => {
-      const state = makeState([{ id: 'v1', name: 'someParam' }], 'default')
+    it('still pauses for an empty variable (isToolWorkflow false)', async () => {
+      const state = makeState([{ id: 'v1', name: 'someParam' }], false)
       const block = makeBlock([
         { variableId: 'v1', description: 'a param', required: false },
       ])
@@ -75,7 +75,7 @@ describe('executeDeclareVariables', () => {
       expect(result.input?.options?.variableId).toBe('v1')
     })
 
-    it('still pauses for an empty variable when settings are absent (legacy session)', async () => {
+    it('still pauses for an empty variable when isToolWorkflow is absent (legacy session)', async () => {
       const state = {
         typebotsQueue: [{ typebot: { variables: [{ id: 'v1', name: 'p' }] } }],
       } as unknown as SessionState
@@ -90,7 +90,7 @@ describe('executeDeclareVariables', () => {
   it('proceeds without input when the variable already has a value (any mode)', async () => {
     const state = makeState(
       [{ id: 'v1', name: 'filled', value: 'hello' }],
-      'TOOL'
+      true
     )
     const block = makeBlock([
       { variableId: 'v1', description: 'already filled', required: true },
