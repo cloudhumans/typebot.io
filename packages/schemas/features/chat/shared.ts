@@ -1,6 +1,7 @@
 import { z } from '../../zod'
 import { publicTypebotSchemaV5, publicTypebotSchemaV6 } from '../publicTypebot'
 import { preprocessTypebot } from '../typebot/helpers/preprocessTypebot'
+import { settingsSchema } from '../typebot/settings'
 
 const typebotInSessionStatePick = {
   version: true,
@@ -10,10 +11,6 @@ const typebotInSessionStatePick = {
   edges: true,
   variables: true,
   typebotId: true,
-  // Carried so the engine can detect TOOL-mode flows at runtime
-  // (settings.general.type === 'TOOL'). Optional on the schema, so legacy
-  // serialized sessions without it stay backward compatible.
-  settings: true,
 } as const
 
 const typebotInSessionBaseSchema = z.preprocess(
@@ -31,6 +28,10 @@ const sessionLoggingFieldsSchema = z.object({
   workspaceId: z.string().optional(),
   workspaceName: z.string().optional(),
   typebotHistoryId: z.string().optional(),
+  // Carried so the engine can detect TOOL-mode flows (settings.general.type
+  // === 'TOOL'). Optional for backward compatibility with existing serialized
+  // sessions created before this field was added.
+  settings: settingsSchema.optional(),
 })
 
 export const typebotInSessionStateSchema = typebotInSessionBaseSchema.and(
