@@ -10,6 +10,10 @@ const typebotInSessionStatePick = {
   edges: true,
   variables: true,
   typebotId: true,
+  // Carried so the engine can detect TOOL-mode flows at runtime
+  // (settings.general.type === 'TOOL'). Optional on the schema, so legacy
+  // serialized sessions without it stay backward compatible.
+  settings: true,
 } as const
 
 const typebotInSessionBaseSchema = z.preprocess(

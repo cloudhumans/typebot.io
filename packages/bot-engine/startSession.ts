@@ -536,6 +536,7 @@ const convertStartTypebotToTypebotInSession = (
         variables: startVariables,
         events: typebot.events,
         typebotId: typebot.id,
+        settings: typebot.settings,
       }
     : {
         version: typebot.version,
@@ -549,6 +550,7 @@ const convertStartTypebotToTypebotInSession = (
         variables: startVariables,
         events: typebot.events,
         typebotId: typebot.id,
+        settings: typebot.settings,
       }
 
 const extractVariableIdsUsedForTranscript = (

@@ -15,6 +15,9 @@ export const executeDeclareVariables = async (
     }
   }
 
+  const isToolMode =
+    state.typebotsQueue[0]?.typebot.settings?.general?.type === 'TOOL'
+
   // Find the first variable that doesn't have a value yet
   for (const declaredVar of variables) {
     const variable = state.typebotsQueue[0].typebot.variables.find(
@@ -32,12 +35,11 @@ export const executeDeclareVariables = async (
       continue
     }
 
-    // Optional declared variable left empty: skip it instead of pausing,
-    // honoring the `required:false` contract. Applies to any execution path —
-    // leaving the variable empty lets {{var}} resolve to "" and the flow runs
-    // through to the return block. `required` defaults to true in the schema,
-    // so required/legacy vars still block here.
-    if (declaredVar.required === false) {
+    // TOOL flows run headless (invoked by an agent, no human to answer inputs).
+    // Never pause to collect an unprovided variable — leave it empty so {{var}}
+    // resolves to "" and the run completes. Interactive (non-TOOL) flows keep
+    // the original collect-on-empty behavior untouched.
+    if (isToolMode) {
       continue
     }
 
