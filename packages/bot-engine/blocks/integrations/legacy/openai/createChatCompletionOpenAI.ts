@@ -54,7 +54,14 @@ export const createChatCompletionOpenAI = async (
     },
   })
   if (!credentials) {
-    logger.error('Could not find credentials in database')
+    logger.error('Could not find credentials in database', {
+      code: 'credential_not_found',
+      credentialsId: options.credentialsId,
+      blockId,
+      typebotId: state.typebotsQueue[0]?.typebot.id,
+      workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
+      integration: 'openai-legacy-chat',
+    })
     return { outgoingEdgeId, logs: [noCredentialsError] }
   }
   const { apiKey } = (await decrypt(

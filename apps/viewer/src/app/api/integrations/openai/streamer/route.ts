@@ -134,7 +134,16 @@ export async function POST(req: Request) {
       ])
     ).rows.at(0) as { data: string; iv: string } | undefined
     if (!credentials) {
-      logger.error('Could not find credentials in database')
+      logger.error('Could not find credentials in database', {
+        code: 'credential_not_found',
+        credentialsId: block.options.credentialsId,
+        blockId: block.id,
+        blockType: block.type,
+        action: block.options?.action,
+        typebotId: state.typebotsQueue[0]?.typebot.id,
+        workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
+        integration: 'forge-stream-route',
+      })
       return
     }
     const decryptedCredentials = await decryptV2(

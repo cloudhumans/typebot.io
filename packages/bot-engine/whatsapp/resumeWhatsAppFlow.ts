@@ -15,6 +15,7 @@ import { isDefined } from '@typebot.io/lib/utils'
 import { Reply } from '../types'
 import { setIsReplyingInChatSession } from '../queries/setIsReplyingInChatSession'
 import { removeIsReplyingInChatSession } from '../queries/removeIsReplyingInChatSession'
+import logger from '@typebot.io/lib/logger'
 
 type Props = {
   receivedMessage: WhatsAppIncomingMessage
@@ -48,7 +49,14 @@ export const resumeWhatsAppFlow = async ({
   const credentials = await getCredentials({ credentialsId, isPreview })
 
   if (!credentials) {
-    console.error('Could not find credentials')
+    logger.error('Could not find credentials in database', {
+      code: 'credential_not_found',
+      credentialsId,
+      workspaceId,
+      sessionId,
+      phoneNumberId,
+      integration: 'whatsapp',
+    })
     return {
       message: 'Message received',
     }
