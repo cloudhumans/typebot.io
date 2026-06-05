@@ -66,6 +66,27 @@ describe('executeDeclareVariables', () => {
     expect(result.input).toBeDefined()
   })
 
+  it('skips a leading optional empty var and pauses on the required one (Bugbot misroute scenario)', async () => {
+    // [optional(empty), required(empty)] — the paused input must target the
+    // REQUIRED variable, not the optional one. This is the same selection that
+    // continueBotFlow relies on to save the reply to the correct variable; if
+    // they disagreed, the reply would be saved to the optional var and the
+    // required prompt would re-appear (misroute + duplicate prompt).
+    const state = makeState([
+      { id: 'v1', name: 'optionalParam' },
+      { id: 'v2', name: 'requiredParam' },
+    ])
+    const block = makeBlock([
+      { variableId: 'v1', description: 'an optional param', required: false },
+      { variableId: 'v2', description: 'a required param', required: true },
+    ])
+
+    const result = await executeDeclareVariables(state, block)
+
+    expect(result.input).toBeDefined()
+    expect(result.input?.options?.variableId).toBe('v2')
+  })
+
   it('proceeds without input when the variable already has a value', async () => {
     const state = makeState([{ id: 'v1', name: 'filled', value: 'hello' }])
     const block = makeBlock([

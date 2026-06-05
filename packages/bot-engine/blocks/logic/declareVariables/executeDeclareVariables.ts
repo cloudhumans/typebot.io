@@ -32,11 +32,11 @@ export const executeDeclareVariables = async (
       continue
     }
 
-    // Optional param not provided: don't pause the flow. TOOL-mode typebots run
-    // server-side via a single startChat (no continuation loop), so there is no
-    // human to answer an input block. Leaving the variable empty lets {{var}}
-    // resolve to "" and the flow runs through to the return block. `required`
-    // defaults to true in the schema, so legacy/required vars keep blocking.
+    // Optional declared variable left empty: skip it instead of pausing,
+    // honoring the `required:false` contract. Applies to any execution path —
+    // leaving the variable empty lets {{var}} resolve to "" and the flow runs
+    // through to the return block. `required` defaults to true in the schema,
+    // so required/legacy vars still block here.
     if (declaredVar.required === false) {
       continue
     }

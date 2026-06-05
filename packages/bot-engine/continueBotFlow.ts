@@ -194,13 +194,30 @@ export const continueBotFlow = async (
   let formattedReply: string | undefined
 
   // Handle Declare Variables block - find the first empty variable and save the reply
-  if (block.type === LogicBlockType.DECLARE_VARIABLES && reply && typeof reply === 'string') {
+  if (
+    block.type === LogicBlockType.DECLARE_VARIABLES &&
+    reply &&
+    typeof reply === 'string'
+  ) {
     const variables = (block as any).options?.variables ?? []
     for (const declaredVar of variables) {
       const variable = state.typebotsQueue[0].typebot.variables.find(
         (v) => v.id === declaredVar.variableId
       )
-      if (!variable || (variable.value !== undefined && variable.value !== null && variable.value !== '')) {
+      if (
+        !variable ||
+        (variable.value !== undefined &&
+          variable.value !== null &&
+          variable.value !== '')
+      ) {
+        continue
+      }
+      // Optional declared variable left empty: skip it instead of collecting,
+      // honoring the `required:false` contract. This must mirror
+      // executeDeclareVariables so both sides agree on which variable is being
+      // collected; otherwise the reply would be saved to the wrong variable.
+      // `required` defaults to true, so required/legacy vars are still collected.
+      if (declaredVar.required === false) {
         continue
       }
       // Found the variable we're collecting - save it
@@ -348,11 +365,11 @@ export const continueBotFlow = async (
 
 const processAndSaveAnswer =
   (state: SessionState, block: InputBlock) =>
-    async (reply: string | undefined): Promise<SessionState> => {
-      if (!reply) return state
-      let newState = await saveAnswerInDb(state, block)(reply)
-      return newState
-    }
+  async (reply: string | undefined): Promise<SessionState> => {
+    if (!reply) return state
+    let newState = await saveAnswerInDb(state, block)(reply)
+    return newState
+  }
 
 const saveVariableValueIfAny =
   (state: SessionState, block: InputBlock) =>
@@ -387,11 +404,11 @@ const parseRetryMessage =
   ): Promise<Pick<ContinueChatResponse, 'messages' | 'input'>> => {
     const retryMessage =
       block.options &&
-        'retryMessageContent' in block.options &&
-        block.options.retryMessageContent
+      'retryMessageContent' in block.options &&
+      block.options.retryMessageContent
         ? parseVariables(state.typebotsQueue[0].typebot.variables)(
-          block.options.retryMessageContent
-        )
+            block.options.retryMessageContent
+          )
         : parseDefaultRetryMessage(block)
     return {
       messages: [
@@ -401,13 +418,13 @@ const parseRetryMessage =
           content:
             textBubbleContentFormat === 'richText'
               ? {
-                type: 'richText',
-                richText: [{ type: 'p', children: [{ text: retryMessage }] }],
-              }
+                  type: 'richText',
+                  richText: [{ type: 'p', children: [{ text: retryMessage }] }],
+                }
               : {
-                type: 'markdown',
-                markdown: retryMessage,
-              },
+                  type: 'markdown',
+                  markdown: retryMessage,
+                },
         },
       ],
       input: await parseInput(state)(block),
@@ -427,41 +444,41 @@ const parseDefaultRetryMessage = (block: InputBlock): string => {
 
 const saveAnswerInDb =
   (state: SessionState, block: InputBlock) =>
-    async (reply: string): Promise<SessionState> => {
-      let newSessionState = state
-      await saveAnswer({
-        answer: {
-          blockId: block.id,
-          content: reply,
-        },
-        reply,
-        state,
-      })
+  async (reply: string): Promise<SessionState> => {
+    let newSessionState = state
+    await saveAnswer({
+      answer: {
+        blockId: block.id,
+        content: reply,
+      },
+      reply,
+      state,
+    })
 
-      newSessionState = {
-        ...saveVariableValueIfAny(newSessionState, block)(reply),
-        previewMetadata: state.typebotsQueue[0].resultId
-          ? newSessionState.previewMetadata
-          : {
+    newSessionState = {
+      ...saveVariableValueIfAny(newSessionState, block)(reply),
+      previewMetadata: state.typebotsQueue[0].resultId
+        ? newSessionState.previewMetadata
+        : {
             ...newSessionState.previewMetadata,
             answers: (newSessionState.previewMetadata?.answers ?? []).concat({
               blockId: block.id,
               content: reply,
             }),
           },
-      }
+    }
 
-      const key = block.options?.variableId
-        ? newSessionState.typebotsQueue[0].typebot.variables.find(
+    const key = block.options?.variableId
+      ? newSessionState.typebotsQueue[0].typebot.variables.find(
           (variable) => variable.id === block.options?.variableId
         )?.name
-        : parseGroupKey(block.id, { state: newSessionState })
+      : parseGroupKey(block.id, { state: newSessionState })
 
-      return setNewAnswerInState(newSessionState)({
-        key: key ?? block.id,
-        value: reply,
-      })
-    }
+    return setNewAnswerInState(newSessionState)({
+      key: key ?? block.id,
+      value: reply,
+    })
+  }
 
 const parseGroupKey = (blockId: string, { state }: { state: SessionState }) => {
   const group = state.typebotsQueue[0].typebot.groups.find((group) =>
@@ -493,9 +510,9 @@ const setNewAnswerInState =
       typebotsQueue: state.typebotsQueue.map((typebot, index) =>
         index === 0
           ? {
-            ...typebot,
-            answers: newAnswers,
-          }
+              ...typebot,
+              answers: newAnswers,
+            }
           : typebot
       ),
     } satisfies SessionState
