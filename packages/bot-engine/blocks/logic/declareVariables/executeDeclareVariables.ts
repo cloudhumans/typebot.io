@@ -8,7 +8,7 @@ export const executeDeclareVariables = async (
   block: DeclareVariablesBlock
 ): Promise<ExecuteLogicResponse> => {
   const variables = block.options?.variables ?? []
-  
+
   if (variables.length === 0) {
     return {
       outgoingEdgeId: block.outgoingEdgeId,
@@ -20,17 +20,30 @@ export const executeDeclareVariables = async (
     const variable = state.typebotsQueue[0].typebot.variables.find(
       (v) => v.id === declaredVar.variableId
     )
-    
+
     if (!variable) continue
 
     // If the variable already has a value, skip it
-    if (variable.value !== undefined && variable.value !== null && variable.value !== '') {
+    if (
+      variable.value !== undefined &&
+      variable.value !== null &&
+      variable.value !== ''
+    ) {
+      continue
+    }
+
+    // Optional param not provided: don't pause the flow. TOOL-mode typebots run
+    // server-side via a single startChat (no continuation loop), so there is no
+    // human to answer an input block. Leaving the variable empty lets {{var}}
+    // resolve to "" and the flow runs through to the return block. `required`
+    // defaults to true in the schema, so legacy/required vars keep blocking.
+    if (declaredVar.required === false) {
       continue
     }
 
     // This variable needs input - show a text input for it
     const messages: ExecuteLogicResponse['messages'] = []
-    
+
     // Add description as a bubble if available
     if (declaredVar.description) {
       messages.push({
