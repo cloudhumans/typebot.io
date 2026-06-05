@@ -46,18 +46,19 @@ describe('executeDeclareVariables', () => {
       expect(result.outgoingEdgeId).toBe('edge-1')
     })
 
-    it('does not pause for a required variable without a value either', async () => {
-      // TOOL flows run headless: there is no human to answer an input block,
-      // so even a required variable must not block the run.
+    it('throws for a required variable without a value (no silent skip)', async () => {
+      // The MCP route does not validate `required`, so a required variable can
+      // arrive empty. Skipping it would silently produce an incomplete payload
+      // ({{var}} === ""), so we fail loudly instead — surfaced as a JSON-RPC
+      // error by the /api/mcp tools/call handler. This is NOT a pause.
       const state = makeState([{ id: 'v1', name: 'requiredParam' }], 'TOOL')
       const block = makeBlock([
         { variableId: 'v1', description: 'a required param', required: true },
       ])
 
-      const result = await executeDeclareVariables(state, block)
-
-      expect(result.input).toBeUndefined()
-      expect(result.outgoingEdgeId).toBe('edge-1')
+      await expect(executeDeclareVariables(state, block)).rejects.toThrow(
+        /Missing required variable "requiredParam"/
+      )
     })
   })
 
