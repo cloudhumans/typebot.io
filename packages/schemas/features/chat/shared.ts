@@ -20,8 +20,11 @@ const typebotInSessionBaseSchema = z.preprocess(
   ])
 )
 
-// Additional fields for logging context — optional for backward compatibility
-// with existing serialized sessions that lack these fields.
+// Optional fields merged onto the session typebot. Kept optional for backward
+// compatibility with sessions serialized before each field existed (getSession
+// parses stored state strictly, so a required field would break in-flight
+// sessions). Covers both diagnostic/logging context (name, workspaceId, ...)
+// and runtime-functional flags (isToolWorkflow, used to detect TOOL-mode flows).
 const sessionLoggingFieldsSchema = z.object({
   name: z.string().optional(),
   workspaceId: z.string().optional(),
