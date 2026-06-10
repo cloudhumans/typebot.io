@@ -33,12 +33,13 @@ Branch: `feat/gcp-oauth-external-migration`.
 
 These were established while validating locally and drive the task details below:
 
-- **The `DISABLE_SIGNUP` PR is env-only — no code change.** The gate is already implemented in two reinforcing places:
-  - `apps/builder/src/features/auth/api/customAdapter.ts:30` (adapter `createUser`)
-  - `apps/builder/src/pages/api/auth/[...nextauth].ts:326` (`signIn` callback → throws `sign-up-disabled`)
+- **The `DISABLE_SIGNUP` PR is env-only — no code change.** The gate exists in two spots, but **only the `signIn` callback is effective with our config** (`ADMIN_EMAIL` unset):
+  - `apps/builder/src/pages/api/auth/[...nextauth].ts:326` (`signIn` callback → throws `sign-up-disabled`). Uses `!env.ADMIN_EMAIL?.includes(email)`, which is `true` when `ADMIN_EMAIL` is unset → **gate fires**. ✅
+  - `apps/builder/src/features/auth/api/customAdapter.ts:30` (adapter `createUser`). Uses `env.ADMIN_EMAIL?.every(...)`, which short-circuits to `undefined` (falsy) when `ADMIN_EMAIL` is unset → **adapter check is a no-op**. ⚠️ So it is NOT a second line of defense in our config. It's also moot for interactive logins: the `signIn` callback throws first, before `createUser` is reached.
+  - Safe because no app code calls `adapter.createUser` outside the NextAuth `signIn`-gated flow (verified by grep); the only non-`signIn` user creation is embedded (`createCloudChatEmbeddedUser`), an intentional bypass. Latent upstream quirk worth noting: the adapter gate silently disables itself whenever `ADMIN_EMAIL` is empty.
   - Default is `false` (`packages/env/env.ts:71`). Migration only requires setting `DISABLE_SIGNUP=true` in the **production** environment.
   - ✅ **Confirmed:** neither `DISABLE_SIGNUP` nor `ADMIN_EMAIL` was set in the manifests (`cloudhumans/typebot.io-manifests`) → prod signup was OPEN by default. PR #80 adds `DISABLE_SIGNUP: 'true'` to the **base** builder ConfigMap (`deploy-k8s/base/typebot-builder-configmap.yaml`), inherited by both instances (`eddie` + `eddie2`).
-- **`ADMIN_EMAIL` is optional, not required.** It's an allowlist of emails that bypass the gate (self-provision without an invitation) — for bootstrap/admin accounts only. Left **unset** (most restrictive: everyone needs an invitation). The gate also applies to the **Cloud Hub Login** (`CUSTOM_OAUTH`/Cognito) direct builder login, not just Google — so new internal staff without an invitation are gated too (existing users and CloudChat embedded SSO are unaffected).
+- **`ADMIN_EMAIL` is optional, not required.** It's an allowlist of emails that bypass the gate (self-provision without an invitation) — for bootstrap/admin accounts only. Left **unset**, which makes the `signIn` callback the most restrictive (everyone needs an invitation); note the adapter check does NOT enforce in this state (see above). The gate also applies to the **Cloud Hub Login** (`CUSTOM_OAUTH`/Cognito) direct builder login, not just Google — so new internal staff without an invitation are gated too (existing users and CloudChat embedded SSO are unaffected).
 - **Embedded CloudChat users are NOT affected by `DISABLE_SIGNUP`.** They authenticate via the `cloudchat-embedded` CredentialsProvider → `cloudchatEmbeddedAuthorize` (verifies the Cognito JWT) → JIT `createCloudChatEmbeddedUser` (direct `p.user.create`, bypasses the adapter gate). It always forwards `createdAt`, so the `signIn` callback's `isNewUser` is `false` and that gate is skipped too. Trust boundary = verified Cognito JWT (`cloudChatAuthorization: true`). So `DISABLE_SIGNUP=true` only locks the **public Google OAuth signup** that External mode newly exposes; embedded SSO logins keep working.
 - **Availability — 7-day token expiry in Testing.** While the app's publishing status is **Testing**, refresh tokens for sensitive scopes expire in ~7 days (connections break weekly). This goes away only after **Production + verified**. This is a core reason the migration is needed.
 - **Going External + Publish does NOT disconnect existing users/tokens.** New authorizations see the "unverified app" warning screen until verification passes.
@@ -100,14 +101,14 @@ These were established while validating locally and drive the task details below
   Run with: `corepack pnpm@8.15.4 --filter @typebot.io/prisma exec tsx docs/superpowers/scratch/verify-signup-block.ts`
 
 - [x] **Step 5: Real Google-login E2E validation** (2026-06-10)
-  With `DISABLE_SIGNUP=true` in local `.env` and the builder restarted, signed in via Google with a fresh external account (`xandylm@gmail.com` — not admin, no invitation). Result: redirected to `/signin?error=sign-up-disabled`, and **0 `User` + 0 `Account` rows** were created (clean block; the `signIn` callback throws before the adapter creates anything).
+  With `DISABLE_SIGNUP=true` in local `.env` and the builder restarted, signed in via Google with a fresh external account (`xan***@gmail.com` — @alexandre-machado's personal Google account; not admin, no invitation). Result: redirected to `/signin?error=sign-up-disabled`, and **0 `User` + 0 `Account` rows** were created (clean block; the `signIn` callback throws before the adapter creates anything).
   > **Gotcha:** the gate only blocks **new** users (`isNewUser`). An account that already exists in the DB is not blocked. To re-test the block, use an account that has never signed in, or delete its `User` row first.
 
 ---
 
 ### Task 2: GCP OAuth Consent Screen Transition (Console Steps)
 
-- [x] **Step 1: Set production environment variable (the "DISABLE_SIGNUP PR")** — 🔄 PR open
+- [ ] **Step 1: Set production environment variable (the "DISABLE_SIGNUP PR")** — 🔄 PR open, not yet merged/deployed
   Env/config change, **not code** (see Key findings). PR [typebot.io-manifests#80](https://github.com/cloudhumans/typebot.io-manifests/pull/80) adds `DISABLE_SIGNUP: 'true'` to `deploy-k8s/base/typebot-builder-configmap.yaml`, inherited by both instances (`eddie` + `eddie2`). `ADMIN_EMAIL` intentionally left unset (most restrictive; all need invite).
   - [ ] Merge PR #80.
   - [ ] Confirm deploy: ArgoCD sync + builder pod restart (env is read at boot, not hot-reloaded).
@@ -153,9 +154,9 @@ These were established while validating locally and drive the task details below
 ### Task 4: Submit Verification Request on GCP Console
 
 - [ ] **Step 1: Justification for Scopes**
-  In the GCP Consent Screen "Data access" workflow, add justifications:
-  - `https://www.googleapis.com/auth/spreadsheets`: "Users need to connect existing spreadsheets that were not created by the app to read and write row data in their custom chatbot workflows."
-  - `https://www.googleapis.com/auth/drive.file`: "Required to create new sheets or access files chosen specifically by the user."
+  In the GCP Consent Screen "Data access" workflow, add justifications. Note: only `spreadsheets` is **sensitive** and drives verification; `drive.file` is non-sensitive. Justifications match the actual UX — selection is done via the **Google Drive Picker** (`GoogleSpreadsheetPicker.tsx`, loads `gapi`/`picker`), so the app only touches files the user explicitly picks.
+  - `https://www.googleapis.com/auth/spreadsheets` *(sensitive)*: "The Google Sheets block reads and writes cell/row data in the spreadsheet the user connects. The Sheets API has no per-file scope, so this broad scope is required to operate on the user-selected sheet."
+  - `https://www.googleapis.com/auth/drive.file` *(non-sensitive)*: "Used with the Google Drive Picker so the user explicitly selects which spreadsheet to connect, and to create new spreadsheets on the user's behalf. Grants per-file access only — never the user's full Drive."
 
 - [ ] **Step 2: Submit to Verification Center**
   Provide links to the demo video, privacy policy, and homepage, and submit for verification. After approval, the unverified-app warning disappears and sensitive-scope refresh tokens stop expiring at 7 days.
