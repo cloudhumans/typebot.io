@@ -42,6 +42,7 @@ const nextConfig = {
     '@typebot.io/schemas',
     '@typebot.io/emails',
     '@typebot.io/env',
+    '@typebot.io/mcp-tools',
   ],
   i18n: {
     defaultLocale: 'en',

@@ -138,6 +138,9 @@ importers:
       '@typebot.io/js':
         specifier: workspace:*
         version: link:../../packages/embeds/js
+      '@typebot.io/mcp-tools':
+        specifier: workspace:*
+        version: link:../../packages/mcp-tools
       '@typebot.io/nextjs':
         specifier: workspace:*
         version: link:../../packages/embeds/nextjs
@@ -325,9 +328,6 @@ importers:
       '@typebot.io/lib':
         specifier: workspace:*
         version: link:../../packages/lib
-      '@typebot.io/mcp-tools':
-        specifier: workspace:*
-        version: link:../../packages/mcp-tools
       '@typebot.io/migrations':
         specifier: workspace:*
         version: link:../../packages/migrations
@@ -442,6 +442,9 @@ importers:
       '@typebot.io/js':
         specifier: workspace:*
         version: link:../../packages/embeds/js
+      '@typebot.io/mcp-tools':
+        specifier: workspace:*
+        version: link:../../packages/mcp-tools
       '@typebot.io/nextjs':
         specifier: workspace:*
         version: link:../../packages/embeds/nextjs
@@ -527,9 +530,6 @@ importers:
       '@typebot.io/lib':
         specifier: workspace:*
         version: link:../../packages/lib
-      '@typebot.io/mcp-tools':
-        specifier: workspace:*
-        version: link:../../packages/mcp-tools
       '@typebot.io/playwright':
         specifier: workspace:*
         version: link:../../packages/playwright
