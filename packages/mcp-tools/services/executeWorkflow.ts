@@ -1,5 +1,5 @@
 import { startChat } from '@typebot.io/bot-engine/apiHandlers/startChat'
-import logger from '@/helpers/logger'
+import logger from '@typebot.io/lib/logger'
 
 interface ExecuteWorkflowParams {
   publicId: string

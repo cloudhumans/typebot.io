@@ -1,5 +1,5 @@
 import prisma from '@typebot.io/lib/prisma'
-import logger from '@/helpers/logger'
+import logger from '@typebot.io/lib/logger'
 import type { GetWorkflowToolsResult } from '../types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

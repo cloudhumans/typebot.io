@@ -9,7 +9,7 @@ vi.mock('@typebot.io/lib/prisma', () => ({
     },
   },
 }))
-vi.mock('@/helpers/logger', () => ({
+vi.mock('@typebot.io/lib/logger', () => ({
   default: {
     debug: vi.fn(),
     info: vi.fn(),
