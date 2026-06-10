@@ -33,10 +33,16 @@ export default async function handler(
     return res.status(200).end()
   }
 
-  // Extract tenant from headers or query
-  const tenant = (req.headers['x-tenant'] ||
-    req.headers['tenant'] ||
-    req.query.tenant) as string | undefined
+  // Extract tenant from headers or query. Headers and query params can be
+  // string arrays when sent multiple times (e.g. ?tenant=a&tenant=b), so we
+  // always normalize to the first value.
+  const firstValue = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value
+
+  const tenant =
+    firstValue(req.headers['x-tenant']) ||
+    firstValue(req.headers['tenant']) ||
+    firstValue(req.query.tenant)
 
   if (req.method === 'GET') {
     // SSE endpoint for server-to-client messages
@@ -65,8 +71,31 @@ export default async function handler(
     try {
       const body = req.body
 
+      // Validate the JSON-RPC envelope before dispatching.
+      if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+        return res.status(200).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Invalid Request',
+          },
+          id: null,
+        })
+      }
+
       // Handle JSON-RPC request
       const { method, params, id } = body
+
+      if (typeof method !== 'string') {
+        return res.status(200).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Invalid Request',
+          },
+          id: id ?? null,
+        })
+      }
 
       if (method === 'initialize') {
         logger.info('MCP initialize', { tenant, requestId: id })
@@ -142,6 +171,18 @@ export default async function handler(
         }
 
         const { name, arguments: args } = params || {}
+
+        if (typeof name !== 'string' || name.length === 0) {
+          return res.status(200).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32602,
+              message: 'Invalid params: "name" is required',
+            },
+            id,
+          })
+        }
+
         logger.info('MCP tools/call', { tenant, toolName: name, requestId: id })
 
         const { tools } = await getWorkflowTools({ tenant })
@@ -221,11 +262,13 @@ export default async function handler(
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       })
+      // Don't leak internal error details to the client; the full error and
+      // stack are captured in the server-side log above.
       return res.status(200).json({
         jsonrpc: '2.0',
         error: {
           code: -32603,
-          message: error instanceof Error ? error.message : 'Internal error',
+          message: 'Internal error',
         },
         id: req.body?.id ?? null,
       })
@@ -244,7 +287,7 @@ export default async function handler(
   return res.status(405).json({ error: 'Method not allowed' })
 }
 
-// Disable body parsing size limit for streaming
+// Raise the body parser size limit to 4mb for larger tool-call payloads.
 export const config = {
   api: {
     bodyParser: {
