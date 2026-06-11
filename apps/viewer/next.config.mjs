@@ -46,6 +46,7 @@ const nextConfig = {
     '@typebot.io/lib',
     '@typebot.io/schemas',
     '@typebot.io/emails',
+    '@typebot.io/mcp-tools',
   ],
   output: 'standalone',
   experimental: {

@@ -1,0 +1,17 @@
+{
+  "name": "@typebot.io/mcp-tools",
+  "version": "1.0.0",
+  "description": "Shared MCP (Model Context Protocol) tool discovery and execution for tool-type typebots.",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "@typebot.io/bot-engine": "workspace:*",
+    "@typebot.io/lib": "workspace:*"
+  },
+  "devDependencies": {
+    "@typebot.io/tsconfig": "workspace:*",
+    "typescript": "5.4.5"
+  }
+}

@@ -1,4 +1,4 @@
-import logger from '@/helpers/logger'
+import logger from '@typebot.io/lib/logger'
 
 /**
  * Extract clean output from workflow execution result.

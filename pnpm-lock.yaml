@@ -138,6 +138,9 @@ importers:
       '@typebot.io/js':
         specifier: workspace:*
         version: link:../../packages/embeds/js
+      '@typebot.io/mcp-tools':
+        specifier: workspace:*
+        version: link:../../packages/mcp-tools
       '@typebot.io/nextjs':
         specifier: workspace:*
         version: link:../../packages/embeds/nextjs
@@ -439,6 +442,9 @@ importers:
       '@typebot.io/js':
         specifier: workspace:*
         version: link:../../packages/embeds/js
+      '@typebot.io/mcp-tools':
+        specifier: workspace:*
+        version: link:../../packages/mcp-tools
       '@typebot.io/nextjs':
         specifier: workspace:*
         version: link:../../packages/embeds/nextjs
@@ -1844,6 +1850,22 @@ importers:
       '@udecode/plate-common':
         specifier: 30.4.5
         version: 30.4.5(@types/react@18.2.15)(immer@10.0.2)(react-dom@18.2.0)(react@18.2.0)(scheduler@0.23.0)(slate-history@0.100.0)(slate-hyperscript@0.100.0)(slate-react@0.102.0)(slate@0.102.0)
+
+  packages/mcp-tools:
+    dependencies:
+      '@typebot.io/bot-engine':
+        specifier: workspace:*
+        version: link:../bot-engine
+      '@typebot.io/lib':
+        specifier: workspace:*
+        version: link:../lib
+    devDependencies:
+      '@typebot.io/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: 5.4.5
+        version: 5.4.5
 
   packages/migrations:
     dependencies:

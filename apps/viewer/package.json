@@ -19,6 +19,7 @@
     "@trpc/server": "10.40.0",
     "@typebot.io/bot-engine": "workspace:*",
     "@typebot.io/js": "workspace:*",
+    "@typebot.io/mcp-tools": "workspace:*",
     "@typebot.io/nextjs": "workspace:*",
     "@typebot.io/prisma": "workspace:*",
     "@typebot.io/telemetry": "workspace:^",

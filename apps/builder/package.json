@@ -44,6 +44,7 @@
     "@typebot.io/emails": "workspace:*",
     "@typebot.io/env": "workspace:*",
     "@typebot.io/js": "workspace:*",
+    "@typebot.io/mcp-tools": "workspace:*",
     "@typebot.io/nextjs": "workspace:*",
     "@typebot.io/theme": "workspace:*",
     "@udecode/cn": "29.0.1",
