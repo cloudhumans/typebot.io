@@ -18,7 +18,7 @@
 | Task | Status |
 |------|--------|
 | 1. Validate `DISABLE_SIGNUP` gate | ✅ Done — script + real Google-login E2E |
-| 2. Set `DISABLE_SIGNUP=true` in prod env | 🔄 PR open — [typebot.io-manifests#80](https://github.com/cloudhumans/typebot.io-manifests/pull/80) (must merge + deploy before External) |
+| 2. Set `DISABLE_SIGNUP=true` in prod env | ✅ Merged — [typebot.io-manifests#80](https://github.com/cloudhumans/typebot.io-manifests/pull/80) · confirm ArgoCD deploy before External |
 | 3. Prep assets in parallel (Block A — can start now) | ⏳ Pending — domain verify · public homepage + privacy policy · consent-screen branding |
 | 4. GCP → External + In Production | ⏳ Pending (manual console) — after PR #80 lands |
 | 5. Demo video + submit verification | ⏳ Pending — Sheets read/write already validated locally |
@@ -108,10 +108,10 @@ These were established while validating locally and drive the task details below
 
 ### Task 2: GCP OAuth Consent Screen Transition (Console Steps)
 
-- [ ] **Step 1: Set production environment variable (the "DISABLE_SIGNUP PR")** — 🔄 PR open, not yet merged/deployed
+- [ ] **Step 1: Set production environment variable (the "DISABLE_SIGNUP PR")** — 🔄 merged, deploy pending
   Env/config change, **not code** (see Key findings). PR [typebot.io-manifests#80](https://github.com/cloudhumans/typebot.io-manifests/pull/80) adds `DISABLE_SIGNUP: 'true'` to `deploy-k8s/base/typebot-builder-configmap.yaml`, inherited by both instances (`eddie` + `eddie2`). `ADMIN_EMAIL` intentionally left unset (most restrictive; all need invite).
-  - [ ] Merge PR #80.
-  - [ ] Confirm deploy: ArgoCD sync + builder pod restart (env is read at boot, not hot-reloaded).
+  - [x] Merge PR #80. ✅ (2026-06-11)
+  - [ ] Confirm deploy: ArgoCD sync + builder pod restart (env is read at boot, not hot-reloaded), then verify `DISABLE_SIGNUP=true` is live in the running pod.
   - ⚠️ Must be deployed **before** publishing the app as External, so external signup is locked the instant the consent screen opens up.
 
 - [x] **Step 2: OAuth redirect URIs — no action needed**
