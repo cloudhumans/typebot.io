@@ -5,7 +5,9 @@ import {
   sanitizeToolName,
   extractToolOutput,
   transformToMCPTool,
+  checkBearerAuth,
 } from '@typebot.io/mcp-tools'
+import { env } from '@typebot.io/env'
 import logger from '@/helpers/logger'
 
 /**
@@ -31,6 +33,21 @@ export default async function handler(
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
+  }
+
+  // Bearer auth gate. Applies to every non-preflight method (GET/POST/DELETE).
+  // This is an HTTP-level guard — unauthorized requests get a real 401, never
+  // a JSON-RPC 200 envelope. Fail-closed: a missing server token yields 401.
+  const auth = checkBearerAuth(
+    req.headers.authorization,
+    env.TYPEBOT_TOOLS_API_TOKEN
+  )
+  if (!auth.authorized) {
+    if (auth.reason === 'misconfigured')
+      logger.warn(
+        'MCP endpoint misconfigured: TYPEBOT_TOOLS_API_TOKEN is not set, rejecting all requests'
+      )
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
   // Extract tenant from headers or query. Headers and query params can be

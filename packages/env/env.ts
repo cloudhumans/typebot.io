@@ -64,6 +64,10 @@ const baseEnv = {
       .url()
       .refine((url) => url.startsWith('postgres') || url.startsWith('mysql')),
     ENCRYPTION_SECRET: z.string().length(32),
+    // Bearer token guarding the MCP tools endpoint (`/api/mcp` on the viewer).
+    // Optional at the schema level so the app still boots without it, but the
+    // route fails closed (401) when it is unset — see packages/mcp-tools.
+    TYPEBOT_TOOLS_API_TOKEN: z.string().min(1).optional(),
     NEXTAUTH_URL: z.preprocess(
       guessNextAuthUrlForVercelPreview,
       z.string().url()
