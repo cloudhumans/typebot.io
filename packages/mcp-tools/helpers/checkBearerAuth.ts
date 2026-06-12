@@ -35,7 +35,10 @@ const extractBearerToken = (
   authorizationHeader: string | undefined
 ): string | undefined => {
   if (!authorizationHeader) return undefined
-  const match = /^Bearer (.+)$/.exec(authorizationHeader)
+  // RFC 7235: the auth-scheme is case-insensitive and `auth-scheme 1*SP token68`
+  // allows one or more spaces. The token68 itself never contains whitespace, so
+  // `\S+` captures it without picking up trailing spaces from a malformed input.
+  const match = /^Bearer\s+(\S+)$/i.exec(authorizationHeader)
   return match ? match[1] : undefined
 }
 

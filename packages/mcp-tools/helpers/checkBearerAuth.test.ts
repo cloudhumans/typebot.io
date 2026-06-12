@@ -10,6 +10,21 @@ describe('checkBearerAuth', () => {
     })
   })
 
+  it('accepts a case-insensitive Bearer scheme (RFC 7235)', () => {
+    expect(checkBearerAuth(`bearer ${TOKEN}`, TOKEN)).toEqual({
+      authorized: true,
+    })
+    expect(checkBearerAuth(`BEARER ${TOKEN}`, TOKEN)).toEqual({
+      authorized: true,
+    })
+  })
+
+  it('tolerates multiple spaces between scheme and token', () => {
+    expect(checkBearerAuth(`Bearer    ${TOKEN}`, TOKEN)).toEqual({
+      authorized: true,
+    })
+  })
+
   it('fails closed when no token is configured on the server', () => {
     expect(checkBearerAuth(`Bearer ${TOKEN}`, undefined)).toEqual({
       authorized: false,
