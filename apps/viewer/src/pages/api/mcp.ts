@@ -262,13 +262,18 @@ export default async function handler(
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       })
-      // Don't leak internal error details to the client; the full error and
-      // stack are captured in the server-side log above.
+      // Propagate the real error message: errors raised during tool execution
+      // (e.g. `Missing required variable "X" for TOOL workflow` thrown by
+      // executeDeclareVariables) are addressed to the calling agent, which
+      // needs the message to self-correct. Masking everything as a generic
+      // "Internal error" defeated that "fail loudly" contract and blinded
+      // message-based observability filters. Full error + stack stay in the
+      // server-side log above.
       return res.status(200).json({
         jsonrpc: '2.0',
         error: {
           code: -32603,
-          message: 'Internal error',
+          message: error instanceof Error ? error.message : 'Internal error',
         },
         id: req.body?.id ?? null,
       })
