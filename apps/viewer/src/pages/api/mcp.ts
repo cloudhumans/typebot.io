@@ -47,6 +47,15 @@ export default async function handler(
       logger.warn(
         'MCP endpoint misconfigured: TYPEBOT_TOOLS_API_TOKEN is not set, rejecting all requests'
       )
+    // The CH-MCP proxy masks a 401 as an empty tools list, so this server-side
+    // log is the only evidence of a wrong/rotated token or brute-force against
+    // this public path. Never log the received token value.
+    else
+      logger.warn('MCP endpoint rejected unauthorized request', {
+        reason: auth.reason,
+        method: req.method,
+      })
+    res.setHeader('WWW-Authenticate', 'Bearer realm="mcp"')
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
