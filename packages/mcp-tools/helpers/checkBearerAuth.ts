@@ -40,10 +40,12 @@ const extractBearerToken = (
 }
 
 /**
- * Constant-time string comparison. Buffers of differing length cannot be fed
- * to `timingSafeEqual` (it throws), so we compare against a fixed-size hash of
- * each input instead — this keeps the work constant regardless of length while
- * still requiring an exact match.
+ * Constant-time string comparison. `timingSafeEqual` throws when the two
+ * buffers differ in length, so we cannot call it directly on inputs of unknown
+ * size. When the lengths differ we still run one `timingSafeEqual` over a
+ * same-length buffer (the input compared against itself) before returning
+ * false, so the mismatch path does the same work as the equal-length path and
+ * does not leak length via an early return.
  */
 const timingSafeStringEqual = (a: string, b: string): boolean => {
   const bufA = Buffer.from(a)
