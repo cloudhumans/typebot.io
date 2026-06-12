@@ -138,9 +138,6 @@ importers:
       '@typebot.io/js':
         specifier: workspace:*
         version: link:../../packages/embeds/js
-      '@typebot.io/mcp-tools':
-        specifier: workspace:*
-        version: link:../../packages/mcp-tools
       '@typebot.io/nextjs':
         specifier: workspace:*
         version: link:../../packages/embeds/nextjs

@@ -1,4 +1,6 @@
 export { sanitizeToolName } from './helpers/sanitizeToolName'
+export { checkBearerAuth } from './helpers/checkBearerAuth'
+export type { BearerAuthResult } from './helpers/checkBearerAuth'
 export { transformToMCPTool } from './helpers/transformToMCPTool'
 export { extractToolOutput } from './helpers/extractToolOutput'
 export { getWorkflowTools } from './services/getWorkflowTools'
