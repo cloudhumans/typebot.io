@@ -47,17 +47,14 @@ export const WebhookContent = ({ block: { options } }: Props) => {
       : webhook?.url
     return (
       <Stack w="full">
-        <Text noOfLines={3} pr="6">
+        <Text noOfLines={2} pr="6">
           {webhook?.method}{' '}
           <Tooltip
             label="Secure mode: the base URL and secret headers/params come from the selected credential and are masked in logs."
             hasArrow
+            shouldWrapChildren
           >
-            <LockedIcon
-              verticalAlign="text-bottom"
-              position="relative"
-              top="-2px"
-            />
+            <LockedIcon verticalAlign="middle" />
           </Tooltip>{' '}
           {displayUrl ?? 'Configure...'}
         </Text>
