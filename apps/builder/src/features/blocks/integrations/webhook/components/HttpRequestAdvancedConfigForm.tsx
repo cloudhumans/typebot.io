@@ -14,7 +14,10 @@ import {
   AccordionPanel,
   Button,
   Text,
+  Tag,
+  TagLeftIcon,
 } from '@chakra-ui/react'
+import { LockedIcon } from '@/components/icons'
 import {
   KeyValue,
   VariableForTest,
@@ -36,10 +39,33 @@ import {
   defaultWebhookBlockOptions,
 } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
 
+type InheritedKeyValue = { key: string; value: string }
+
+const InheritedEntries = ({ items }: { items?: InheritedKeyValue[] }) => {
+  if (!items || items.length === 0) return null
+  return (
+    <Stack spacing="1">
+      <Text fontSize="xs" color="gray.500">
+        Inherited from credentials (read-only)
+      </Text>
+      {items.map((item, idx) => (
+        <Tag key={`${item.key}-${idx}`} size="md" colorScheme="gray">
+          <TagLeftIcon as={LockedIcon} />
+          <Text>
+            {item.key}: {item.value}
+          </Text>
+        </Tag>
+      ))}
+    </Stack>
+  )
+}
+
 type Props = {
   blockId: string
   webhook: HttpRequest | undefined
   options: HttpRequestBlock['options']
+  inheritedHeaders?: InheritedKeyValue[]
+  inheritedQueryParams?: InheritedKeyValue[]
   onWebhookChange: (webhook: HttpRequest) => void
   onOptionsChange: (options: HttpRequestBlock['options']) => void
 }
@@ -48,6 +74,8 @@ export const HttpRequestAdvancedConfigForm = ({
   blockId,
   webhook,
   options,
+  inheritedHeaders,
+  inheritedQueryParams,
   onWebhookChange,
   onOptionsChange,
 }: Props) => {
@@ -153,7 +181,8 @@ export const HttpRequestAdvancedConfigForm = ({
               Query params
               <AccordionIcon />
             </AccordionButton>
-            <AccordionPanel pt="4">
+            <AccordionPanel pt="4" as={Stack} spacing="3">
+              <InheritedEntries items={inheritedQueryParams} />
               <TableList<KeyValue>
                 initialItems={webhook?.queryParams}
                 onItemsChange={updateQueryParams}
@@ -168,7 +197,8 @@ export const HttpRequestAdvancedConfigForm = ({
               Headers
               <AccordionIcon />
             </AccordionButton>
-            <AccordionPanel pt="4">
+            <AccordionPanel pt="4" as={Stack} spacing="3">
+              <InheritedEntries items={inheritedHeaders} />
               <TableList<KeyValue>
                 initialItems={webhook?.headers}
                 onItemsChange={updateHeaders}
