@@ -5,6 +5,7 @@ import { SetVariableLabel } from '@/components/SetVariableLabel'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { trpc } from '@/lib/trpc'
 import { LockedIcon } from '@/components/icons'
+import { useTranslate } from '@tolgee/react'
 
 type Props = {
   block: HttpRequestBlock
@@ -18,6 +19,7 @@ const joinUrl = (base: string, suffix?: string) => {
 }
 
 export const WebhookContent = ({ block: { options } }: Props) => {
+  const { t } = useTranslate()
   const { typebot } = useTypebot()
   const { workspace } = useWorkspace()
   const webhook = options?.webhook
@@ -50,20 +52,25 @@ export const WebhookContent = ({ block: { options } }: Props) => {
         <Text noOfLines={2} pr="6">
           {webhook?.method}{' '}
           <Tooltip
-            label="Secure mode: the base URL and secret headers/params come from the selected credential and are masked in logs."
+            label={t('blocks.integrations.httpRequest.secureMode.tooltip')}
             hasArrow
             shouldWrapChildren
           >
             <LockedIcon verticalAlign="middle" />
           </Tooltip>{' '}
-          {displayUrl ?? 'Configure...'}
+          {displayUrl ?? t('blocks.integrations.httpRequest.configure.label')}
         </Text>
         {responseMappings}
       </Stack>
     )
   }
 
-  if (!webhook?.url) return <Text color="gray.500">Configure...</Text>
+  if (!webhook?.url)
+    return (
+      <Text color="gray.500">
+        {t('blocks.integrations.httpRequest.configure.label')}
+      </Text>
+    )
   return (
     <Stack w="full">
       <Text noOfLines={2} pr="6">

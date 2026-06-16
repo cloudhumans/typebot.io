@@ -17,6 +17,7 @@ import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { trpc } from '@/lib/trpc'
 import { LockedIcon } from '@/components/icons'
 import { RestApiCredentialsModal } from './RestApiCredentialsModal'
+import { useTranslate } from '@tolgee/react'
 
 type Props = {
   block: HttpRequestBlock
@@ -27,6 +28,7 @@ export const HttpRequestSettings = ({
   block: { id: blockId, options },
   onOptionsChange,
 }: Props) => {
+  const { t } = useTranslate()
   const { workspace } = useWorkspace()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const credentialsId = options?.credentialsId
@@ -69,8 +71,10 @@ export const HttpRequestSettings = ({
           currentCredentialsId={credentialsId}
           onCredentialsSelect={updateCredentialsId}
           onCreateNewClick={onOpen}
-          credentialsName="REST API credentials"
-          defaultCredentialLabel="No credentials (custom URL)"
+          credentialsName={t('blocks.integrations.httpRequest.credentials.name')}
+          defaultCredentialLabel={t(
+            'blocks.integrations.httpRequest.credentials.noCredentialLabel'
+          )}
           size="sm"
         />
       )}
@@ -85,7 +89,9 @@ export const HttpRequestSettings = ({
           <Box flex="1">
             <TextInput
               key={`suffix-${credentialsId}`}
-              placeholder="/path/suffix"
+              placeholder={t(
+                'blocks.integrations.httpRequest.pathSuffix.placeholder'
+              )}
               defaultValue={options?.webhook?.url}
               onChange={updateUrl}
             />
@@ -94,7 +100,7 @@ export const HttpRequestSettings = ({
       ) : (
         <TextInput
           key="custom-url"
-          placeholder="Paste URL..."
+          placeholder={t('blocks.integrations.httpRequest.url.placeholder')}
           defaultValue={options?.webhook?.url}
           onChange={updateUrl}
         />

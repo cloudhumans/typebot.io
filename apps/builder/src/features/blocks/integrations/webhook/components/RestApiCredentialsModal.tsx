@@ -19,6 +19,7 @@ import {
 import { KeyValue } from '@typebot.io/schemas'
 import React, { useState } from 'react'
 import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
+import { useTranslate } from '@tolgee/react'
 
 type Props = {
   isOpen: boolean
@@ -45,6 +46,7 @@ export const RestApiCredentialsModal = ({
   onClose,
   onNewCredentials,
 }: Props) => {
+  const { t } = useTranslate()
   const { workspace } = useWorkspace()
   const { showToast } = useToast()
   const [name, setName] = useState('')
@@ -84,7 +86,9 @@ export const RestApiCredentialsModal = ({
     if (!workspace) return
     if (!isValidUrl(baseUrl)) {
       showToast({
-        description: 'The configured Base URL must be a valid http(s) URL.',
+        description: t(
+          'blocks.integrations.httpRequest.credentialsModal.invalidBaseUrl'
+        ),
         status: 'error',
       })
       return
@@ -107,53 +111,77 @@ export const RestApiCredentialsModal = ({
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Add REST API credentials</ModalHeader>
+        <ModalHeader>
+          {t('blocks.integrations.httpRequest.credentialsModal.title')}
+        </ModalHeader>
         <ModalCloseButton />
         <form onSubmit={createRestApiCredentials}>
           <ModalBody as={Stack} spacing="6">
             <TextInput
               isRequired
-              label="Name"
+              label={t(
+                'blocks.integrations.httpRequest.credentialsModal.nameInput.label'
+              )}
               onChange={setName}
-              placeholder="My API"
+              placeholder={t(
+                'blocks.integrations.httpRequest.credentialsModal.nameInput.placeholder'
+              )}
               withVariableButton={false}
               debounceTimeout={0}
             />
             <TextInput
               isRequired
-              label="Base URL"
+              label={t(
+                'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.label'
+              )}
               onChange={setBaseUrl}
-              placeholder="https://api.example.com/v1"
-              helperText="Requests inherit this base URL. The block only sets the path suffix."
+              placeholder={t(
+                'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.placeholder'
+              )}
+              helperText={t(
+                'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.helperText'
+              )}
               withVariableButton={false}
               debounceTimeout={0}
             />
             <Stack>
               <FormLabel mb="0">
-                Headers{' '}
+                {t(
+                  'blocks.integrations.httpRequest.credentialsModal.headers.label'
+                )}{' '}
                 <Text as="span" color="gray.500" fontWeight="normal">
-                  (values are stored encrypted and masked)
+                  {t(
+                    'blocks.integrations.httpRequest.credentialsModal.maskedHint'
+                  )}
                 </Text>
               </FormLabel>
               <TableList<KeyValue>
                 initialItems={headers}
                 onItemsChange={setHeaders}
-                addLabel="Add a header"
+                addLabel={t(
+                  'blocks.integrations.httpRequest.credentialsModal.addHeader.label'
+                )}
               >
                 {(props) => <HeadersInputs {...props} />}
               </TableList>
             </Stack>
             <Stack>
               <FormLabel mb="0">
-                Query params{' '}
+                {t(
+                  'blocks.integrations.httpRequest.credentialsModal.queryParams.label'
+                )}{' '}
                 <Text as="span" color="gray.500" fontWeight="normal">
-                  (values are stored encrypted and masked)
+                  {t(
+                    'blocks.integrations.httpRequest.credentialsModal.maskedHint'
+                  )}
                 </Text>
               </FormLabel>
               <TableList<KeyValue>
                 initialItems={queryParams}
                 onItemsChange={setQueryParams}
-                addLabel="Add a param"
+                addLabel={t(
+                  'blocks.integrations.httpRequest.credentialsModal.addParam.label'
+                )}
               >
                 {(props) => <QueryParamsInputs {...props} />}
               </TableList>
@@ -166,7 +194,9 @@ export const RestApiCredentialsModal = ({
               isDisabled={name === '' || baseUrl === ''}
               colorScheme="blue"
             >
-              Create
+              {t(
+                'blocks.integrations.httpRequest.credentialsModal.createButton.label'
+              )}
             </Button>
           </ModalFooter>
         </form>

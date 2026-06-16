@@ -18,6 +18,7 @@ import {
   TagLeftIcon,
 } from '@chakra-ui/react'
 import { LockedIcon } from '@/components/icons'
+import { useTranslate } from '@tolgee/react'
 import {
   KeyValue,
   VariableForTest,
@@ -41,12 +42,18 @@ import {
 
 type InheritedKeyValue = { key: string; value: string }
 
-const InheritedEntries = ({ items }: { items?: InheritedKeyValue[] }) => {
+const InheritedEntries = ({
+  items,
+  label,
+}: {
+  items?: InheritedKeyValue[]
+  label: string
+}) => {
   if (!items || items.length === 0) return null
   return (
     <Stack spacing="1">
       <Text fontSize="xs" color="gray.500">
-        Inherited from credentials (read-only)
+        {label}
       </Text>
       {items.map((item, idx) => (
         <Tag key={`${item.key}-${idx}`} size="md" colorScheme="gray">
@@ -79,6 +86,7 @@ export const HttpRequestAdvancedConfigForm = ({
   onWebhookChange,
   onOptionsChange,
 }: Props) => {
+  const { t } = useTranslate()
   const { typebot, save } = useTypebot()
   const [isTestResponseLoading, setIsTestResponseLoading] = useState(false)
   const [testResponse, setTestResponse] = useState<string>()
@@ -182,7 +190,12 @@ export const HttpRequestAdvancedConfigForm = ({
               <AccordionIcon />
             </AccordionButton>
             <AccordionPanel pt="4" as={Stack} spacing="3">
-              <InheritedEntries items={inheritedQueryParams} />
+              <InheritedEntries
+                items={inheritedQueryParams}
+                label={t(
+                  'blocks.integrations.httpRequest.inheritedEntries.label'
+                )}
+              />
               <TableList<KeyValue>
                 initialItems={webhook?.queryParams}
                 onItemsChange={updateQueryParams}
@@ -198,7 +211,12 @@ export const HttpRequestAdvancedConfigForm = ({
               <AccordionIcon />
             </AccordionButton>
             <AccordionPanel pt="4" as={Stack} spacing="3">
-              <InheritedEntries items={inheritedHeaders} />
+              <InheritedEntries
+                items={inheritedHeaders}
+                label={t(
+                  'blocks.integrations.httpRequest.inheritedEntries.label'
+                )}
+              />
               <TableList<KeyValue>
                 initialItems={webhook?.headers}
                 onItemsChange={updateHeaders}
