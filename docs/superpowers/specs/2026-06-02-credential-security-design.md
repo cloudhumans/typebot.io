@@ -107,17 +107,18 @@ The HTTP Request Block settings panel dynamically adjusts based on the active `C
 
 ### 3.1 Parsing & Merging (`executeWebhookBlock.ts`)
 When the bot-engine runs an HTTP block:
-1. **Fetch & Decrypt**: If `block.options.credentialsId` is present, the server retrieves and decrypts the credentials payload from the DB.
+1. **Fetch & Decrypt (workspace-scoped)**: If `block.options.credentialsId` is present, the server retrieves the record **filtered by both `credentialsId` AND the executing typebot's `workspaceId`** (`findFirst({ where: { id, workspaceId, type: 'rest-api' } })`) and decrypts it. Fetching by `credentialsId` alone is forbidden — it would let a flow reference another workspace's secret. A non-match aborts the block.
 2. **Variable Interpolation**: Apply `parseVariables` over the decrypted credentials fields (`baseUrl`, `headers`, `queryParams`) and the block-level configuration fields.
 3. **Merging Rules**:
    - **URL Resolution**: `parsedBaseUrl` is concatenated with `parsedSubPath` (normalizing double slashes).
    - **Headers**: Merge parsed global headers and local headers. Block-level local headers override global ones in case of duplicate keys.
    - **Query Params**: Merge parsed global and local parameters. Block-level local parameters override global ones.
+4. **Resolved-URL validation (SSRF)**: `z.string().url()` runs at save time, but variable interpolation can rewrite the host afterward. Before issuing the request, validate the *resolved* URL: scheme allowlist (`http`/`https`) and rejection of private/loopback/link-local hosts and the metadata IP `169.254.169.254`. SSRF is pre-existing in this block (variables already interpolate into arbitrary URLs), so the check should be a shared helper applied to both the credentialed and legacy paths; if deferred, track it as an explicit follow-up.
 
 ### 3.2 Logging Security
 All transaction traces and error messages stored in `ChatLog` must mask variables originating from the secure credentials database record, preserving secrecy in production dashboard listings.
 
-**Mechanism (value-based masking):** During credential resolution, collect every resolved header/query secret value into a `secretValues: Set<string>`. Immediately before persisting any log detail, run each string field (request URL, headers, query string, response excerpt, error messages) through a `maskSecrets(text, secretValues)` helper that replaces each occurrence of a secret value with `••••••••`. This is value-based rather than key-based, so secrets interpolated anywhere (not just known header keys) are still masked. The real request sent upstream retains the true values; only the persisted log copy is masked. The base URL is exempt (already shown locked in the UI). See the implementation plan, section 4, for the concrete helper.
+**Mechanism (value-based masking):** During credential resolution, collect every resolved header/query secret value into a `secretValues: Set<string>`. Immediately before persisting any log detail, run each string field (request URL, headers, query string, response excerpt, error messages) through a `maskSecrets(text, secretValues)` helper that replaces each occurrence of a secret value with `••••••••`. This is value-based rather than key-based, so secrets interpolated anywhere (not just known header keys) are still masked. The real request sent upstream retains the true values; only the persisted log copy is masked. The base URL is exempt from masking (it is shown locked in the UI). **Caveat:** to keep that exemption safe, the base URL must not itself carry secrets — at credential-save time reject a `baseUrl` containing userinfo (`https://user:pass@host`) or obviously sensitive query parameters (e.g. `?token=`, `?api_key=`). Secrets belong in the `headers`/`queryParams` arrays, which are masked. See the implementation plan, section 4, for the concrete masking helper.
 
 ---
 
