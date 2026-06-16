@@ -30,10 +30,19 @@ import { env } from '@typebot.io/env'
 import { parseAnswers } from '@typebot.io/results/parseAnswers'
 import { JSONParse } from '@typebot.io/lib/JSONParse'
 import logger from '@typebot.io/lib/logger'
+import { RestApiCredentials } from '@typebot.io/schemas'
+import {
+  cleanUrlConcat,
+  isResolvedUrlSafe,
+  maskSecretsDeep,
+  mergeKeyValues,
+  resolveRestApiCredentialData,
+} from './restApiCredential'
 
 type ParsedWebhook = ExecutableHttpRequest & {
   basicAuth: { username?: string; password?: string }
   isJson: boolean
+  secretValues?: Set<string>
 }
 
 export const longReqTimeoutWhitelist = [
@@ -78,11 +87,31 @@ export const executeWebhookBlock = async (
         })) as HttpRequest | null)
       : null)
   if (!webhook) return { outgoingEdgeId: block.outgoingEdgeId }
+
+  const credentialsId =
+    'options' in block ? block.options?.credentialsId : undefined
+  let credentialData: RestApiCredentials['data'] | undefined
+  if (credentialsId) {
+    const resolved = await resolveRestApiCredentialData({
+      credentialsId,
+      workspaceId: state.typebotsQueue[0].typebot.workspaceId,
+    })
+    if (!resolved) {
+      logs.push({
+        status: 'error',
+        description: `Referenced credential could not be resolved for this workspace.`,
+      })
+      return { outgoingEdgeId: block.outgoingEdgeId, logs }
+    }
+    credentialData = resolved
+  }
+
   const parsedWebhook = await parseWebhookAttributes({
     webhook,
     isCustomBody: block.options?.isCustomBody,
     typebot: state.typebotsQueue[0].typebot,
     answers: state.typebotsQueue[0].answers,
+    credentialData,
   })
   if (!parsedWebhook) {
     logs.push({
@@ -91,7 +120,19 @@ export const executeWebhookBlock = async (
     })
     return { outgoingEdgeId: block.outgoingEdgeId, logs }
   }
-  if (block.options?.isExecutedOnClient && !state.whatsApp)
+
+  const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
+  if (!urlSafety.safe) {
+    logs.push({
+      status: 'error',
+      description: `Request URL rejected: ${urlSafety.reason}`,
+    })
+    return { outgoingEdgeId: block.outgoingEdgeId, logs }
+  }
+
+  // Credential-backed blocks must never execute on the client, otherwise the
+  // resolved secret headers/params would be sent to the browser.
+  if (block.options?.isExecutedOnClient && !credentialData && !state.whatsApp)
     return {
       outgoingEdgeId: block.outgoingEdgeId,
       clientSideActions: [
@@ -149,13 +190,35 @@ export const parseWebhookAttributes = async ({
   isCustomBody,
   typebot,
   answers,
+  credentialData,
 }: {
   webhook: HttpRequest
   isCustomBody?: boolean
   typebot: TypebotInSession
   answers: AnswerInSessionState[]
+  credentialData?: RestApiCredentials['data']
 }): Promise<ParsedWebhook | undefined> => {
-  if (!webhook.url) return
+  // With a credential, the request URL is composed from the credential base
+  // URL even when the block's own URL (path suffix) is empty.
+  if (!webhook.url && !credentialData) return
+
+  // Collect resolved (interpolated) secret values for log masking, and merge
+  // credential-level headers/query params with the block's own.
+  const secretValues = new Set<string>()
+  if (credentialData) {
+    const collectSecret = (value: string) => {
+      const resolved = parseVariables(typebot.variables)(value)
+      if (resolved) secretValues.add(resolved)
+    }
+    credentialData.headers?.forEach((h) => collectSecret(h.value))
+    credentialData.queryParams?.forEach((q) => collectSecret(q.value))
+    webhook = {
+      ...webhook,
+      headers: mergeKeyValues(credentialData.headers, webhook.headers),
+      queryParams: mergeKeyValues(credentialData.queryParams, webhook.queryParams),
+    }
+  }
+
   const basicAuth: { username?: string; password?: string } = {}
   const basicAuthHeaderIdx = webhook.headers?.findIndex(
     (h) =>
@@ -196,15 +259,20 @@ export const parseWebhookAttributes = async ({
         )
       : { data: undefined, isJson: false }
 
+  const urlBase = credentialData
+    ? cleanUrlConcat(credentialData.baseUrl, webhook.url ?? '')
+    : webhook.url ?? ''
+
   return {
     url: parseVariables(typebot.variables)(
-      webhook.url + (queryParams !== '' ? `?${queryParams}` : '')
+      urlBase + (queryParams !== '' ? `?${queryParams}` : '')
     ),
     basicAuth,
     method,
     headers,
     body,
     isJson,
+    secretValues: credentialData ? secretValues : undefined,
   }
 }
 
@@ -220,6 +288,9 @@ export const executeWebhook = async (
   const logs: ChatLog[] = []
 
   const { headers, url, method, basicAuth, isJson } = webhook
+  const secretValues = webhook.secretValues ?? new Set<string>()
+  // Mask credential-derived secrets in anything that gets persisted/logged.
+  const mask = <T>(value: T): T => maskSecretsDeep(value, secretValues)
   const contentType = headers ? headers['Content-Type'] : undefined
 
   const isLongRequest = params.disableRequestTimeout
@@ -274,11 +345,11 @@ export const executeWebhook = async (
     logs.push({
       status: 'success',
       description: webhookSuccessDescription,
-      details: {
+      details: mask({
         statusCode: response.status,
         response: typeof body === 'string' ? safeJsonParse(body).data : body,
         request,
-      },
+      }),
     })
     const httpDuration = Date.now() - requestStartTime
     logger.info(
@@ -286,7 +357,7 @@ export const executeWebhook = async (
       {
         ...logContext,
         http: {
-          url: request.url,
+          url: mask(request.url),
           method: request.method,
           status_code: response.status,
           duration: httpDuration,
@@ -318,18 +389,18 @@ export const executeWebhook = async (
       logs.push({
         status: 'error',
         description: webhookErrorDescription,
-        details: {
+        details: mask({
           statusCode: error.response.status,
           request,
           response,
-        },
+        }),
       })
       logger.warn(
         `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Error`,
         {
           ...logContext,
           http: {
-            url: request.url,
+            url: mask(request.url),
             method: request.method,
             status_code: error.response.status,
             duration: Date.now() - requestStartTime,
@@ -352,17 +423,17 @@ export const executeWebhook = async (
         description: `Webhook request timed out. (${
           (request.timeout ? request.timeout : 0) / 1000
         }s)`,
-        details: {
+        details: mask({
           response,
           request,
-        },
+        }),
       })
       logger.error(
         `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Timeout`,
         {
           ...logContext,
           http: {
-            url: request.url,
+            url: mask(request.url),
             method: request.method,
             timeout_ms: request.timeout || 0,
             duration: Date.now() - requestStartTime,
@@ -380,20 +451,20 @@ export const executeWebhook = async (
       {
         ...logContext,
         http: {
-          url: request.url,
+          url: mask(request.url),
           method: request.method,
           duration: Date.now() - requestStartTime,
         },
-        error: error instanceof Error ? error.message : String(error),
+        error: mask(error instanceof Error ? error.message : String(error)),
       }
     )
     logs.push({
       status: 'error',
       description: `Webhook failed to execute.`,
-      details: {
+      details: mask({
         response,
         request,
-      },
+      }),
     })
     return { response, logs, startTimeShouldBeUpdated: true }
   }
