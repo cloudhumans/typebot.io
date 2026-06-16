@@ -32,7 +32,7 @@ export const HttpRequestSettings = ({
 
   const { data: credential } = trpc.credentials.getRestApiCredential.useQuery(
     { workspaceId: workspace?.id as string, credentialsId: credentialsId as string },
-    { enabled: !!workspace?.id && !!credentialsId }
+    { enabled: !!workspace?.id && !!credentialsId && credentialsId !== 'default' }
   )
 
   const setLocalWebhook = async (newLocalWebhook: HttpRequest) => {
@@ -44,7 +44,15 @@ export const HttpRequestSettings = ({
   }
 
   const updateCredentialsId = (newCredentialsId?: string) => {
-    onOptionsChange({ ...options, credentialsId: newCredentialsId })
+    // The dropdown emits the sentinel 'default' for the "no credentials" option.
+    // Normalize it (and empty) to undefined so the block falls back to custom URL.
+    onOptionsChange({
+      ...options,
+      credentialsId:
+        newCredentialsId && newCredentialsId !== 'default'
+          ? newCredentialsId
+          : undefined,
+    })
   }
 
   return (
