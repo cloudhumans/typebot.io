@@ -6,9 +6,13 @@ This implementation plan outlines the exact file modifications, additions, and v
 
 ## 🏗️ 1. Schema & Validation Layer
 
-We will define the schema for the REST API Credentials inside the schemas package. Since we reuse the existing `Credentials` database table, no Prisma migration is needed.
+We will define the schema for the REST API Credentials inside the schemas package, reusing the existing `Credentials` database table. One small **additive** Prisma migration is required: a nullable `createdById` column for auditing (see below). It is additive and nullable, so existing rows become `null` and retrocompatibility is preserved.
 
 ### 📁 Files to Modify:
+* **`packages/prisma/postgresql/schema.prisma`** (+ generated migration)
+  - Add a nullable `createdById String?` column to the `Credentials` model for creator auditing, with an optional relation to `User` (`onDelete: SetNull`, so deleting a user does not delete their credentials). Run `prisma migrate dev` to generate the additive migration.
+* **`packages/schemas/features/blocks/shared.ts`**
+  - Add `createdById: z.string().nullish()` to `credentialsBaseSchema` (it mirrors the `Credentials` row minus `data`/`type`), so every credential type exposes the audit field at the record level.
 * **`packages/schemas/features/blocks/integrations/webhook/schema.ts`**
   - Define `restApiCredentialsSchema` using `credentialsBaseSchema`.
   - Add `credentialsId?: string` to `httpRequestOptionsV5Schema`.
@@ -44,7 +48,6 @@ export const restApiCredentialsSchema = z
           })
         )
         .optional(),
-      createdById: z.string().min(1),
     }),
   })
   .merge(credentialsBaseSchema)
@@ -53,6 +56,8 @@ export type RestApiCredentials = z.infer<typeof restApiCredentialsSchema>
 ```
 
 > **Nota (convenções do repo):** importar `z` do wrapper local (`packages/schemas/zod.ts`) e não do pacote `zod` direto — o wrapper aplica `zod-openapi`. Validadores ficam sem mensagens custom (ex.: `.url()`, `.min(1)`), seguindo o padrão dos demais credential schemas. Mensagens voltadas ao usuário ficam na camada de UI via i18n (Tolgee) — ver seção 3.1.
+
+> **Auditoria:** `createdById` **não** fica no payload `data` criptografado. Ele é uma coluna dedicada (nullable) na tabela `Credentials`, exposta via `credentialsBaseSchema`. Isso permite consultar quem criou uma credencial sem descriptografar cada registro (relatórios de auditoria, remoção de acesso). A migration é aditiva e nullable, então credenciais legadas ficam com `createdById = null`.
 
 Add `credentialsId` inside `httpRequestOptionsV5Schema`:
 ```typescript
@@ -73,6 +78,7 @@ We need to register the new schema in the creation endpoint and add a secure que
 * **`apps/builder/src/features/credentials/api/createCredentials.ts`**
   - Import `restApiCredentialsSchema` and include its fields in the validation union.
   - **Authorization:** creating a `rest-api` credential must be restricted to workspace **admins** (since the secret controls network destinations). Reuse the existing membership/role guard (e.g. `isWriteWorkspaceForbidden` / member-role check used by the other credential mutations) and reject non-admins with `FORBIDDEN`. Always bind the new record to the caller's `workspaceId`.
+  - **Auditing:** set the new `createdById` **column** to `ctx.user.id` on insert (not inside the encrypted `data` payload).
 * **`apps/builder/src/features/credentials/api/getRestApiCredential.ts`** (NEW)
   - Implement a secure read endpoint that returns only masked fields (e.g. replacing secret values with `••••••••`).
 * **`apps/builder/src/features/credentials/api/router.ts`**

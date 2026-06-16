@@ -14,7 +14,7 @@ The feature introduces workspace-scoped REST API credentials to mask secrets and
 
 ## 💾 1. Data Layer: REST Data Source Schema
 
-We reuse the existing generic `Credentials` Prisma model in the database to prevent database migrations and preserve retrocompatibility.
+We reuse the existing generic `Credentials` Prisma model, with **one additive, nullable migration** (`createdById`) for auditing. The migration is additive and nullable, so existing rows become `null` and retrocompatibility is preserved.
 
 ### 1.1 Database Representation (`Credentials` Table)
 * `type`: `"rest-api"`
@@ -23,9 +23,10 @@ We reuse the existing generic `Credentials` Prisma model in the database to prev
 * `data`: Symmetric-key encrypted JSON payload using `ENCRYPTION_SECRET`.
 * `iv`: Initialization vector for the encrypted string.
 * `createdAt`: Automatically populated database timestamp.
+* `createdById` *(new, nullable)*: Auditing column holding the creator's user id. Stored as a **dedicated column** (not in the encrypted `data`) so creator lookups don't require decrypting each row. Optional relation to `User` with `onDelete: SetNull`.
 
 ### 1.2 Encrypted JSON Schema (`data` payload)
-The decrypted JSON structure inside the `data` field contains base URL, headers, query parameters, and creator auditing metadata:
+The decrypted JSON structure inside the `data` field contains base URL, headers, and query parameters. Creator auditing (`createdById`) lives in a dedicated column, **not** in this payload:
 ```json
 {
   "baseUrl": "https://api.stripe.com/v1",
@@ -40,8 +41,7 @@ The decrypted JSON structure inside the `data` field contains base URL, headers,
       "key": "api_key",
       "value": "<REDACTED>"
     }
-  ],
-  "createdById": "cl_user_id_123"
+  ]
 }
 ```
 
@@ -69,13 +69,12 @@ export const restApiCredentialDataSchema = z.object({
       })
     )
     .optional(),
-  createdById: z.string().min(1),
 })
 
 export type RestApiCredentialData = z.infer<typeof restApiCredentialDataSchema>
 ```
 
-> Validators are kept message-less (`.url()`, `.min(1)`), matching the other credential schemas in `@typebot.io/schemas`. User-facing copy lives in the UI layer. `headers` and `queryParams` are optional so a credential can carry only a base URL.
+> Validators are kept message-less (`.url()`, `.min(1)`), matching the other credential schemas in `@typebot.io/schemas`. User-facing copy lives in the UI layer. `headers` and `queryParams` are optional so a credential can carry only a base URL. `createdById` is **not** part of this encrypted payload — it is a dedicated `Credentials` column (added to `credentialsBaseSchema` as `z.string().nullish()`).
 
 ---
 
@@ -88,7 +87,7 @@ A new modal is opened when the builder clicks "Connect New" in the HTTP block's 
   - Base URL (String input, validated as URL).
   - Headers Table: Dynamic key-value row insertion. Header values are masked (using input `type="password"`) for security, displaying `••••••••` upon reload.
   - Query Params Table: Dynamic key-value row insertion with masked values.
-* **Auditing**: Automatically captures `ctx.user.id` on submit and stores it in the credential's JSON metadata payload.
+* **Auditing**: Automatically captures `ctx.user.id` on submit and stores it in the dedicated `createdById` column (not in the encrypted JSON payload), enabling creator lookups without decryption.
 
 ### 2.2 Block UI State Transitions
 The HTTP Request Block settings panel dynamically adjusts based on the active `CredentialsDropdown` state:
