@@ -6,6 +6,7 @@ import {
   Tag,
   TagLeftIcon,
   Text,
+  Tooltip,
   useDisclosure,
 } from '@chakra-ui/react'
 import { HttpRequest, HttpRequestBlock } from '@typebot.io/schemas'
@@ -46,12 +47,16 @@ export const HttpRequestSettings = ({
   const updateCredentialsId = (newCredentialsId?: string) => {
     // The dropdown emits the sentinel 'default' for the "no credentials" option.
     // Normalize it (and empty) to undefined so the block falls back to custom URL.
+    const normalized =
+      newCredentialsId && newCredentialsId !== 'default'
+        ? newCredentialsId
+        : undefined
+    // Reset the URL field: a full URL typed in custom mode is invalid as a path
+    // suffix once a credential is active (and vice-versa), so don't carry it over.
     onOptionsChange({
       ...options,
-      credentialsId:
-        newCredentialsId && newCredentialsId !== 'default'
-          ? newCredentialsId
-          : undefined,
+      credentialsId: normalized,
+      webhook: { ...options?.webhook, url: '' },
     })
   }
 
@@ -71,12 +76,15 @@ export const HttpRequestSettings = ({
       )}
       {credentialsId && credential ? (
         <HStack align="stretch">
-          <Tag size="lg" colorScheme="gray" flexShrink={0} maxW="50%">
-            <TagLeftIcon as={LockedIcon} />
-            <Text noOfLines={1}>{credential.baseUrl}</Text>
-          </Tag>
+          <Tooltip label={credential.baseUrl} placement="top" hasArrow>
+            <Tag size="lg" colorScheme="gray" flexShrink={0} maxW="45%">
+              <TagLeftIcon as={LockedIcon} />
+              <Text noOfLines={1}>{credential.baseUrl}</Text>
+            </Tag>
+          </Tooltip>
           <Box flex="1">
             <TextInput
+              key={`suffix-${credentialsId}`}
               placeholder="/path/suffix"
               defaultValue={options?.webhook?.url}
               onChange={updateUrl}
@@ -85,6 +93,7 @@ export const HttpRequestSettings = ({
         </HStack>
       ) : (
         <TextInput
+          key="custom-url"
           placeholder="Paste URL..."
           defaultValue={options?.webhook?.url}
           onChange={updateUrl}
