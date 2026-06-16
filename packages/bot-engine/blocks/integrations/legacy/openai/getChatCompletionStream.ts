@@ -10,6 +10,7 @@ import { OpenAIStream } from 'ai'
 import { parseVariableNumber } from '@typebot.io/variables/parseVariableNumber'
 import { ClientOptions, OpenAI } from 'openai'
 import { defaultOpenAIOptions } from '@typebot.io/schemas/features/blocks/integrations/openai/constants'
+import logger from '@typebot.io/lib/logger'
 
 export const getChatCompletionStream =
   (conn: Connection) =>
@@ -25,7 +26,13 @@ export const getChatCompletionStream =
       ])
     ).rows.at(0) as { data: string; iv: string } | undefined
     if (!credentials) {
-      console.error('Could not find credentials in database')
+      logger.error('Could not find credentials in database', {
+        code: 'credential_not_found',
+        credentialsId: options.credentialsId,
+        typebotId: state.typebotsQueue[0]?.typebot.id,
+        workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
+        integration: 'openai-legacy-stream',
+      })
       return
     }
     const { apiKey } = (await decryptV2(

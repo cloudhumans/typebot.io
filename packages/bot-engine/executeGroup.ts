@@ -40,6 +40,7 @@ import {
   parseBubbleBlock,
 } from './parseBubbleBlock'
 import logger from '@typebot.io/lib/logger'
+import { enforceBlockVisitLimit } from './enforceBlockVisitLimit'
 
 type ContextProps = {
   version: 1 | 2
@@ -106,6 +107,29 @@ export const executeGroup = async (
 
     // Skip NOTE blocks during execution
     if (block.type === BubbleBlockType.NOTE) continue
+
+    const willSkipBubble =
+      isBubbleBlock(block) &&
+      (!block.content || (firstBubbleWasStreamed === true && index === 0))
+
+    const visitLimitOutcome = enforceBlockVisitLimit({
+      state: newSessionState,
+      block,
+      group,
+      sessionId,
+      willSkipBubble,
+    })
+    newSessionState = visitLimitOutcome.state
+    if (visitLimitOutcome.kind === 'terminate') {
+      return {
+        messages,
+        newSessionState,
+        clientSideActions,
+        logs,
+        visitedEdges,
+        setVariableHistory,
+      }
+    }
 
     if (isBubbleBlock(block)) {
       if (!block.content || (firstBubbleWasStreamed && index === 0)) {

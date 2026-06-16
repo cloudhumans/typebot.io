@@ -3,6 +3,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { isWriteWorkspaceForbidden } from '@/features/workspace/helpers/isWriteWorkspaceForbidden'
+import { findCredentialsUsages } from '@typebot.io/lib/credentials/findCredentialsUsages'
 
 export const deleteCredentials = authenticatedProcedure
   .input(
@@ -25,13 +26,34 @@ export const deleteCredentials = authenticatedProcedure
           message: 'Workspace not found',
         })
 
-      const deletedCount = await prisma.credentials.deleteMany({
-        where: {
-          id: credentialsId,
-          workspaceId,
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const usages = await findCredentialsUsages(
+            credentialsId,
+            workspaceId,
+            tx
+          )
+
+          if (usages.length > 0) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `Credential in use by ${usages.length} flow(s). Detach it from every flow before deleting.`,
+              cause: { _credentialInUse: true, usages },
+            })
+          }
+
+          const deletedCount = await tx.credentials.deleteMany({
+            where: {
+              id: credentialsId,
+              workspaceId,
+            },
+          })
+          return { deletedCount: deletedCount.count }
         },
-      })
-      if (deletedCount.count === 0)
+        { isolationLevel: 'RepeatableRead' }
+      )
+
+      if (result.deletedCount === 0)
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Credentials not found',
