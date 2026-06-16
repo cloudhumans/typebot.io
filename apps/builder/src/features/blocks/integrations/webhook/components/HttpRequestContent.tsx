@@ -1,4 +1,4 @@
-import { Stack, Text, HStack } from '@chakra-ui/react'
+import { Stack, Text } from '@chakra-ui/react'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { HttpRequestBlock } from '@typebot.io/schemas'
 import { SetVariableLabel } from '@/components/SetVariableLabel'
@@ -47,12 +47,11 @@ export const WebhookContent = ({ block: { options } }: Props) => {
       : webhook?.url
     return (
       <Stack w="full">
-        <HStack spacing={1} pr="6" align="flex-start">
-          <LockedIcon mt="0.5" flexShrink={0} />
-          <Text noOfLines={2}>
-            {webhook?.method} {displayUrl ?? 'Configure...'}
-          </Text>
-        </HStack>
+        <Text noOfLines={3} pr="6">
+          {webhook?.method}{' '}
+          <LockedIcon verticalAlign="text-bottom" />{' '}
+          {displayUrl ?? 'Configure...'}
+        </Text>
         {responseMappings}
       </Stack>
     )
