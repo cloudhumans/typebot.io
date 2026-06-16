@@ -1,4 +1,4 @@
-import { Stack, Text } from '@chakra-ui/react'
+import { Stack, Text, Tooltip } from '@chakra-ui/react'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { HttpRequestBlock } from '@typebot.io/schemas'
 import { SetVariableLabel } from '@/components/SetVariableLabel'
@@ -49,7 +49,16 @@ export const WebhookContent = ({ block: { options } }: Props) => {
       <Stack w="full">
         <Text noOfLines={3} pr="6">
           {webhook?.method}{' '}
-          <LockedIcon verticalAlign="text-bottom" />{' '}
+          <Tooltip
+            label="Secure mode: the base URL and secret headers/params come from the selected credential and are masked in logs."
+            hasArrow
+          >
+            <LockedIcon
+              verticalAlign="text-bottom"
+              position="relative"
+              top="-2px"
+            />
+          </Tooltip>{' '}
           {displayUrl ?? 'Configure...'}
         </Text>
         {responseMappings}
