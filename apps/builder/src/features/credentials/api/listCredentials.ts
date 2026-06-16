@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
 import { whatsAppCredentialsSchema } from '@typebot.io/schemas/features/whatsapp'
 import { zemanticAiCredentialsSchema } from '@typebot.io/schemas/features/blocks/integrations/zemanticAi'
+import { restApiCredentialsSchema } from '@typebot.io/schemas/features/blocks/integrations/webhook/schema'
 import {
   googleSheetsCredentialsSchema,
   stripeCredentialsSchema,
@@ -30,7 +31,8 @@ export const listCredentials = authenticatedProcedure
         .or(googleSheetsCredentialsSchema.shape.type)
         .or(openAICredentialsSchema.shape.type)
         .or(whatsAppCredentialsSchema.shape.type)
-        .or(zemanticAiCredentialsSchema.shape.type),
+        .or(zemanticAiCredentialsSchema.shape.type)
+        .or(restApiCredentialsSchema.shape.type),
     })
   )
   .output(
