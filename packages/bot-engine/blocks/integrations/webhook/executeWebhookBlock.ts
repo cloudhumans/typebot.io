@@ -121,8 +121,15 @@ export const executeWebhookBlock = async (
     return { outgoingEdgeId: block.outgoingEdgeId, logs }
   }
 
+  // Validate the resolved URL (after interpolation). Genuinely unsafe URLs
+  // (bad scheme / metadata host) are blocked for every block. Parse failures
+  // only abort credentialed blocks, to avoid regressing legacy flows whose
+  // URLs `ky` tolerates but `new URL()` does not.
   const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
-  if (!urlSafety.safe) {
+  if (
+    !urlSafety.safe &&
+    (credentialData || urlSafety.reason !== 'Invalid URL')
+  ) {
     logs.push({
       status: 'error',
       description: `Request URL rejected: ${urlSafety.reason}`,
