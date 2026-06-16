@@ -32,13 +32,13 @@ The decrypted JSON structure inside the `data` field contains base URL, headers,
   "headers": [
     {
       "key": "Authorization",
-      "value": "Bearer sk_test_51Nz..."
+      "value": "Bearer <API_TOKEN>"
     }
   ],
   "queryParams": [
     {
       "key": "api_key",
-      "value": "sec_12345"
+      "value": "<REDACTED>"
     }
   ],
   "createdById": "cl_user_id_123"
@@ -48,23 +48,34 @@ The decrypted JSON structure inside the `data` field contains base URL, headers,
 ### 1.3 Schema Validation (Zod)
 We define the structure validation in `@typebot.io/schemas`:
 ```typescript
-import { z } from 'zod'
+// Use the repo's local zod wrapper (applies zod-openapi), not the raw `zod` package.
+import { z } from '../zod'
 
 export const restApiCredentialDataSchema = z.object({
-  baseUrl: z.string().url("A URL Base configurada precisa ser válida."),
-  headers: z.array(z.object({
-    key: z.string().min(1, "A chave do header não pode ser vazia."),
-    value: z.string()
-  })),
-  queryParams: z.array(z.object({
-    key: z.string().min(1, "A chave do parâmetro não pode ser vazia."),
-    value: z.string()
-  })),
-  createdById: z.string().min(1, "O ID do usuário criador é obrigatório.")
+  baseUrl: z.string().url(),
+  headers: z
+    .array(
+      z.object({
+        key: z.string().min(1),
+        value: z.string(),
+      })
+    )
+    .optional(),
+  queryParams: z
+    .array(
+      z.object({
+        key: z.string().min(1),
+        value: z.string(),
+      })
+    )
+    .optional(),
+  createdById: z.string().min(1),
 })
 
 export type RestApiCredentialData = z.infer<typeof restApiCredentialDataSchema>
 ```
+
+> Validators are kept message-less (`.url()`, `.min(1)`), matching the other credential schemas in `@typebot.io/schemas`. User-facing copy lives in the UI layer. `headers` and `queryParams` are optional so a credential can carry only a base URL.
 
 ---
 
@@ -105,6 +116,8 @@ When the bot-engine runs an HTTP block:
 
 ### 3.2 Logging Security
 All transaction traces and error messages stored in `ChatLog` must mask variables originating from the secure credentials database record, preserving secrecy in production dashboard listings.
+
+**Mechanism (value-based masking):** During credential resolution, collect every resolved header/query secret value into a `secretValues: Set<string>`. Immediately before persisting any log detail, run each string field (request URL, headers, query string, response excerpt, error messages) through a `maskSecrets(text, secretValues)` helper that replaces each occurrence of a secret value with `••••••••`. This is value-based rather than key-based, so secrets interpolated anywhere (not just known header keys) are still masked. The real request sent upstream retains the true values; only the persisted log copy is masked. The base URL is exempt (already shown locked in the UI). See the implementation plan, section 4, for the concrete helper.
 
 ---
 

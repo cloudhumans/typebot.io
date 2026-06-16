@@ -20,32 +20,39 @@ We will define the schema for the REST API Credentials inside the schemas packag
 
 #### `packages/schemas/features/blocks/integrations/webhook/schema.ts`
 ```typescript
+import { z } from '../../../zod'
 import { credentialsBaseSchema } from '../../shared'
 
 export const restApiCredentialsSchema = z
   .object({
     type: z.literal('rest-api'),
     data: z.object({
-      baseUrl: z.string().url("A URL Base configurada precisa ser válida."),
-      headers: z.array(
-        z.object({
-          key: z.string().min(1, "A chave do header não pode ser vazia."),
-          value: z.string(),
-        })
-      ).optional(),
-      queryParams: z.array(
-        z.object({
-          key: z.string().min(1, "A chave do parâmetro não pode ser vazia."),
-          value: z.string(),
-        })
-      ).optional(),
-      createdById: z.string().min(1, "O ID do usuário criador é obrigatório."),
+      baseUrl: z.string().url(),
+      headers: z
+        .array(
+          z.object({
+            key: z.string().min(1),
+            value: z.string(),
+          })
+        )
+        .optional(),
+      queryParams: z
+        .array(
+          z.object({
+            key: z.string().min(1),
+            value: z.string(),
+          })
+        )
+        .optional(),
+      createdById: z.string().min(1),
     }),
   })
   .merge(credentialsBaseSchema)
 
 export type RestApiCredentials = z.infer<typeof restApiCredentialsSchema>
 ```
+
+> **Nota (convenções do repo):** importar `z` do wrapper local (`packages/schemas/zod.ts`) e não do pacote `zod` direto — o wrapper aplica `zod-openapi`. Validadores ficam sem mensagens custom (ex.: `.url()`, `.min(1)`), seguindo o padrão dos demais credential schemas. Mensagens voltadas ao usuário ficam na camada de UI.
 
 Add `credentialsId` inside `httpRequestOptionsV5Schema`:
 ```typescript
@@ -158,16 +165,37 @@ Execute safe concatenation and merge values correctly on the server side during 
     3. Concatenate the URLs safely: `const resolvedUrl = cleanUrlConcat(parsedBaseUrl, blockUrlSuffix)`.
     4. Merge headers: global headers + local headers (local overrides global).
     5. Merge query parameters: global queryParams + local queryParams (local overrides global).
-    6. Mask global header values in transaction log details to ensure secret variables are never logged.
+    6. Mask credential-derived values in the transaction log (see masking mechanism below).
 
 ### 📝 Code Specifications (Concatenation & Merging logic):
 ```typescript
 const cleanUrlConcat = (base: string, suffix: string): string => {
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
+  // Empty suffix → return base unchanged (no trailing slash)
+  if (!suffix) return cleanBase
   const cleanSuffix = suffix.startsWith('/') ? suffix : `/${suffix}`
   return `${cleanBase}${cleanSuffix}`
 }
 ```
+
+### 🔒 Secret Masking Mechanism (logs)
+
+The masking is **deterministic and value-based**, applied right before persisting to `ChatLog`. We do not rely on a header-key blocklist (variables can be interpolated anywhere — URL, query params, body), so we mask by the resolved secret *values* themselves:
+
+1. While resolving the credential, collect the set of sensitive resolved strings into a `secretValues: Set<string>` — every interpolated `headers[].value` and `queryParams[].value` originating from the decrypted credential record (skip empty strings).
+2. Define a helper:
+   ```typescript
+   const maskSecrets = (text: string, secretValues: Set<string>): string => {
+     let masked = text
+     for (const secret of secretValues) {
+       if (!secret) continue
+       masked = masked.split(secret).join('••••••••')
+     }
+     return masked
+   }
+   ```
+3. Apply `maskSecrets` to every string field of the log detail (request URL, headers, query string, response body excerpt, and error messages) before calling the log-creation path. The raw request sent to the upstream API keeps the real values; only the persisted/returned log copy is masked.
+4. The base URL itself is **not** masked (it is shown locked in the UI by design), only the header/query secret values are.
 
 ---
 
@@ -178,8 +206,9 @@ To verify that the feature works and maintains retrocompatibility:
 ### ⚙️ Unit & Integration Tests
 1. **Zod Validation Test**: Verify that valid `rest-api` credential values pass schema check, and invalid/empty fields fail.
 2. **Merging Rules Test**: Verify that local headers/query params override global values in `executeWebhookBlock.ts`.
-3. **Safe Concatenation Test**: Verify that combinations like `http://example.com/` + `/path` resolve to `http://example.com/path` without doubling slashes.
+3. **Safe Concatenation Test**: Verify that combinations like `http://example.com/` + `/path` resolve to `http://example.com/path` without doubling slashes, **and that an empty suffix returns the base URL unchanged** (no trailing slash added).
 4. **Credential Decryption Failure handling**: Verify behavior if a referenced credential has been deleted or cannot be decrypted.
+5. **Secret Masking Test**: Verify that resolved credential header/query values are replaced with `••••••••` in persisted `ChatLog` entries (URL, headers, query string, response excerpt, error messages), while the real request still carries the actual values.
 
 ### 🌐 E2E & Playwright Coverage
 * Add a test case in `apps/builder/src/features/blocks/integrations/webhook/webhook.spec.ts` (or playwright spec):
