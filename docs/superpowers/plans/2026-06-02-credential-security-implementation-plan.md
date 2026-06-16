@@ -12,7 +12,7 @@ We will define the schema for the REST API Credentials inside the schemas packag
 * **`packages/prisma/postgresql/schema.prisma`** (+ generated migration)
   - Add a nullable `createdById String?` column to the `Credentials` model for creator auditing, with an optional relation to `User` (`onDelete: SetNull`, so deleting a user does not delete their credentials). Run `prisma migrate dev` to generate the additive migration.
 * **`packages/schemas/features/blocks/shared.ts`**
-  - Add `createdById: z.string().nullish()` to `credentialsBaseSchema` (it mirrors the `Credentials` row minus `data`/`type`), so every credential type exposes the audit field at the record level.
+  - Add `createdById: z.string().nullable()` to `credentialsBaseSchema` (it mirrors the `Credentials` row minus `data`/`type`), so every credential type exposes the audit field at the record level.
 * **`packages/schemas/features/blocks/integrations/webhook/schema.ts`**
   - Define `restApiCredentialsSchema` using `credentialsBaseSchema`.
   - Add `credentialsId?: string` to `httpRequestOptionsV5Schema`.

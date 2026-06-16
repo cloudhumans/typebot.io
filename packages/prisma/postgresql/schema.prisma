@@ -60,6 +60,7 @@ model User {
   displayedInAppNotifications Json?
   TypebotEditQueue            TypebotEditQueue[]
   TypebotHistory              TypebotHistory[]
+  createdCredentials          Credentials[]
 }
 
 model ApiToken {
@@ -139,7 +140,11 @@ model Credentials {
   name        String
   type        String
   iv          String
+  createdById String?
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([createdById])
 }
 
 model VerificationToken {

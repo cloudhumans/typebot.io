@@ -1,7 +1,25 @@
 import { z } from '../../../../zod'
-import { blockBaseSchema } from '../../shared'
+import { blockBaseSchema, credentialsBaseSchema } from '../../shared'
 import { IntegrationBlockType } from '../constants'
 import { HttpMethod, maxTimeout } from './constants'
+
+const restApiCredentialsKeyValueSchema = z.object({
+  key: z.string().min(1),
+  value: z.string(),
+})
+
+export const restApiCredentialsSchema = z
+  .object({
+    type: z.literal('rest-api'),
+    data: z.object({
+      baseUrl: z.string().url(),
+      headers: z.array(restApiCredentialsKeyValueSchema).optional(),
+      queryParams: z.array(restApiCredentialsKeyValueSchema).optional(),
+    }),
+  })
+  .merge(credentialsBaseSchema)
+
+export type RestApiCredentials = z.infer<typeof restApiCredentialsSchema>
 
 const variableForTestSchema = z.object({
   id: z.string(),
@@ -43,6 +61,7 @@ const httpRequestSchema = z.union([
 ])
 
 export const httpRequestOptionsV5Schema = z.object({
+  credentialsId: z.string().optional(),
   variablesForTest: z.array(variableForTestSchema).optional(),
   responseVariableMapping: z.array(responseVariableMappingSchema).optional(),
   isAdvancedConfig: z.boolean().optional(),

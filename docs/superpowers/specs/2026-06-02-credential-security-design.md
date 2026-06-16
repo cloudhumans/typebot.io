@@ -74,7 +74,7 @@ export const restApiCredentialDataSchema = z.object({
 export type RestApiCredentialData = z.infer<typeof restApiCredentialDataSchema>
 ```
 
-> Validators are kept message-less (`.url()`, `.min(1)`), matching the other credential schemas in `@typebot.io/schemas`. User-facing copy lives in the UI layer. `headers` and `queryParams` are optional so a credential can carry only a base URL. `createdById` is **not** part of this encrypted payload — it is a dedicated `Credentials` column (added to `credentialsBaseSchema` as `z.string().nullish()`).
+> Validators are kept message-less (`.url()`, `.min(1)`), matching the other credential schemas in `@typebot.io/schemas`. User-facing copy lives in the UI layer. `headers` and `queryParams` are optional so a credential can carry only a base URL. `createdById` is **not** part of this encrypted payload — it is a dedicated `Credentials` column (added to `credentialsBaseSchema` as `z.string().nullable()`).
 
 ---
 
