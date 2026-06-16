@@ -74,15 +74,6 @@ export const HttpRequestSettings = ({
           size="sm"
         />
       )}
-      {credentialsId && credential && (
-        <HStack fontSize="sm" color="purple.500" spacing={1}>
-          <LockedIcon />
-          <Text>
-            Secure mode — base URL and credential secrets are applied at runtime
-            and masked in logs.
-          </Text>
-        </HStack>
-      )}
       {credentialsId && credential ? (
         <HStack align="stretch">
           <Tooltip label={credential.baseUrl} placement="top" hasArrow>
