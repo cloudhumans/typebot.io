@@ -21,16 +21,17 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
     // base64-encoded into `state`, blows the OAuth redirect's `Location` header
     // past the ingress header limit → 502. Keeping `state` minimal also stops the
     // JWT from leaking into Google's URL and logs.
-    const { typebotId, blockId, workspaceId, redirectUrl } = req.query
+    // req.query values are `string | string[] | undefined`; normalize to a single
+    // string so `state` never carries arrays/undefined that the callback (which
+    // treats these as strings, e.g. `redirectUrl.split`) can't handle.
+    const firstValue = (value: string | string[] | undefined) =>
+      Array.isArray(value) ? value[0] : value
     const state = Buffer.from(
       JSON.stringify({
-        typebotId,
-        blockId,
-        workspaceId,
-        redirectUrl:
-          typeof redirectUrl === 'string'
-            ? redirectUrl.split('?')[0]
-            : redirectUrl,
+        typebotId: firstValue(req.query.typebotId),
+        blockId: firstValue(req.query.blockId),
+        workspaceId: firstValue(req.query.workspaceId),
+        redirectUrl: firstValue(req.query.redirectUrl)?.split('?')[0],
       })
     ).toString('base64')
     const url = oauth2Client.generateAuthUrl({
