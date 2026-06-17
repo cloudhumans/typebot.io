@@ -12,9 +12,13 @@ type Props = {
   block: HttpRequestBlock
 }
 
+// Mirror the runtime's cleanUrlConcat (bot-engine) exactly, including stripping
+// a trailing slash from the base when the suffix is empty — otherwise the graph
+// node would preview a URL (e.g. https://api.com/v1/) different from the one
+// actually requested (https://api.com/v1).
 const joinUrl = (base: string, suffix?: string) => {
-  if (!suffix) return base
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
+  if (!suffix) return cleanBase
   const cleanSuffix = suffix.startsWith('/') ? suffix : `/${suffix}`
   return `${cleanBase}${cleanSuffix}`
 }
