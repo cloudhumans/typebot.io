@@ -215,7 +215,12 @@ export const parseWebhookAttributes = async ({
   if (credentialData) {
     const collectSecret = (value: string) => {
       const resolved = parseVariables(typebot.variables)(value)
-      if (resolved) secretValues.add(resolved)
+      if (!resolved) return
+      secretValues.add(resolved)
+      // Query-param secrets are percent-encoded by qs.stringify in the request
+      // URL, so the masked value must also cover the encoded form.
+      const encoded = encodeURIComponent(resolved)
+      if (encoded !== resolved) secretValues.add(encoded)
     }
     credentialData.headers?.forEach((h) => collectSecret(h.value))
     credentialData.queryParams?.forEach((q) => collectSecret(q.value))
