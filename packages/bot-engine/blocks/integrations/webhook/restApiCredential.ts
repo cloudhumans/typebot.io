@@ -103,8 +103,14 @@ export const resolveRestApiCredentialData = async ({
     where: { id: credentialsId, workspaceId, type: 'rest-api' },
   })
   if (!credential) return null
-  return (await decrypt(
-    credential.data,
-    credential.iv
-  )) as RestApiCredentials['data']
+  try {
+    return (await decrypt(
+      credential.data,
+      credential.iv
+    )) as RestApiCredentials['data']
+  } catch {
+    // Corrupted payload / missing ENCRYPTION_SECRET — fail closed so the caller
+    // aborts the block in a controlled way rather than throwing.
+    return null
+  }
 }

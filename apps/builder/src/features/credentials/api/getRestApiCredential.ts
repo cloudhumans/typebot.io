@@ -43,10 +43,18 @@ export const getRestApiCredential = authenticatedProcedure
     if (!credential)
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Credential not found' })
 
-    const decrypted = (await decrypt(
-      credential.data,
-      credential.iv
-    )) as RestApiCredentials['data']
+    let decrypted: RestApiCredentials['data']
+    try {
+      decrypted = (await decrypt(
+        credential.data,
+        credential.iv
+      )) as RestApiCredentials['data']
+    } catch {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Could not read credential',
+      })
+    }
 
     return {
       id: credential.id,

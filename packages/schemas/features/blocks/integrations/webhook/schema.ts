@@ -4,15 +4,31 @@ import { IntegrationBlockType } from '../constants'
 import { HttpMethod, maxTimeout } from './constants'
 
 const restApiCredentialsKeyValueSchema = z.object({
-  key: z.string().min(1),
+  key: z.string().trim().min(1),
   value: z.string(),
 })
+
+// The base URL is shown in clear text in the builder and is not value-masked in
+// logs, so it must not itself carry secrets: enforce http(s) and reject userinfo
+// (e.g. https://user:pass@host).
+const isSafeBaseUrl = (url: string) => {
+  try {
+    const parsed = new URL(url)
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.username === '' &&
+      parsed.password === ''
+    )
+  } catch {
+    return false
+  }
+}
 
 export const restApiCredentialsSchema = z
   .object({
     type: z.literal('rest-api'),
     data: z.object({
-      baseUrl: z.string().url(),
+      baseUrl: z.string().url().refine(isSafeBaseUrl),
       headers: z.array(restApiCredentialsKeyValueSchema).optional(),
       queryParams: z.array(restApiCredentialsKeyValueSchema).optional(),
     }),

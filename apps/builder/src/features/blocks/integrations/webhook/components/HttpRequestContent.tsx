@@ -24,7 +24,11 @@ export const WebhookContent = ({ block: { options } }: Props) => {
   const { typebot } = useTypebot()
   const { workspace } = useWorkspace()
   const webhook = options?.webhook
-  const credentialsId = options?.credentialsId
+  // The dropdown emits 'default' to mean "no credentials"; treat it as absence.
+  const credentialsId =
+    options?.credentialsId && options.credentialsId !== 'default'
+      ? options.credentialsId
+      : undefined
   const method = webhook?.method ?? defaultWebhookAttributes.method
 
   const { data: credential } = trpc.credentials.getRestApiCredential.useQuery(

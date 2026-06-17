@@ -30,7 +30,11 @@ type Props = {
 const isValidUrl = (url: string) => {
   try {
     const parsed = new URL(url)
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.username === '' &&
+      parsed.password === ''
+    )
   } catch {
     return false
   }
@@ -38,8 +42,8 @@ const isValidUrl = (url: string) => {
 
 const toDataEntries = (items: KeyValue[]) =>
   items
-    .filter((item) => item.key && item.key.length > 0)
-    .map((item) => ({ key: item.key as string, value: item.value ?? '' }))
+    .map((item) => ({ key: (item.key ?? '').trim(), value: item.value ?? '' }))
+    .filter((item) => item.key.length > 0)
 
 export const RestApiCredentialsModal = ({
   isOpen,

@@ -31,11 +31,16 @@ export const HttpRequestSettings = ({
   const { t } = useTranslate()
   const { workspace } = useWorkspace()
   const { isOpen, onOpen, onClose } = useDisclosure()
-  const credentialsId = options?.credentialsId
+  // The dropdown emits 'default' to mean "no credentials"; treat it as absence.
+  const credentialsId =
+    options?.credentialsId && options.credentialsId !== 'default'
+      ? options.credentialsId
+      : undefined
+  const isSecureMode = !!credentialsId
 
   const { data: credential } = trpc.credentials.getRestApiCredential.useQuery(
     { workspaceId: workspace?.id as string, credentialsId: credentialsId as string },
-    { enabled: !!workspace?.id && !!credentialsId && credentialsId !== 'default' }
+    { enabled: !!workspace?.id && !!credentialsId }
   )
 
   const setLocalWebhook = async (newLocalWebhook: HttpRequest) => {
@@ -78,12 +83,12 @@ export const HttpRequestSettings = ({
           size="sm"
         />
       )}
-      {credentialsId && credential ? (
+      {isSecureMode ? (
         <HStack align="stretch">
-          <Tooltip label={credential.baseUrl} placement="top" hasArrow>
+          <Tooltip label={credential?.baseUrl ?? ''} placement="top" hasArrow>
             <Tag size="lg" colorScheme="gray" flexShrink={0} maxW="45%">
               <TagLeftIcon as={LockedIcon} />
-              <Text noOfLines={1}>{credential.baseUrl}</Text>
+              <Text noOfLines={1}>{credential?.baseUrl ?? '…'}</Text>
             </Tag>
           </Tooltip>
           <Box flex="1">

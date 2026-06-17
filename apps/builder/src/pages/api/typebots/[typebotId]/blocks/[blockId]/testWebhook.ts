@@ -23,6 +23,7 @@ import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/ty
 import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/webhook/parseSampleResult'
 import { saveLog } from '@typebot.io/bot-engine/logs/saveLog'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
+import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -69,17 +70,33 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const credentialsId =
       'options' in block ? block.options?.credentialsId : undefined
-    const credentialData = credentialsId
-      ? await resolveRestApiCredentialData({
-          credentialsId,
-          workspaceId: typebot.workspaceId,
-        })
-      : undefined
-    if (credentialsId && !credentialData)
-      return res.status(404).send({
-        statusCode: 404,
-        data: { message: `Referenced credential could not be resolved` },
+    let credentialData
+    if (credentialsId) {
+      // Resolving a credential decrypts workspace secrets and issues a
+      // server-side request, so gate it: the caller must be authenticated and a
+      // member of the typebot's workspace.
+      if (!user)
+        return res
+          .status(401)
+          .send({ statusCode: 401, data: { message: 'Unauthorized' } })
+      const workspace = await prisma.workspace.findFirst({
+        where: { id: typebot.workspaceId },
+        select: { id: true, members: true },
       })
+      if (!workspace || isReadWorkspaceFobidden(workspace, user))
+        return res
+          .status(403)
+          .send({ statusCode: 403, data: { message: 'Forbidden' } })
+      credentialData = await resolveRestApiCredentialData({
+        credentialsId,
+        workspaceId: typebot.workspaceId,
+      })
+      if (!credentialData)
+        return res.status(404).send({
+          statusCode: 404,
+          data: { message: `Referenced credential could not be resolved` },
+        })
+    }
 
     const parsedWebhook = await parseWebhookAttributes({
       webhook,
