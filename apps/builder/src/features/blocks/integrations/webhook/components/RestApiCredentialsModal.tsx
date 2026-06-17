@@ -29,11 +29,13 @@ type Props = {
 
 const isValidUrl = (url: string) => {
   try {
-    const parsed = new URL(url)
+    const parsed = new URL(url.trim())
     return (
       (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
       parsed.username === '' &&
-      parsed.password === ''
+      parsed.password === '' &&
+      parsed.search === '' &&
+      parsed.hash === ''
     )
   } catch {
     return false

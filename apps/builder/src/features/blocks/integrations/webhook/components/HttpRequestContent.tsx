@@ -64,7 +64,7 @@ export const WebhookContent = ({ block: { options } }: Props) => {
           >
             <LockedIcon verticalAlign="middle" />
           </Tooltip>{' '}
-          {displayUrl ?? t('blocks.integrations.httpRequest.configure.label')}
+          {displayUrl || t('blocks.integrations.httpRequest.configure.label')}
         </Text>
         {responseMappings}
       </Stack>

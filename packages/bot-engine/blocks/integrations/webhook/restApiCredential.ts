@@ -60,13 +60,23 @@ const metadataHosts = new Set([
   '169.254.169.254',
   'metadata.google.internal',
   'metadata',
+  // IPv6 forms of the cloud metadata endpoint (IPv4-mapped + AWS native IPv6).
+  '::ffff:169.254.169.254',
+  '::ffff:a9fe:a9fe',
+  'fd00:ec2::254',
 ])
+
+// Normalizes a URL hostname for metadata-host comparison: strips IPv6 brackets
+// and lowercases, so `[::ffff:169.254.169.254]` and `[FD00:EC2::254]` match.
+const normalizeHostname = (hostname: string) =>
+  hostname.toLowerCase().replace(/^\[/, '').replace(/\]$/, '')
 
 /**
  * Conservative SSRF guard for the *resolved* request URL (after variable
  * interpolation). Enforces an http/https scheme allowlist and blocks the cloud
- * metadata endpoint. Broader private-range blocking is intentionally left out
- * to preserve self-hosted setups where webhooks call internal hostnames.
+ * metadata endpoint (IPv4 and IPv6 forms). Broader private-range blocking is
+ * intentionally left out to preserve self-hosted setups where webhooks call
+ * internal hostnames.
  */
 export const isResolvedUrlSafe = (
   url: string
@@ -79,7 +89,7 @@ export const isResolvedUrlSafe = (
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
     return { safe: false, reason: `Disallowed scheme: ${parsed.protocol}` }
-  if (metadataHosts.has(parsed.hostname.toLowerCase()))
+  if (metadataHosts.has(normalizeHostname(parsed.hostname)))
     return { safe: false, reason: 'Blocked metadata host' }
   return { safe: true }
 }

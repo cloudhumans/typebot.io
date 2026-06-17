@@ -26,6 +26,12 @@ import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWork
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     const user = await getAuthenticatedUser(req, res)
+    // This builder endpoint issues a server-side HTTP request, so it must not be
+    // callable anonymously (the credential path additionally checks membership).
+    if (!user)
+      return res
+        .status(401)
+        .send({ statusCode: 401, data: { message: 'Unauthorized' } })
     const typebotId = req.query.typebotId as string
     const blockId = req.query.blockId as string
     const resultId = req.query.resultId as string | undefined
@@ -70,13 +76,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       'options' in block ? block.options?.credentialsId : undefined
     let credentialData
     if (credentialsId) {
-      // Resolving a credential decrypts workspace secrets and issues a
-      // server-side request, so gate it: the caller must be authenticated and a
-      // member of the typebot's workspace.
-      if (!user)
-        return res
-          .status(401)
-          .send({ statusCode: 401, data: { message: 'Unauthorized' } })
+      // Resolving a credential decrypts workspace secrets, so additionally
+      // require the caller to be a member of the typebot's workspace.
       const workspace = await prisma.workspace.findFirst({
         where: { id: typebot.workspaceId },
         select: { id: true, members: true },

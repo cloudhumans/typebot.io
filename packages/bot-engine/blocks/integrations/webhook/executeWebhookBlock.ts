@@ -88,8 +88,14 @@ export const executeWebhookBlock = async (
       : null)
   if (!webhook) return { outgoingEdgeId: block.outgoingEdgeId }
 
-  const credentialsId =
+  const rawCredentialsId =
     'options' in block ? block.options?.credentialsId : undefined
+  // 'default' is the dropdown sentinel for "no credentials"; treat as absence
+  // in case it ever reaches the engine via stale persistence/import.
+  const credentialsId =
+    rawCredentialsId && rawCredentialsId !== 'default'
+      ? rawCredentialsId
+      : undefined
   let credentialData: RestApiCredentials['data'] | undefined
   if (credentialsId) {
     const resolved = await resolveRestApiCredentialData({

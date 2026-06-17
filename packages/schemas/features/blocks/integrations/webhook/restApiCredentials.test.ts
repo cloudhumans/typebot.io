@@ -52,6 +52,13 @@ describe('restApiCredentialsSchema', () => {
     )
   })
 
+  it('rejects a base URL with a query string or fragment (secret leak vector)', () => {
+    expect(parse({ baseUrl: 'https://api.example.com?token=abc' }).success).toBe(
+      false
+    )
+    expect(parse({ baseUrl: 'https://api.example.com#frag' }).success).toBe(false)
+  })
+
   it('rejects an empty / whitespace-only header key', () => {
     expect(
       parse({

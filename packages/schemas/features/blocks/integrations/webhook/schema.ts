@@ -13,11 +13,15 @@ const restApiCredentialsKeyValueSchema = z.object({
 // (e.g. https://user:pass@host).
 const isSafeBaseUrl = (url: string) => {
   try {
-    const parsed = new URL(url)
+    const parsed = new URL(url.trim())
     return (
       (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
       parsed.username === '' &&
-      parsed.password === ''
+      parsed.password === '' &&
+      // No query string / fragment: those could carry secrets (e.g. ?token=)
+      // that would leak via the clear-text, unmasked base URL.
+      parsed.search === '' &&
+      parsed.hash === ''
     )
   } catch {
     return false

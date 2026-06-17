@@ -94,11 +94,17 @@ describe('isResolvedUrlSafe', () => {
     expect(isResolvedUrlSafe('ftp://example.com').safe).toBe(false)
   })
 
-  it('rejects the cloud metadata endpoint', () => {
+  it('rejects the cloud metadata endpoint (IPv4 and IPv6 forms)', () => {
     expect(
       isResolvedUrlSafe('http://169.254.169.254/latest/meta-data').safe
     ).toBe(false)
     expect(isResolvedUrlSafe('http://metadata.google.internal/').safe).toBe(
+      false
+    )
+    expect(
+      isResolvedUrlSafe('http://[::ffff:169.254.169.254]/latest/meta-data').safe
+    ).toBe(false)
+    expect(isResolvedUrlSafe('http://[fd00:ec2::254]/latest/meta-data').safe).toBe(
       false
     )
   })
