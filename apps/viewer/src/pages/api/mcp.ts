@@ -5,7 +5,9 @@ import {
   sanitizeToolName,
   extractToolOutput,
   transformToMCPTool,
-} from '@/features/mcp'
+  checkBearerAuth,
+} from '@typebot.io/mcp-tools'
+import { env } from '@typebot.io/env'
 import logger from '@/helpers/logger'
 
 /**
@@ -33,10 +35,40 @@ export default async function handler(
     return res.status(200).end()
   }
 
-  // Extract tenant from headers or query
-  const tenant = (req.headers['x-tenant'] ||
-    req.headers['tenant'] ||
-    req.query.tenant) as string | undefined
+  // Bearer auth gate. Applies to every non-preflight method (GET/POST/DELETE).
+  // This is an HTTP-level guard — unauthorized requests get a real 401, never
+  // a JSON-RPC 200 envelope. Fail-closed: a missing server token yields 401.
+  const auth = checkBearerAuth(
+    req.headers.authorization,
+    env.TYPEBOT_TOOLS_API_TOKEN
+  )
+  if (!auth.authorized) {
+    if (auth.reason === 'misconfigured')
+      logger.warn(
+        'MCP endpoint misconfigured: TYPEBOT_TOOLS_API_TOKEN is not set, rejecting all requests'
+      )
+    // The CH-MCP proxy masks a 401 as an empty tools list, so this server-side
+    // log is the only evidence of a wrong/rotated token or brute-force against
+    // this public path. Never log the received token value.
+    else
+      logger.warn('MCP endpoint rejected unauthorized request', {
+        reason: auth.reason,
+        method: req.method,
+      })
+    res.setHeader('WWW-Authenticate', 'Bearer realm="mcp"')
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  // Extract tenant from headers or query. Headers and query params can be
+  // string arrays when sent multiple times (e.g. ?tenant=a&tenant=b), so we
+  // always normalize to the first value.
+  const firstValue = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value
+
+  const tenant =
+    firstValue(req.headers['x-tenant']) ||
+    firstValue(req.headers['tenant']) ||
+    firstValue(req.query.tenant)
 
   if (req.method === 'GET') {
     // SSE endpoint for server-to-client messages
@@ -65,8 +97,31 @@ export default async function handler(
     try {
       const body = req.body
 
+      // Validate the JSON-RPC envelope before dispatching.
+      if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+        return res.status(200).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Invalid Request',
+          },
+          id: null,
+        })
+      }
+
       // Handle JSON-RPC request
       const { method, params, id } = body
+
+      if (typeof method !== 'string') {
+        return res.status(200).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Invalid Request',
+          },
+          id: id ?? null,
+        })
+      }
 
       if (method === 'initialize') {
         logger.info('MCP initialize', { tenant, requestId: id })
@@ -142,6 +197,18 @@ export default async function handler(
         }
 
         const { name, arguments: args } = params || {}
+
+        if (typeof name !== 'string' || name.length === 0) {
+          return res.status(200).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32602,
+              message: 'Invalid params: "name" is required',
+            },
+            id,
+          })
+        }
+
         logger.info('MCP tools/call', { tenant, toolName: name, requestId: id })
 
         const { tools } = await getWorkflowTools({ tenant })
@@ -221,6 +288,13 @@ export default async function handler(
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       })
+      // Propagate the real error message: errors raised during tool execution
+      // (e.g. `Missing required variable "X" for TOOL workflow` thrown by
+      // executeDeclareVariables) are addressed to the calling agent, which
+      // needs the message to self-correct. Masking everything as a generic
+      // "Internal error" defeated that "fail loudly" contract and blinded
+      // message-based observability filters. Full error + stack stay in the
+      // server-side log above.
       return res.status(200).json({
         jsonrpc: '2.0',
         error: {
@@ -244,7 +318,7 @@ export default async function handler(
   return res.status(405).json({ error: 'Method not allowed' })
 }
 
-// Disable body parsing size limit for streaming
+// Raise the body parser size limit to 4mb for larger tool-call payloads.
 export const config = {
   api: {
     bodyParser: {
