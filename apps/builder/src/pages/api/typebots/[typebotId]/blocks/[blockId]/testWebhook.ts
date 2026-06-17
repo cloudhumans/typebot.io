@@ -15,10 +15,8 @@ import {
   executeWebhook,
   parseWebhookAttributes,
 } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
-import {
-  isResolvedUrlSafe,
-  resolveRestApiCredentialData,
-} from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
+import { isResolvedUrlSafe } from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
+import { resolveRestApiCredentialData } from '@typebot.io/bot-engine/blocks/integrations/webhook/resolveRestApiCredential'
 import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedChildTypebots'
 import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/webhook/parseSampleResult'
 import { saveLog } from '@typebot.io/bot-engine/logs/saveLog'

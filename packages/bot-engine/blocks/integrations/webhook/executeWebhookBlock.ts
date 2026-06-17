@@ -36,8 +36,8 @@ import {
   isResolvedUrlSafe,
   maskSecretsDeep,
   mergeKeyValues,
-  resolveRestApiCredentialData,
 } from './restApiCredential'
+import { resolveRestApiCredentialData } from './resolveRestApiCredential'
 
 type ParsedWebhook = ExecutableHttpRequest & {
   basicAuth: { username?: string; password?: string }
