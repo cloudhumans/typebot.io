@@ -224,7 +224,28 @@ The masking is **deterministic and value-based**, applied right before persistin
 
 ---
 
-## 🧪 5. Testing & Verification Checklist
+## 📦 5. Import / Export & Retrocompatibility
+
+Typebots reference a credential only by `block.options.credentialsId`. The encrypted secret payload (`baseUrl`, `headers`, `queryParams`) lives in the `Credentials` table, **never** in the typebot document — so it is never serialized into an export.
+
+### 5.1 Export
+* Exporting a typebot serializes `credentialsId` (the id only). **No secret data leaves the workspace.** Importing elsewhere can reference, at most, a dangling id — never the actual base URL or header/query secrets.
+
+### 5.2 Import (and cross-workspace duplication)
+* Import goes through `createTypebot`, which already runs `sanitizeGroups → sanitizeBlock` (`apps/builder/src/features/typebot/helpers/sanitizers.ts`).
+* `sanitizeBlock`'s **generic `default` case** runs `sanitizeCredentialsId(workspaceId)` on any block whose `options.credentialsId` is set: it looks the credential up in the **target** workspace and returns `undefined` if it does not exist. **No new code is required** — the HTTP Request block inherits this because `credentialsId` is part of `httpRequestOptionsV5Schema`.
+* Resulting behavior:
+  - **No credential** (legacy/most blocks): untouched — custom-URL mode, 100% retrocompatible.
+  - **Credential present, same workspace:** id resolves, kept.
+  - **Credential present, different workspace:** id is nulled → block cleanly falls back to custom-URL mode (the builder shows the open URL input; the runtime takes the legacy path). The user must reconfigure.
+* **Known edge:** when a credentialed block loses its credential on cross-workspace import, the previously-entered path suffix (e.g. `/orders`) remains in `webhook.url` and is now an invalid absolute URL until the user re-selects a credential or replaces it with a full URL. This matches how other credential-backed blocks behave on import and is acceptable.
+
+### 5.3 Builder fallback when a referenced credential is missing
+* `getRestApiCredential` returns `NOT_FOUND` for an unknown/foreign id; the settings panel then renders the custom-URL input (no locked tag), and `CredentialsDropdown` shows the default "no credentials" label. The stale id is normalized away on the next dropdown change.
+
+---
+
+## 🧪 6. Testing & Verification Checklist
 
 To verify that the feature works and maintains retrocompatibility:
 
@@ -238,6 +259,7 @@ To verify that the feature works and maintains retrocompatibility:
 7. **Authorization Test**: Verify that a non-admin workspace member is rejected (`FORBIDDEN`) when creating a `rest-api` credential.
 8. **SSRF Validation Test**: Verify that a resolved URL pointing at a private/loopback host or `169.254.169.254`, or using a non-`http(s)` scheme, is rejected before the request is issued.
 9. **Base URL Hygiene Test**: Verify that saving a credential whose `baseUrl` contains userinfo (`user:pass@`) or a sensitive query param is rejected.
+10. **Import Sanitization Test**: Verify that importing a typebot whose HTTP block references a `credentialsId` absent from the target workspace results in `credentialsId === undefined` (via `sanitizeBlock`), and that the block falls back to custom-URL mode. Confirm an exported typebot JSON contains no decrypted secret values.
 
 ### 🌐 E2E & Playwright Coverage
 * Add a test case in `apps/builder/src/features/blocks/integrations/webhook/webhook.spec.ts` (or playwright spec):

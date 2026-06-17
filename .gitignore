@@ -41,3 +41,4 @@ snapshots
 .typebot-build
 .pnpm-store
 .antigravitycli
+.serena/
