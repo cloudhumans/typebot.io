@@ -1,7 +1,8 @@
 # Design Specification: Credential Security (REST Data Sources)
 
 **Date**: 2026-06-02  
-**Status**: Approved  
+**Updated**: 2026-06-16  
+**Status**: Implemented (reflects shipped code)  
 **Author**: Antigravity AI  
 
 ---
