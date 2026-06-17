@@ -99,6 +99,10 @@ The HTTP Request Block settings panel dynamically adjusts based on the active `C
 * **State 2: Secured Credential Active**
   - Replaces the URL text input with a locked combination: `[ 🔒 Credential Base URL ]` (Read-only tag) followed by `[ Suffix / Relative Path Suffix ]` (Editable input).
   - Shows inherited global headers and query parameters at the top of their respective lists as read-only, masked entries (e.g. `Authorization: ••••••••••••`).
+  - The graph node preview shows an inline lock icon before the resolved URL (`🔒 GET <baseUrl><suffix>`); the lock carries a tooltip explaining secure mode.
+
+### 2.3 Internationalization (i18n)
+All user-facing copy for this feature resolves through **Tolgee** (`useTranslate` / `t('...')`), under the `blocks.integrations.httpRequest.*` key namespace, instead of being hardcoded. Keys are maintained in the locale files the fork keeps in lockstep — **`en.json` (default + fallback), `pt-BR.json`, and `es.json`**; the remaining locales (`de`, `fr`, `it`, `pt`, `ro`) fall back to `en`. Validation messages (e.g. invalid base URL) live in the UI layer as i18n keys, never in the Zod schema (which stays message-less).
 
 ---
 
@@ -117,12 +121,27 @@ When the bot-engine runs an HTTP block:
 ### 3.2 Logging Security
 All transaction traces and error messages stored in `ChatLog` must mask variables originating from the secure credentials database record, preserving secrecy in production dashboard listings.
 
-**Mechanism (value-based masking):** During credential resolution, collect every resolved header/query secret value into a `secretValues: Set<string>`. Immediately before persisting any log detail, run each string field (request URL, headers, query string, response excerpt, error messages) through a `maskSecrets(text, secretValues)` helper that replaces each occurrence of a secret value with `••••••••`. This is value-based rather than key-based, so secrets interpolated anywhere (not just known header keys) are still masked. The real request sent upstream retains the true values; only the persisted log copy is masked. The base URL is exempt from masking (it is shown locked in the UI). **Caveat:** to keep that exemption safe, the base URL must not itself carry secrets — at credential-save time reject a `baseUrl` containing userinfo (`https://user:pass@host`) or obviously sensitive query parameters (e.g. `?token=`, `?api_key=`). Secrets belong in the `headers`/`queryParams` arrays, which are masked. See the implementation plan, section 4, for the concrete masking helper.
+**Mechanism (value-based masking):** During credential resolution, collect every resolved header/query secret value into a `secretValues: Set<string>`. Immediately before persisting any log detail, run each string field (request URL, headers, query string, response excerpt, error messages) through a `maskSecrets(text, secretValues)` helper that replaces each occurrence of a secret value with `••••••••`. This is value-based rather than key-based, so secrets interpolated anywhere (not just known header keys) are still masked. The real request sent upstream retains the true values; only the persisted log copy is masked. The base URL is exempt from masking (it is shown locked in the UI). **Caveat:** to keep that exemption safe, the base URL must not itself carry secrets — at credential-save time reject a `baseUrl` containing userinfo (`https://user:pass@host`) or obviously sensitive query parameters (e.g. `?token=`, `?api_key=`). Secrets belong in the `headers`/`queryParams` arrays, which are masked. The concrete helper lives in `packages/bot-engine/blocks/integrations/webhook/restApiCredential.ts`.
 
 ---
 
-## 🧪 4. Testing Plan
+## 📦 4. Import / Export & Retrocompatibility
+
+A typebot references a credential only by `block.options.credentialsId`. The encrypted secret payload (`baseUrl`, `headers`, `queryParams`) lives in the `Credentials` table, **never** in the typebot document.
+
+* **Export:** serializes `credentialsId` (the id only). No secret data ever leaves the workspace — an export can carry, at most, a dangling id.
+* **Import / cross-workspace duplication:** handled by the existing `sanitizeGroups → sanitizeBlock` path in `createTypebot` (`apps/builder/src/features/typebot/helpers/sanitizers.ts`). Its generic `default` case runs `sanitizeCredentialsId(workspaceId)`, which looks the id up in the **target** workspace and returns `undefined` when absent. The HTTP Request block inherits this automatically because `credentialsId` is part of `httpRequestOptionsV5Schema` — no feature-specific code needed.
+  - No credential → untouched (custom-URL mode, fully retrocompatible).
+  - Credential present, same workspace → id resolves, kept.
+  - Credential present, different workspace → id nulled → block falls back to custom-URL mode; the user must reconfigure.
+* **Builder fallback:** when a referenced credential is missing, `getRestApiCredential` returns `NOT_FOUND`; the settings panel renders the open URL input and `CredentialsDropdown` shows the default label. The stale id is normalized to `undefined` on the next dropdown change.
+* **Known edge:** a credentialed block that loses its credential on cross-workspace import keeps its path suffix (e.g. `/orders`) in `webhook.url`, which is an invalid absolute URL until reconfigured — consistent with other credential-backed blocks.
+
+---
+
+## 🧪 5. Testing Plan
 * **Prisma Validation**: Test the schema serialization and deserialization of the new Zod definition.
 * **Variables Parsing**: Test variable parsing within the base URL, headers, and query parameters of the credential.
 * **Merging Test**: Verify that block-level parameters override credential-level parameters correctly.
 * **UI State Checks**: Ensure legacy HTTP blocks correctly fall back to the open URL input.
+* **Import Sanitization**: Importing a typebot referencing a `credentialsId` absent from the target workspace nulls the id (via `sanitizeBlock`) and falls back to custom-URL mode; an exported typebot JSON contains no decrypted secret values.
