@@ -96,6 +96,7 @@ describe('createCloudChatEmbeddedUser', () => {
     expect(callArg.data.apiTokens).toEqual({
       create: { name: 'Default', token: expect.any(String) },
     })
+    expect(callArg.data.apiTokens.create.token).toHaveLength(24)
     expect(callArg.data).not.toHaveProperty('workspaces')
     expect(callArg).not.toHaveProperty('include')
   })
