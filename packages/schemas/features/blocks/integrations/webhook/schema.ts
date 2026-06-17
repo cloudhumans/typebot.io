@@ -32,7 +32,7 @@ export const restApiCredentialsSchema = z
   .object({
     type: z.literal('rest-api'),
     data: z.object({
-      baseUrl: z.string().url().refine(isSafeBaseUrl),
+      baseUrl: z.string().trim().url().refine(isSafeBaseUrl),
       headers: z.array(restApiCredentialsKeyValueSchema).optional(),
       queryParams: z.array(restApiCredentialsKeyValueSchema).optional(),
     }),

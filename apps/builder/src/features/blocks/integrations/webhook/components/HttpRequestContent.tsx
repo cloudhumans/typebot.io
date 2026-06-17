@@ -36,7 +36,7 @@ export const WebhookContent = ({ block: { options } }: Props) => {
       workspaceId: workspace?.id as string,
       credentialsId: credentialsId as string,
     },
-    { enabled: !!workspace?.id && !!credentialsId && credentialsId !== 'default' }
+    { enabled: !!workspace?.id && !!credentialsId }
   )
 
   const responseMappings = options?.responseVariableMapping

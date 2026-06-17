@@ -280,7 +280,8 @@ export const HttpRequestAdvancedConfigForm = ({
           </AccordionItem>
         </Accordion>
       </SwitchWithRelatedSettings>
-      {(webhook?.url || options?.credentialsId) && (
+      {(webhook?.url ||
+        (options?.credentialsId && options.credentialsId !== 'default')) && (
         <Button
           onClick={executeTestRequest}
           colorScheme="blue"

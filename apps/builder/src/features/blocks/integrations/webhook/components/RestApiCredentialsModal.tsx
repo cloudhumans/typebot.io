@@ -105,7 +105,7 @@ export const RestApiCredentialsModal = ({
         workspaceId: workspace.id,
         name,
         data: {
-          baseUrl,
+          baseUrl: baseUrl.trim(),
           headers: toDataEntries(headers),
           queryParams: toDataEntries(queryParams),
         },
