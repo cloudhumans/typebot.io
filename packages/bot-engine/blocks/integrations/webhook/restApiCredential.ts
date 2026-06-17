@@ -71,6 +71,32 @@ const metadataHosts = new Set([
 const normalizeHostname = (hostname: string) =>
   hostname.toLowerCase().replace(/^\[/, '').replace(/\]$/, '')
 
+// Parses a hostname written as an IPv4 address in any common encoding (dotted
+// decimal, a single decimal integer, or hex) into a 32-bit int. Returns null
+// when the host is not such a form (e.g. a real hostname). Used to block the
+// link-local range regardless of how the IP is written (e.g. http://2852039166).
+const hostnameToIpv4Int = (host: string): number | null => {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+    const parts = host.split('.').map(Number)
+    if (parts.some((p) => p > 255)) return null
+    return (
+      ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0
+    )
+  }
+  if (/^\d+$/.test(host)) {
+    const n = Number(host)
+    return Number.isInteger(n) && n >= 0 && n <= 0xffffffff ? n >>> 0 : null
+  }
+  if (/^0x[0-9a-f]+$/i.test(host)) {
+    const n = parseInt(host, 16)
+    return n >= 0 && n <= 0xffffffff ? n >>> 0 : null
+  }
+  return null
+}
+
+// 169.254.0.0/16 (link-local, includes the cloud metadata IP 169.254.169.254).
+const isLinkLocalIpv4 = (ipInt: number) => ipInt >>> 16 === 0xa9fe
+
 /**
  * Conservative SSRF guard for the *resolved* request URL (after variable
  * interpolation). Enforces an http/https scheme allowlist and blocks the cloud
@@ -89,8 +115,12 @@ export const isResolvedUrlSafe = (
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
     return { safe: false, reason: `Disallowed scheme: ${parsed.protocol}` }
-  if (metadataHosts.has(normalizeHostname(parsed.hostname)))
+  const host = normalizeHostname(parsed.hostname)
+  if (metadataHosts.has(host))
     return { safe: false, reason: 'Blocked metadata host' }
+  const ipInt = hostnameToIpv4Int(host)
+  if (ipInt !== null && isLinkLocalIpv4(ipInt))
+    return { safe: false, reason: 'Blocked link-local/metadata address' }
   return { safe: true }
 }
 

@@ -72,8 +72,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
     )
 
-    const credentialsId =
+    const rawCredentialsId =
       'options' in block ? block.options?.credentialsId : undefined
+    // 'default' is the dropdown sentinel for "no credentials" — treat as absence.
+    const credentialsId =
+      rawCredentialsId && rawCredentialsId !== 'default'
+        ? rawCredentialsId
+        : undefined
     let credentialData
     if (credentialsId) {
       // Resolving a credential decrypts workspace secrets, so additionally

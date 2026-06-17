@@ -109,6 +109,20 @@ describe('isResolvedUrlSafe', () => {
     )
   })
 
+  it('rejects alternate IP encodings of the metadata/link-local address', () => {
+    // 2852039166 === 169.254.169.254
+    expect(isResolvedUrlSafe('http://2852039166/latest/meta-data').safe).toBe(
+      false
+    )
+    expect(isResolvedUrlSafe('http://0xA9FEA9FE/').safe).toBe(false)
+    expect(isResolvedUrlSafe('http://169.254.0.1/').safe).toBe(false)
+  })
+
+  it('still allows normal public/private IPs and hosts', () => {
+    expect(isResolvedUrlSafe('http://10.0.0.5:8080/api').safe).toBe(true)
+    expect(isResolvedUrlSafe('https://1.1.1.1/').safe).toBe(true)
+  })
+
   it('rejects malformed URLs', () => {
     expect(isResolvedUrlSafe('not a url').safe).toBe(false)
   })
