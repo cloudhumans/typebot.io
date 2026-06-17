@@ -6,6 +6,7 @@ import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { trpc } from '@/lib/trpc'
 import { LockedIcon } from '@/components/icons'
 import { useTranslate } from '@tolgee/react'
+import { defaultWebhookAttributes } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
 
 type Props = {
   block: HttpRequestBlock
@@ -24,6 +25,7 @@ export const WebhookContent = ({ block: { options } }: Props) => {
   const { workspace } = useWorkspace()
   const webhook = options?.webhook
   const credentialsId = options?.credentialsId
+  const method = webhook?.method ?? defaultWebhookAttributes.method
 
   const { data: credential } = trpc.credentials.getRestApiCredential.useQuery(
     {
@@ -50,7 +52,7 @@ export const WebhookContent = ({ block: { options } }: Props) => {
     return (
       <Stack w="full">
         <Text noOfLines={2} pr="6">
-          {webhook?.method}{' '}
+          {method}{' '}
           <Tooltip
             label={t('blocks.integrations.httpRequest.secureMode.tooltip')}
             hasArrow
@@ -74,7 +76,7 @@ export const WebhookContent = ({ block: { options } }: Props) => {
   return (
     <Stack w="full">
       <Text noOfLines={2} pr="6">
-        {webhook.method} {webhook.url}
+        {method} {webhook.url}
       </Text>
       {responseMappings}
     </Stack>
