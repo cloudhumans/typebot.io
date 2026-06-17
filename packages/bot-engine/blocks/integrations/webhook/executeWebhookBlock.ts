@@ -28,8 +28,8 @@ import {
 } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
 import { env } from '@typebot.io/env'
 import { parseAnswers } from '@typebot.io/results/parseAnswers'
-import { JSONParse } from '@typebot.io/lib/JSONParse'
 import logger from '@typebot.io/lib/logger'
+import { parseResponseBody, safeJsonParse } from './parseResponseBody'
 
 type ParsedWebhook = ExecutableHttpRequest & {
   basicAuth: { username?: string; password?: string }
@@ -268,15 +268,13 @@ export const executeWebhook = async (
 
   try {
     const response = await ky(request.url, omit(request, 'url'))
-    const body = response.headers.get('content-type')?.includes('json')
-      ? await response.json()
-      : await response.text()
+    const body = await parseResponseBody(response)
     logs.push({
       status: 'success',
       description: webhookSuccessDescription,
       details: {
         statusCode: response.status,
-        response: typeof body === 'string' ? safeJsonParse(body).data : body,
+        response: body,
         request,
       },
     })
@@ -296,24 +294,16 @@ export const executeWebhook = async (
     return {
       response: {
         statusCode: response.status,
-        data: typeof body === 'string' ? safeJsonParse(body).data : body,
+        data: body,
       },
       logs,
       startTimeShouldBeUpdated: true,
     }
   } catch (error) {
     if (error instanceof HTTPError) {
-      const responseBody = error.response.headers
-        .get('content-type')
-        ?.includes('json')
-        ? await error.response.json()
-        : await error.response.text()
       const response = {
         statusCode: error.response.status,
-        data:
-          typeof responseBody === 'string'
-            ? safeJsonParse(responseBody).data
-            : responseBody,
+        data: await parseResponseBody(error.response),
       }
       logs.push({
         status: 'error',
@@ -434,15 +424,6 @@ export const convertKeyValueTableToObject = (
       [key]: value,
     }
   }, {})
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const safeJsonParse = (json: unknown): { data: any; isJson: boolean } => {
-  try {
-    return { data: JSONParse(json as string), isJson: true }
-  } catch (err) {
-    return { data: json, isJson: false }
-  }
 }
 
 const parseFormDataBody = (body: object) => {
