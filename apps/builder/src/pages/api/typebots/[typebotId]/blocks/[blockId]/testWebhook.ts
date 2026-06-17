@@ -15,6 +15,10 @@ import {
   executeWebhook,
   parseWebhookAttributes,
 } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
+import {
+  isResolvedUrlSafe,
+  resolveRestApiCredentialData,
+} from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
 import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedChildTypebots'
 import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/webhook/parseSampleResult'
 import { saveLog } from '@typebot.io/bot-engine/logs/saveLog'
@@ -63,6 +67,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
     )
 
+    const credentialsId =
+      'options' in block ? block.options?.credentialsId : undefined
+    const credentialData = credentialsId
+      ? await resolveRestApiCredentialData({
+          credentialsId,
+          workspaceId: typebot.workspaceId,
+        })
+      : undefined
+    if (credentialsId && !credentialData)
+      return res.status(404).send({
+        statusCode: 404,
+        data: { message: `Referenced credential could not be resolved` },
+      })
+
     const parsedWebhook = await parseWebhookAttributes({
       webhook,
       isCustomBody: block.options?.isCustomBody,
@@ -76,12 +94,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }),
       },
       answers,
+      credentialData: credentialData ?? undefined,
     })
 
     if (!parsedWebhook)
       return res.status(500).send({
         statusCode: 500,
         data: { message: `Couldn't parse webhook attributes` },
+      })
+
+    const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
+    if (!urlSafety.safe && (credentialData || urlSafety.reason !== 'Invalid URL'))
+      return res.status(400).send({
+        statusCode: 400,
+        data: { message: `Request URL rejected: ${urlSafety.reason}` },
       })
 
     const { response, logs } = await executeWebhook(parsedWebhook, {
