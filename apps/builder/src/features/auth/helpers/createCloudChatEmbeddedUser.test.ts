@@ -66,6 +66,7 @@ describe('createCloudChatEmbeddedUser', () => {
         emailVerified: verifiedAt,
         image: undefined,
         onboardingCategories: [],
+        apiTokens: { create: { name: 'Default', token: expect.any(String) } },
       },
     })
     expect(user.email).toBe('maria@cliente.com')
@@ -82,16 +83,19 @@ describe('createCloudChatEmbeddedUser', () => {
         emailVerified: undefined,
         image: undefined,
         onboardingCategories: [],
+        apiTokens: { create: { name: 'Default', token: expect.any(String) } },
       },
     })
   })
 
-  it('does not create workspace, MemberInWorkspace or apiToken (no nested relations)', async () => {
+  it('creates a Default apiToken (preview auth) but no workspace or include', async () => {
     const p = buildPrismaMock()
     await createCloudChatEmbeddedUser({ p, email: 'no-side@local.test' })
 
     const callArg = p.user.create.mock.calls[0][0]
-    expect(callArg.data).not.toHaveProperty('apiTokens')
+    expect(callArg.data.apiTokens).toEqual({
+      create: { name: 'Default', token: expect.any(String) },
+    })
     expect(callArg.data).not.toHaveProperty('workspaces')
     expect(callArg).not.toHaveProperty('include')
   })
