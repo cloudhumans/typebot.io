@@ -1,4 +1,5 @@
 import { PrismaClient, User } from '@typebot.io/prisma'
+import { generateId } from '@typebot.io/lib'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import logger from '@/helpers/logger'
 
@@ -24,6 +25,7 @@ export const createCloudChatEmbeddedUser = async ({
       emailVerified: emailVerified ?? undefined,
       image: image ?? undefined,
       onboardingCategories: [],
+      apiTokens: { create: { name: 'Default', token: generateId(24) } },
     },
   })
 
