@@ -7,6 +7,8 @@ import {
   maskedValue,
   addMaskableSecret,
   rfc3986Encode,
+  MAX_MASK_SCAN_CHARS,
+  tooLargeToMask,
 } from './restApiCredential'
 
 describe('cleanUrlConcat', () => {
@@ -104,6 +106,24 @@ describe('maskSecretsDeep', () => {
 
   it('is a no-op when there are no secrets', () => {
     expect(maskSecretsDeep({ a: 'b' }, new Set())).toEqual({ a: 'b' })
+  })
+
+  it('caps work on oversized payloads and never leaks the secret past budget', () => {
+    const secret = 'SUPER-SECRET-TOKEN-VALUE'
+    const masked = maskSecretsDeep(
+      {
+        early: `Authorization: ${secret}`,
+        filler: 'x'.repeat(MAX_MASK_SCAN_CHARS), // exhausts the scan budget
+        late: `also ${secret} here`,
+      },
+      new Set([secret])
+    )
+    // Scanned within budget -> masked normally.
+    expect(masked.early).toContain(maskedValue)
+    expect(masked.early).not.toContain(secret)
+    // Beyond budget -> dropped wholesale, so the secret cannot leak.
+    expect(masked.late).toBe(tooLargeToMask)
+    expect(masked.late).not.toContain(secret)
   })
 })
 

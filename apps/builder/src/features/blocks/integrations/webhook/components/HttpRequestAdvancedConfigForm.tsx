@@ -117,9 +117,6 @@ export const HttpRequestAdvancedConfigForm = ({
   const updateIsCustomBody = (isCustomBody: boolean) =>
     onOptionsChange({ ...options, isCustomBody })
 
-  // const updateTimeout = (timeout: number | undefined) =>
-  //   onOptionsChange({ ...options, timeout })
-
   const executeTestRequest = async () => {
     if (!typebot) return
     setIsTestResponseLoading(true)
@@ -139,9 +136,6 @@ export const HttpRequestAdvancedConfigForm = ({
     setResponseKeys(getDeepKeys(data))
     setIsTestResponseLoading(false)
   }
-
-  // const updateIsExecutedOnClient = (isExecutedOnClient: boolean) =>
-  //   onOptionsChange({ ...options, isExecutedOnClient })
 
   const ResponseMappingInputs = useMemo(
     () =>
@@ -164,15 +158,6 @@ export const HttpRequestAdvancedConfigForm = ({
         }
         onCheckChange={updateAdvancedConfig}
       >
-        {/* <SwitchWithLabel
-          label="Execute on client"
-          moreInfoContent="If enabled, the webhook will be executed on the client. It means it will be executed in the browser of your visitor. Make sure to enable CORS and do not expose sensitive data."
-          initialValue={
-            options?.isExecutedOnClient ??
-            defaultWebhookBlockOptions.isExecutedOnClient
-          }
-          onCheckChange={updateIsExecutedOnClient}
-        /> */}
         <HStack justify="space-between">
           <Text>Method:</Text>
           <DropdownList
@@ -247,22 +232,6 @@ export const HttpRequestAdvancedConfigForm = ({
               )}
             </AccordionPanel>
           </AccordionItem>
-          {/* <AccordionItem>
-            <AccordionButton justifyContent="space-between">
-              Advanced parameters
-              <AccordionIcon />
-            </AccordionButton>
-            <AccordionPanel pt="4">
-              <NumberInput
-                label="Timeout (s)"
-                defaultValue={options?.timeout ?? defaultTimeout}
-                min={1}
-                max={maxTimeout}
-                onValueChange={updateTimeout}
-                withVariableButton={false}
-              />
-            </AccordionPanel>
-          </AccordionItem> */}
           <AccordionItem>
             <AccordionButton justifyContent="space-between">
               Variable values for test

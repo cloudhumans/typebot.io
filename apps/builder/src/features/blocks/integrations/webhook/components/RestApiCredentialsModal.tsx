@@ -17,6 +17,7 @@ import {
   Text,
 } from '@chakra-ui/react'
 import { KeyValue } from '@typebot.io/schemas'
+import { isSafeBaseUrl } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
 import React, { useState } from 'react'
 import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
 import { useTranslate } from '@tolgee/react'
@@ -25,21 +26,6 @@ type Props = {
   isOpen: boolean
   onClose: () => void
   onNewCredentials: (id: string) => void
-}
-
-const isValidUrl = (url: string) => {
-  try {
-    const parsed = new URL(url.trim())
-    return (
-      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
-      parsed.username === '' &&
-      parsed.password === '' &&
-      parsed.search === '' &&
-      parsed.hash === ''
-    )
-  } catch {
-    return false
-  }
 }
 
 const toDataEntries = (items: KeyValue[]) =>
@@ -94,12 +80,12 @@ export const RestApiCredentialsModal = ({
     onClose()
   }
 
-  const isBaseUrlInvalid = baseUrl.trim() !== '' && !isValidUrl(baseUrl)
+  const isBaseUrlInvalid = baseUrl.trim() !== '' && !isSafeBaseUrl(baseUrl)
 
   const createRestApiCredentials = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!workspace) return
-    if (!isValidUrl(baseUrl)) {
+    if (!isSafeBaseUrl(baseUrl)) {
       showToast({
         description: t(
           'blocks.integrations.httpRequest.credentialsModal.invalidBaseUrl'

@@ -2,16 +2,10 @@ import { KeyValue } from '@typebot.io/schemas'
 
 export const maskedValue = '••••••••'
 
-/**
- * Safely concatenates a credential base URL with a block-level path suffix,
- * normalizing slashes. An empty suffix returns the base URL unchanged.
- */
-export const cleanUrlConcat = (base: string, suffix: string): string => {
-  const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
-  if (!suffix) return cleanBase
-  const cleanSuffix = suffix.startsWith('/') ? suffix : `/${suffix}`
-  return `${cleanBase}${cleanSuffix}`
-}
+// Single source of truth lives in @typebot.io/schemas so the runtime, builder
+// and schema stay in lockstep. Re-exported under the historical name used by
+// this module's callers and tests.
+export { concatUrlPath as cleanUrlConcat } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
 
 /**
  * Merges credential-level (global) key/value entries with block-level (local)
@@ -36,6 +30,15 @@ export const mergeKeyValues = (
   return [...globalAsKeyValues, ...(local ?? [])]
 }
 
+// Upper bound on the characters maskSecretsDeep scans in one call. Beyond it,
+// remaining strings are replaced with `tooLargeToMask` instead of scanned,
+// capping the O(size × secrets) cost on pathologically large response bodies.
+// This is fail-safe: an over-budget value is dropped, never emitted unmasked —
+// and only the persisted log is affected (the response returned to the flow is
+// never passed through the masker).
+export const MAX_MASK_SCAN_CHARS = 256_000
+export const tooLargeToMask = '[omitted: payload too large to mask]'
+
 /**
  * Recursively replaces every occurrence of a secret value with a mask in any
  * string found within the given value (objects/arrays are walked deeply).
@@ -43,19 +46,33 @@ export const mergeKeyValues = (
  */
 export const maskSecretsDeep = <T>(value: T, secretValues: Set<string>): T => {
   if (secretValues.size === 0) return value
+  return maskWithinBudget(value, secretValues, { remaining: MAX_MASK_SCAN_CHARS })
+}
+
+const maskWithinBudget = <T>(
+  value: T,
+  secretValues: Set<string>,
+  budget: { remaining: number }
+): T => {
   if (typeof value === 'string') {
+    if (budget.remaining <= 0) return tooLargeToMask as unknown as T
+    budget.remaining -= value.length
     let masked: string = value
     for (const secret of secretValues) {
       if (!secret) continue
-      masked = masked.split(secret).join(maskedValue)
+      // includes() skips the split/join allocation when the secret is absent.
+      if (masked.includes(secret))
+        masked = masked.split(secret).join(maskedValue)
     }
     return masked as unknown as T
   }
   if (Array.isArray(value))
-    return value.map((item) => maskSecretsDeep(item, secretValues)) as unknown as T
+    return value.map((item) =>
+      maskWithinBudget(item, secretValues, budget)
+    ) as unknown as T
   if (value && typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>).map(
-      ([k, v]) => [k, maskSecretsDeep(v, secretValues)]
+      ([k, v]) => [k, maskWithinBudget(v, secretValues, budget)]
     )
     return Object.fromEntries(entries) as T
   }

@@ -7,20 +7,10 @@ import { trpc } from '@/lib/trpc'
 import { LockedIcon } from '@/components/icons'
 import { useTranslate } from '@tolgee/react'
 import { defaultWebhookAttributes } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
+import { concatUrlPath } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
 
 type Props = {
   block: HttpRequestBlock
-}
-
-// Mirror the runtime's cleanUrlConcat (bot-engine) exactly, including stripping
-// a trailing slash from the base when the suffix is empty — otherwise the graph
-// node would preview a URL (e.g. https://api.com/v1/) different from the one
-// actually requested (https://api.com/v1).
-const joinUrl = (base: string, suffix?: string) => {
-  const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
-  if (!suffix) return cleanBase
-  const cleanSuffix = suffix.startsWith('/') ? suffix : `/${suffix}`
-  return `${cleanBase}${cleanSuffix}`
 }
 
 export const WebhookContent = ({ block: { options } }: Props) => {
@@ -65,7 +55,7 @@ export const WebhookContent = ({ block: { options } }: Props) => {
         </Text>
       )
     const displayUrl = credential
-      ? joinUrl(credential.baseUrl, webhook?.url ?? undefined)
+      ? concatUrlPath(credential.baseUrl, webhook?.url ?? undefined)
       : webhook?.url
     return (
       <Stack w="full">

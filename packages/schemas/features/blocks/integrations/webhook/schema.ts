@@ -2,31 +2,12 @@ import { z } from '../../../../zod'
 import { blockBaseSchema, credentialsBaseSchema } from '../../shared'
 import { IntegrationBlockType } from '../constants'
 import { HttpMethod, maxTimeout } from './constants'
+import { isSafeBaseUrl } from './urlHelpers'
 
 const restApiCredentialsKeyValueSchema = z.object({
   key: z.string().trim().min(1),
   value: z.string(),
 })
-
-// The base URL is shown in clear text in the builder and is not value-masked in
-// logs, so it must not itself carry secrets: enforce http(s) and reject userinfo
-// (e.g. https://user:pass@host).
-const isSafeBaseUrl = (url: string) => {
-  try {
-    const parsed = new URL(url.trim())
-    return (
-      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
-      parsed.username === '' &&
-      parsed.password === '' &&
-      // No query string / fragment: those could carry secrets (e.g. ?token=)
-      // that would leak via the clear-text, unmasked base URL.
-      parsed.search === '' &&
-      parsed.hash === ''
-    )
-  } catch {
-    return false
-  }
-}
 
 export const restApiCredentialsSchema = z
   .object({
