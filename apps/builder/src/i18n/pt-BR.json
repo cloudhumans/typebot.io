@@ -150,6 +150,7 @@
   "blocks.integrations.httpRequest.secureMode.tooltip": "Modo seguro: a URL base e os headers/parâmetros secretos vêm da credencial selecionada e são mascarados nos logs.",
   "blocks.integrations.httpRequest.credentials.name": "Credenciais REST API",
   "blocks.integrations.httpRequest.credentials.noCredentialLabel": "Sem credenciais (URL personalizada)",
+  "blocks.integrations.httpRequest.credentials.notFound": "Credencial não encontrada — pode ter sido excluída. Selecione outra ou remova.",
   "blocks.integrations.httpRequest.pathSuffix.placeholder": "/caminho/sufixo",
   "blocks.integrations.httpRequest.url.placeholder": "Cole a URL...",
   "blocks.integrations.httpRequest.inheritedEntries.label": "Herdado das credenciais (somente leitura)",

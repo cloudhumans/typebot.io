@@ -87,6 +87,15 @@ export const RestApiCredentialsModal = ({
     setQueryParams([])
   }
 
+  // Reset on close so reopening the modal (X / overlay click / Esc) doesn't show
+  // stale name/baseUrl/headers from a previous, abandoned attempt.
+  const handleClose = () => {
+    resetForm()
+    onClose()
+  }
+
+  const isBaseUrlInvalid = baseUrl.trim() !== '' && !isValidUrl(baseUrl)
+
   const createRestApiCredentials = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!workspace) return
@@ -114,7 +123,7 @@ export const RestApiCredentialsModal = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} size="lg">
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>
@@ -135,21 +144,30 @@ export const RestApiCredentialsModal = ({
               withVariableButton={false}
               debounceTimeout={0}
             />
-            <TextInput
-              isRequired
-              label={t(
-                'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.label'
+            <Stack spacing={1}>
+              <TextInput
+                isRequired
+                label={t(
+                  'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.label'
+                )}
+                onChange={setBaseUrl}
+                placeholder={t(
+                  'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.placeholder'
+                )}
+                helperText={t(
+                  'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.helperText'
+                )}
+                withVariableButton={false}
+                debounceTimeout={0}
+              />
+              {isBaseUrlInvalid && (
+                <Text fontSize="sm" color="red.500">
+                  {t(
+                    'blocks.integrations.httpRequest.credentialsModal.invalidBaseUrl'
+                  )}
+                </Text>
               )}
-              onChange={setBaseUrl}
-              placeholder={t(
-                'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.placeholder'
-              )}
-              helperText={t(
-                'blocks.integrations.httpRequest.credentialsModal.baseUrlInput.helperText'
-              )}
-              withVariableButton={false}
-              debounceTimeout={0}
-            />
+            </Stack>
             <Stack>
               <FormLabel mb="0">
                 {t(
@@ -197,7 +215,7 @@ export const RestApiCredentialsModal = ({
             <Button
               type="submit"
               isLoading={isCreating}
-              isDisabled={name === '' || baseUrl === ''}
+              isDisabled={name === '' || baseUrl === '' || isBaseUrlInvalid}
               colorScheme="blue"
             >
               {t(

@@ -38,10 +38,14 @@ export const HttpRequestSettings = ({
       : undefined
   const isSecureMode = !!credentialsId
 
-  const { data: credential } = trpc.credentials.getRestApiCredential.useQuery(
-    { workspaceId: workspace?.id as string, credentialsId: credentialsId as string },
-    { enabled: !!workspace?.id && !!credentialsId }
-  )
+  const { data: credential, isError: isCredentialError } =
+    trpc.credentials.getRestApiCredential.useQuery(
+      {
+        workspaceId: workspace?.id as string,
+        credentialsId: credentialsId as string,
+      },
+      { enabled: !!workspace?.id && !!credentialsId, retry: false }
+    )
 
   const setLocalWebhook = async (newLocalWebhook: HttpRequest) => {
     onOptionsChange({ ...options, webhook: newLocalWebhook })
@@ -84,24 +88,36 @@ export const HttpRequestSettings = ({
         />
       )}
       {isSecureMode ? (
-        <HStack align="stretch">
-          <Tooltip label={credential?.baseUrl ?? ''} placement="top" hasArrow>
-            <Tag size="lg" colorScheme="gray" flexShrink={0} maxW="45%">
-              <TagLeftIcon as={LockedIcon} />
-              <Text noOfLines={1}>{credential?.baseUrl ?? '…'}</Text>
-            </Tag>
-          </Tooltip>
-          <Box flex="1">
-            <TextInput
-              key={`suffix-${credentialsId}`}
-              placeholder={t(
-                'blocks.integrations.httpRequest.pathSuffix.placeholder'
-              )}
-              defaultValue={options?.webhook?.url}
-              onChange={updateUrl}
-            />
-          </Box>
-        </HStack>
+        isCredentialError ? (
+          <Tag size="lg" colorScheme="red" alignSelf="flex-start">
+            <Text>
+              {t('blocks.integrations.httpRequest.credentials.notFound')}
+            </Text>
+          </Tag>
+        ) : (
+          <HStack align="stretch">
+            <Tooltip label={credential?.baseUrl ?? ''} placement="top" hasArrow>
+              <Tag size="lg" colorScheme="gray" flexShrink={0} maxW="45%">
+                <TagLeftIcon as={LockedIcon} />
+                <Text noOfLines={1}>{credential?.baseUrl ?? '…'}</Text>
+              </Tag>
+            </Tooltip>
+            <Box flex="1">
+              <TextInput
+                key={`suffix-${credentialsId}`}
+                flushOnUnmount={false}
+                aria-label={t(
+                  'blocks.integrations.httpRequest.pathSuffix.placeholder'
+                )}
+                placeholder={t(
+                  'blocks.integrations.httpRequest.pathSuffix.placeholder'
+                )}
+                defaultValue={options?.webhook?.url}
+                onChange={updateUrl}
+              />
+            </Box>
+          </HStack>
+        )
       ) : (
         <TextInput
           key="custom-url"

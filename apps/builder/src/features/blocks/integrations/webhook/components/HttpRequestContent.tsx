@@ -35,13 +35,14 @@ export const WebhookContent = ({ block: { options } }: Props) => {
       : undefined
   const method = webhook?.method ?? defaultWebhookAttributes.method
 
-  const { data: credential } = trpc.credentials.getRestApiCredential.useQuery(
-    {
-      workspaceId: workspace?.id as string,
-      credentialsId: credentialsId as string,
-    },
-    { enabled: !!workspace?.id && !!credentialsId }
-  )
+  const { data: credential, isError: isCredentialError } =
+    trpc.credentials.getRestApiCredential.useQuery(
+      {
+        workspaceId: workspace?.id as string,
+        credentialsId: credentialsId as string,
+      },
+      { enabled: !!workspace?.id && !!credentialsId, retry: false }
+    )
 
   const responseMappings = options?.responseVariableMapping
     ?.filter((mapping) => mapping.variableId)
@@ -54,6 +55,15 @@ export const WebhookContent = ({ block: { options } }: Props) => {
     ))
 
   if (credentialsId) {
+    // The referenced credential was deleted or is unresolvable: don't render a
+    // lock + path suffix, which would imply a working secure request to a URL
+    // that no longer exists. Surface the broken state instead.
+    if (isCredentialError)
+      return (
+        <Text color="red.500" noOfLines={2} pr="6">
+          {t('blocks.integrations.httpRequest.credentials.notFound')}
+        </Text>
+      )
     const displayUrl = credential
       ? joinUrl(credential.baseUrl, webhook?.url ?? undefined)
       : webhook?.url
