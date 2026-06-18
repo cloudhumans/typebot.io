@@ -31,6 +31,7 @@ import { parseAnswers } from '@typebot.io/results/parseAnswers'
 import logger from '@typebot.io/lib/logger'
 import { RestApiCredentials } from '@typebot.io/schemas'
 import {
+  addMaskableSecret,
   cleanUrlConcat,
   isResolvedUrlSafe,
   maskSecretsDeep,
@@ -219,15 +220,8 @@ export const parseWebhookAttributes = async ({
   // credential-level headers/query params with the block's own.
   const secretValues = new Set<string>()
   if (credentialData) {
-    const collectSecret = (value: string) => {
-      const resolved = parseVariables(typebot.variables)(value)
-      if (!resolved) return
-      secretValues.add(resolved)
-      // Query-param secrets are percent-encoded by qs.stringify in the request
-      // URL, so the masked value must also cover the encoded form.
-      const encoded = encodeURIComponent(resolved)
-      if (encoded !== resolved) secretValues.add(encoded)
-    }
+    const collectSecret = (value: string) =>
+      addMaskableSecret(secretValues, parseVariables(typebot.variables)(value))
     credentialData.headers?.forEach((h) => collectSecret(h.value))
     credentialData.queryParams?.forEach((q) => collectSecret(q.value))
     webhook = {
@@ -252,6 +246,13 @@ export const parseWebhookAttributes = async ({
       webhook.headers?.at(basicAuthHeaderIdx)?.value?.slice(6).split(':') ?? []
     basicAuth.username = username
     basicAuth.password = password
+    // The user/pass get spread into the logged `request` object as separate
+    // fields, so the full "Basic user:pass" header value already collected
+    // wouldn't mask them. Mask the parts too when they came from a credential.
+    if (credentialData) {
+      if (username) addMaskableSecret(secretValues, username)
+      if (password) addMaskableSecret(secretValues, password)
+    }
     webhook.headers?.splice(basicAuthHeaderIdx, 1)
   }
   const headers = convertKeyValueTableToObject(
@@ -309,6 +310,12 @@ export const executeWebhook = async (
   const secretValues = webhook.secretValues ?? new Set<string>()
   // Mask credential-derived secrets in anything that gets persisted/logged.
   const mask = <T>(value: T): T => maskSecretsDeep(value, secretValues)
+  // `secretValues` is defined (even if empty) only for credential-backed
+  // requests. Those must not follow redirects: the SSRF guard only validates
+  // the initial URL, and `ky` would otherwise replay the secret headers to a
+  // 302 Location (e.g. the cloud metadata IP). 'manual' makes `ky` throw on a
+  // 3xx instead of following it, so the secret never leaves the validated host.
+  const isCredentialed = webhook.secretValues !== undefined
   const contentType = headers ? headers['Content-Type'] : undefined
 
   const isLongRequest = params.disableRequestTimeout
@@ -351,6 +358,7 @@ export const executeWebhook = async (
     json: !isFormData && body && isJson ? body : undefined,
     body: (isFormData && body ? body : undefined) as any,
     timeout: calculateTimeout(),
+    ...(isCredentialed ? { redirect: 'manual' as const } : {}),
   } satisfies Options & { url: string; body: any }
 
   const requestStartTime = Date.now()
@@ -394,9 +402,17 @@ export const executeWebhook = async (
         statusCode: error.response.status,
         data: await parseResponseBody(error.response),
       }
+      // With redirect:'manual' (credential-backed requests) ky throws on a 3xx
+      // instead of following it; surface a clear reason rather than a bare 3xx.
+      const isBlockedRedirect =
+        isCredentialed &&
+        error.response.status >= 300 &&
+        error.response.status < 400
       logs.push({
         status: 'error',
-        description: webhookErrorDescription,
+        description: isBlockedRedirect
+          ? `Request blocked: the endpoint attempted a redirect, which is not followed for credential-backed requests.`
+          : webhookErrorDescription,
         details: mask({
           statusCode: error.response.status,
           request,

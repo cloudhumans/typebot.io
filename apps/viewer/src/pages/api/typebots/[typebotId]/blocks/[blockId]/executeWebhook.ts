@@ -7,6 +7,7 @@ import {
   Block,
   PublicTypebot,
   AnswerInSessionState,
+  RestApiCredentials,
 } from '@typebot.io/schemas'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { byId } from '@typebot.io/lib'
@@ -19,6 +20,8 @@ import {
   executeWebhook,
   parseWebhookAttributes,
 } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
+import { resolveRestApiCredentialData } from '@typebot.io/bot-engine/blocks/integrations/webhook/resolveRestApiCredential'
+import { isResolvedUrlSafe } from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
 import { fetchLinkedParentTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedParentTypebots'
 import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedChildTypebots'
 import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/webhook/parseSampleResult'
@@ -92,6 +95,29 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
         )
 
+    // Resolve a workspace-scoped rest-api credential when the block references
+    // one, mirroring the bot-engine path so this endpoint stays consistent
+    // (credential merging, masking and the SSRF guard all apply here too).
+    const rawCredentialsId = (block.options as { credentialsId?: string })
+      ?.credentialsId
+    const credentialsId =
+      rawCredentialsId && rawCredentialsId !== 'default'
+        ? rawCredentialsId
+        : undefined
+    let credentialData: RestApiCredentials['data'] | undefined
+    if (credentialsId) {
+      credentialData =
+        (await resolveRestApiCredentialData({
+          credentialsId,
+          workspaceId: typebot.workspaceId,
+        })) ?? undefined
+      if (!credentialData)
+        return res.status(400).send({
+          statusCode: 400,
+          data: { message: `Referenced credential could not be resolved.` },
+        })
+    }
+
     const parsedWebhook = await parseWebhookAttributes({
       webhook,
       isCustomBody: block.options?.isCustomBody,
@@ -105,12 +131,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }),
       },
       answers,
+      credentialData,
     })
 
     if (!parsedWebhook)
       return res.status(500).send({
         statusCode: 500,
         data: { message: `Couldn't parse webhook attributes` },
+      })
+
+    // Validate the resolved URL (post-interpolation). Genuinely unsafe URLs
+    // (bad scheme / metadata host) are blocked for every block; parse failures
+    // only abort credentialed ones, matching the bot-engine path and avoiding
+    // regressions for legacy flows whose URLs `ky` tolerates but `new URL()`
+    // does not.
+    const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
+    if (
+      !urlSafety.safe &&
+      (credentialData || urlSafety.reason !== 'Invalid URL')
+    )
+      return res.status(400).send({
+        statusCode: 400,
+        data: { message: `Request URL rejected: ${urlSafety.reason}` },
       })
 
     const { response, logs } = await executeWebhook(parsedWebhook, {

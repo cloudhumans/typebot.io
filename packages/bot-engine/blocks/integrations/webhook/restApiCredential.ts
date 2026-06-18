@@ -15,18 +15,24 @@ export const cleanUrlConcat = (base: string, suffix: string): string => {
 
 /**
  * Merges credential-level (global) key/value entries with block-level (local)
- * ones. Local entries override global ones when they share the same key.
- * Global entries come first so the downstream object reducer lets locals win.
+ * ones. A local entry fully overrides the global entry sharing its key —
+ * including clearing it: a local entry with an empty value drops the inherited
+ * one entirely (the downstream object reducer discards empty values), so the
+ * "local overrides global" contract holds even for removal. Remaining global
+ * entries come first so locals win for any key still present in both.
  */
 export const mergeKeyValues = (
   global: { key: string; value: string }[] | undefined,
   local: KeyValue[] | undefined
 ): KeyValue[] => {
-  const globalAsKeyValues: KeyValue[] = (global ?? []).map((entry) => ({
-    id: `cred-${entry.key}`,
-    key: entry.key,
-    value: entry.value,
-  }))
+  const localKeys = new Set((local ?? []).map((entry) => entry.key))
+  const globalAsKeyValues: KeyValue[] = (global ?? [])
+    .filter((entry) => !localKeys.has(entry.key))
+    .map((entry) => ({
+      id: `cred-${entry.key}`,
+      key: entry.key,
+      value: entry.value,
+    }))
   return [...globalAsKeyValues, ...(local ?? [])]
 }
 
@@ -54,6 +60,33 @@ export const maskSecretsDeep = <T>(value: T, secretValues: Set<string>): T => {
     return Object.fromEntries(entries) as T
   }
   return value
+}
+
+// Credential secret values shorter than this are skipped for log masking: a
+// 1–4 char value like "1" or "true" would match incidental substrings across
+// the whole log (e.g. "INV-1042" -> "INV-••••••••042"), corrupting it. Real API
+// tokens are comfortably longer than this floor.
+export const MIN_MASKABLE_SECRET_LENGTH = 5
+
+// Strict RFC 3986 percent-encoding, matching what `qs.stringify` emits for query
+// params (it escapes !*'() which encodeURIComponent leaves intact). A secret
+// like "sk!" becomes "sk%21" in the request URL, so the mask set must cover it.
+export const rfc3986Encode = (value: string): string =>
+  encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  )
+
+// Adds a resolved secret and the encoded forms it may take in a request URL to
+// the mask set, skipping values too short to mask without corrupting logs.
+export const addMaskableSecret = (
+  secretValues: Set<string>,
+  value: string | undefined
+): void => {
+  if (!value || value.length < MIN_MASKABLE_SECRET_LENGTH) return
+  secretValues.add(value)
+  for (const encoded of [encodeURIComponent(value), rfc3986Encode(value)])
+    if (encoded !== value) secretValues.add(encoded)
 }
 
 const metadataHosts = new Set([
@@ -97,12 +130,37 @@ const hostnameToIpv4Int = (host: string): number | null => {
 // 169.254.0.0/16 (link-local, includes the cloud metadata IP 169.254.169.254).
 const isLinkLocalIpv4 = (ipInt: number) => ipInt >>> 16 === 0xa9fe
 
+// Returns the leading 16-bit hextet of an IPv6 hostname (bracket-stripped,
+// lowercased), or null when the host is not IPv6. Only the first group is
+// needed to classify the link-local / unique-local ranges below.
+const ipv6LeadingHextet = (host: string): number | null => {
+  if (!host.includes(':')) return null
+  // A leading "::" means the address starts at the zero-run (e.g. ::1, ::ffff:…).
+  if (host.startsWith('::')) return 0
+  const first = host.split(':')[0]
+  if (!/^[0-9a-f]{1,4}$/.test(first)) return null
+  return parseInt(first, 16)
+}
+
+// Blocks the IPv6 ranges that matter for metadata SSRF, mirroring how the IPv4
+// guard blocks the whole 169.254.0.0/16 rather than a single address:
+//   fe80::/10 — link-local (top 10 bits == 1111111010)
+//   fc00::/7  — unique-local, incl. the AWS IMDS host fd00:ec2::254 and siblings
+// (top 7 bits == 1111110)
+const isBlockedIpv6 = (host: string): boolean => {
+  const hextet = ipv6LeadingHextet(host)
+  if (hextet === null) return false
+  if ((hextet & 0xffc0) === 0xfe80) return true
+  if ((hextet & 0xfe00) === 0xfc00) return true
+  return false
+}
+
 /**
  * Conservative SSRF guard for the *resolved* request URL (after variable
  * interpolation). Enforces an http/https scheme allowlist and blocks the cloud
- * metadata endpoint (IPv4 and IPv6 forms). Broader private-range blocking is
- * intentionally left out to preserve self-hosted setups where webhooks call
- * internal hostnames.
+ * metadata endpoint (IPv4 and IPv6 forms, including the link-local/unique-local
+ * ranges). Broader private-range blocking is intentionally left out to preserve
+ * self-hosted setups where webhooks call internal hostnames.
  */
 export const isResolvedUrlSafe = (
   url: string
@@ -120,6 +178,8 @@ export const isResolvedUrlSafe = (
     return { safe: false, reason: 'Blocked metadata host' }
   const ipInt = hostnameToIpv4Int(host)
   if (ipInt !== null && isLinkLocalIpv4(ipInt))
+    return { safe: false, reason: 'Blocked link-local/metadata address' }
+  if (isBlockedIpv6(host))
     return { safe: false, reason: 'Blocked link-local/metadata address' }
   return { safe: true }
 }

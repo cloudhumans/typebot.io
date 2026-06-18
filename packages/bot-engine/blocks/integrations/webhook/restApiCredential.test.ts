@@ -5,6 +5,8 @@ import {
   maskSecretsDeep,
   isResolvedUrlSafe,
   maskedValue,
+  addMaskableSecret,
+  rfc3986Encode,
 } from './restApiCredential'
 
 describe('cleanUrlConcat', () => {
@@ -34,14 +36,36 @@ describe('cleanUrlConcat', () => {
 })
 
 describe('mergeKeyValues', () => {
-  it('places global entries before local ones (local wins downstream on dup keys)', () => {
+  it('lets a local entry fully override the global one with the same key', () => {
     const merged = mergeKeyValues(
       [{ key: 'Authorization', value: 'global' }],
       [{ id: 'l1', key: 'Authorization', value: 'local' }]
     )
+    expect(merged).toHaveLength(1)
+    expect(merged[0]).toMatchObject({ key: 'Authorization', value: 'local' })
+  })
+
+  it('keeps both when keys differ (global first)', () => {
+    const merged = mergeKeyValues(
+      [{ key: 'X-Global', value: 'g' }],
+      [{ id: 'l1', key: 'X-Local', value: 'l' }]
+    )
     expect(merged).toHaveLength(2)
-    expect(merged[0]).toMatchObject({ key: 'Authorization', value: 'global' })
-    expect(merged[1]).toMatchObject({ key: 'Authorization', value: 'local' })
+    expect(merged[0]).toMatchObject({ key: 'X-Global', value: 'g' })
+    expect(merged[1]).toMatchObject({ key: 'X-Local', value: 'l' })
+  })
+
+  it('lets a local empty value clear the inherited global entry', () => {
+    // The global entry is dropped, leaving only the (empty) local one, which the
+    // downstream object reducer discards — so the header is effectively removed.
+    const merged = mergeKeyValues(
+      [{ key: 'Authorization', value: 'global-secret' }],
+      [{ id: 'l1', key: 'Authorization', value: '' }]
+    )
+    expect(merged.filter((e) => e.value === 'global-secret')).toHaveLength(0)
+    expect(merged).toEqual([
+      expect.objectContaining({ key: 'Authorization', value: '' }),
+    ])
   })
 
   it('handles undefined global/local', () => {
@@ -118,12 +142,60 @@ describe('isResolvedUrlSafe', () => {
     expect(isResolvedUrlSafe('http://169.254.0.1/').safe).toBe(false)
   })
 
+  it('rejects IPv6 link-local (fe80::/10) and unique-local (fc00::/7) ranges', () => {
+    // Whole ranges, not just specific addresses: the AWS IMDS sibling fd00:ec2::253
+    // (not in the fixed metadata set) must be blocked just like ::254.
+    expect(isResolvedUrlSafe('http://[fd00:ec2::253]/').safe).toBe(false)
+    expect(isResolvedUrlSafe('http://[fc00::1]/').safe).toBe(false)
+    expect(isResolvedUrlSafe('http://[fd12:3456:789a::1]/').safe).toBe(false)
+    expect(isResolvedUrlSafe('http://[fe80::1]/').safe).toBe(false)
+    expect(isResolvedUrlSafe('http://[FE80::abcd]/').safe).toBe(false)
+  })
+
   it('still allows normal public/private IPs and hosts', () => {
     expect(isResolvedUrlSafe('http://10.0.0.5:8080/api').safe).toBe(true)
     expect(isResolvedUrlSafe('https://1.1.1.1/').safe).toBe(true)
+    // Public IPv6 (Cloudflare DNS) is outside the blocked ranges.
+    expect(isResolvedUrlSafe('https://[2606:4700:4700::1111]/').safe).toBe(true)
   })
 
   it('rejects malformed URLs', () => {
     expect(isResolvedUrlSafe('not a url').safe).toBe(false)
+  })
+})
+
+describe('rfc3986Encode', () => {
+  it('escapes the sub-delims encodeURIComponent leaves intact (!*\'())', () => {
+    expect(rfc3986Encode("sk-secret!*'()")).toBe('sk-secret%21%2A%27%28%29')
+  })
+
+  it('matches encodeURIComponent for ordinary characters', () => {
+    expect(rfc3986Encode('a b/c')).toBe(encodeURIComponent('a b/c'))
+  })
+})
+
+describe('addMaskableSecret', () => {
+  it('skips values shorter than the minimum length (avoids log corruption)', () => {
+    const set = new Set<string>()
+    addMaskableSecret(set, '1')
+    addMaskableSecret(set, 'true')
+    addMaskableSecret(set, '')
+    addMaskableSecret(set, undefined)
+    expect(set.size).toBe(0)
+  })
+
+  it('adds the raw value and its encoded forms for maskable secrets', () => {
+    const set = new Set<string>()
+    addMaskableSecret(set, "sk-live-secret!")
+    expect(set.has("sk-live-secret!")).toBe(true)
+    // qs.stringify (RFC 3986) form must be covered so it cannot leak in a URL.
+    expect(set.has('sk-live-secret%21')).toBe(true)
+  })
+
+  it('covers the encodeURIComponent form for values with spaces/slashes', () => {
+    const set = new Set<string>()
+    addMaskableSecret(set, 'token with/space')
+    expect(set.has('token with/space')).toBe(true)
+    expect(set.has(encodeURIComponent('token with/space'))).toBe(true)
   })
 })
