@@ -311,6 +311,36 @@ describe('isResolvedUrlSafe', () => {
     ).toBe(false)
   })
 
+  it('with a baseUrl, rejects encoded-dot traversal that new URL() leaves literal', () => {
+    const baseUrl = 'https://api.example.com/v1'
+    // A variable-valued suffix resolving to encoded traversal: new URL keeps
+    // %2e/%2f literal so a naive prefix check would pass, but a server decodes
+    // and routes to /admin.
+    expect(
+      isResolvedUrlSafe('https://api.example.com/v1/%2e%2e/admin', { baseUrl })
+        .safe
+    ).toBe(false)
+    expect(
+      isResolvedUrlSafe('https://api.example.com/v1/%2e%2e%2fadmin', { baseUrl })
+        .safe
+    ).toBe(false)
+    // Double-encoded variant.
+    expect(
+      isResolvedUrlSafe('https://api.example.com/v1/%252e%252e/admin', {
+        baseUrl,
+      }).safe
+    ).toBe(false)
+  })
+
+  it('with a baseUrl, still allows benign percent-encoding within the base path', () => {
+    const baseUrl = 'https://api.example.com/v1'
+    // Encoded space in a normal segment must not be mistaken for traversal.
+    expect(
+      isResolvedUrlSafe('https://api.example.com/v1/order%20list', { baseUrl })
+        .safe
+    ).toBe(true)
+  })
+
   it('with a baseUrl, allows the base path and its descendants', () => {
     const baseUrl = 'https://api.example.com/v1'
     expect(isResolvedUrlSafe('https://api.example.com/v1', { baseUrl }).safe).toBe(

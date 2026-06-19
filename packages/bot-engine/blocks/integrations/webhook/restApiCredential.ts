@@ -222,12 +222,35 @@ export const isWithinBaseUrl = (baseUrl: string, resolvedUrl: string): boolean =
   if (resolved.origin !== base.origin) return false
   // A suffix can't legitimately introduce userinfo; reject the `…@host` shape.
   if (resolved.username !== '' || resolved.password !== '') return false
+
+  // `new URL()` keeps `%2e`/`%2f` percent-encoded in the pathname and does NOT
+  // treat them as dot-segments, but many upstream servers decode the path before
+  // routing. A variable-valued suffix resolving to `%2e%2e/admin` would otherwise
+  // keep a pathname under the base here yet route to `/admin` there. Decode the
+  // way a permissive server might (collapse `%25`, then `%2e`/`%2f`), bounded
+  // against a decode-bomb, then let `new URL()` resolve `.`/`..` so the prefix
+  // check sees the path the server will actually serve.
+  let decodedPath = resolved.pathname
+  for (let i = 0; i < 3 && /%(25|2e|2f)/i.test(decodedPath); i++)
+    decodedPath = decodedPath
+      .replace(/%25/gi, '%')
+      .replace(/%2e/gi, '.')
+      .replace(/%2f/gi, '/')
+  let canonical: URL
+  try {
+    // Resolve against the full base so a decoded protocol-relative `//host`
+    // escape changes origin and gets rejected below rather than silently passing.
+    canonical = new URL(decodedPath, base)
+  } catch {
+    return false
+  }
+  if (canonical.origin !== base.origin) return false
   const basePath = base.pathname.endsWith('/')
     ? base.pathname.slice(0, -1)
     : base.pathname
   return (
-    resolved.pathname === basePath ||
-    resolved.pathname.startsWith(`${basePath}/`)
+    canonical.pathname === basePath ||
+    canonical.pathname.startsWith(`${basePath}/`)
   )
 }
 
