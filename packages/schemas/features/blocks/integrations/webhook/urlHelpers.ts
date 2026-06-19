@@ -29,10 +29,27 @@ export const isSafeBaseUrl = (url: string): boolean => {
  * slashes. A trailing slash on the base is stripped even when the suffix is empty
  * so the builder's node preview matches the URL the runtime actually requests
  * (e.g. https://api.com/v1, not https://api.com/v1/).
+ *
+ * The suffix is treated as a path only and is hardened: a query/fragment is
+ * dropped (those have a dedicated query-params field and must not ride in the
+ * path), and `.` / `..` segments — including percent-encoded forms like `%2e` —
+ * are removed. Otherwise a block author (who may be less privileged than the
+ * admin who owns the credential) could set a suffix like `../admin` that
+ * normalizes outside the admin-locked base path, sending the credential's secret
+ * headers to an unintended endpoint on the same host.
  */
 export const concatUrlPath = (base: string, suffix?: string): string => {
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
   if (!suffix) return cleanBase
-  const cleanSuffix = suffix.startsWith('/') ? suffix : `/${suffix}`
-  return `${cleanBase}${cleanSuffix}`
+  const pathOnly = suffix.split(/[?#]/)[0]
+  const safePath = pathOnly
+    .split('/')
+    .filter((segment) => {
+      if (segment === '') return false
+      const normalized = segment.replace(/%2e/gi, '.')
+      return normalized !== '.' && normalized !== '..'
+    })
+    .join('/')
+  if (!safePath) return cleanBase
+  return `${cleanBase}/${safePath}`
 }

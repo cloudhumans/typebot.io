@@ -35,6 +35,39 @@ describe('cleanUrlConcat', () => {
       'https://api.example.com/v1'
     )
   })
+
+  it('strips "." / ".." segments so the suffix cannot escape the base path', () => {
+    expect(cleanUrlConcat('https://api.example.com/v1', '../admin')).toBe(
+      'https://api.example.com/v1/admin'
+    )
+    expect(cleanUrlConcat('https://api.example.com/v1', '../../admin')).toBe(
+      'https://api.example.com/v1/admin'
+    )
+    expect(cleanUrlConcat('https://api.example.com/v1', './orders')).toBe(
+      'https://api.example.com/v1/orders'
+    )
+    expect(
+      cleanUrlConcat('https://api.example.com/v1', 'orders/../../admin')
+    ).toBe('https://api.example.com/v1/orders/admin')
+  })
+
+  it('also strips percent-encoded "." / ".." segments (%2e)', () => {
+    expect(cleanUrlConcat('https://api.example.com/v1', '%2e%2e/admin')).toBe(
+      'https://api.example.com/v1/admin'
+    )
+    expect(cleanUrlConcat('https://api.example.com/v1', '%2E%2E/admin')).toBe(
+      'https://api.example.com/v1/admin'
+    )
+  })
+
+  it('drops a query/fragment from the suffix (those belong to dedicated fields)', () => {
+    expect(cleanUrlConcat('https://api.example.com/v1', 'orders?token=x')).toBe(
+      'https://api.example.com/v1/orders'
+    )
+    expect(cleanUrlConcat('https://api.example.com/v1', 'orders#frag')).toBe(
+      'https://api.example.com/v1/orders'
+    )
+  })
 })
 
 describe('mergeKeyValues', () => {
