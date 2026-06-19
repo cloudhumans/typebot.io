@@ -432,12 +432,15 @@ export const executeWebhook = async (
         statusCode: error.response.status,
         data: await parseResponseBody(error.response),
       }
-      // With redirect:'manual' (credential-backed requests) ky throws on a 3xx
-      // instead of following it; surface a clear reason rather than a bare 3xx.
+      // With redirect:'manual' (credential-backed requests) ky throws instead of
+      // following a redirect; surface a clear reason. Under Node/undici a manual
+      // redirect usually arrives as an opaque response (type 'opaqueredirect',
+      // status 0) rather than a 3xx, so detect both shapes.
       const isBlockedRedirect =
         isCredentialed &&
-        error.response.status >= 300 &&
-        error.response.status < 400
+        (error.response.status === 0 ||
+          error.response.type === 'opaqueredirect' ||
+          (error.response.status >= 300 && error.response.status < 400))
       logs.push({
         status: 'error',
         description: isBlockedRedirect
@@ -498,7 +501,9 @@ export const executeWebhook = async (
     }
     const response = {
       statusCode: 500,
-      data: { message: `Error from Typebot server: ${error}` },
+      // This message is returned to the flow (and may be persisted), and a raw
+      // error can embed the request URL/secret query params, so mask it.
+      data: { message: mask(`Error from Typebot server: ${error}`) },
     }
     logger.error(
       `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Failed`,
