@@ -394,11 +394,14 @@ export const executeWebhook = async (
     logs.push({
       status: 'success',
       description: webhookSuccessDescription,
-      details: mask({
+      // Mask request and response independently: maskSecretsDeep shares one scan
+      // budget per call, so masking them together would let a huge response body
+      // exhaust it before request.url/headers are reached.
+      details: {
         statusCode: response.status,
-        response: body,
-        request,
-      }),
+        response: mask(body),
+        request: mask(request),
+      },
     })
     const httpDuration = Date.now() - requestStartTime
     logger.info(
@@ -438,11 +441,11 @@ export const executeWebhook = async (
         description: isBlockedRedirect
           ? `Request blocked: the endpoint attempted a redirect, which is not followed for credential-backed requests.`
           : webhookErrorDescription,
-        details: mask({
+        details: {
           statusCode: error.response.status,
-          request,
-          response,
-        }),
+          request: mask(request),
+          response: mask(response),
+        },
       })
       logger.warn(
         `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Error`,
@@ -472,10 +475,10 @@ export const executeWebhook = async (
         description: `Webhook request timed out. (${
           (request.timeout ? request.timeout : 0) / 1000
         }s)`,
-        details: mask({
-          response,
-          request,
-        }),
+        details: {
+          response: mask(response),
+          request: mask(request),
+        },
       })
       logger.error(
         `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Timeout`,
@@ -510,10 +513,10 @@ export const executeWebhook = async (
     logs.push({
       status: 'error',
       description: `Webhook failed to execute.`,
-      details: mask({
-        response,
-        request,
-      }),
+      details: {
+        response: mask(response),
+        request: mask(request),
+      },
     })
     return { response, logs, startTimeShouldBeUpdated: true }
   }
