@@ -22,6 +22,7 @@ import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/we
 import { saveLog } from '@typebot.io/bot-engine/logs/saveLog'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -85,13 +86,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
     )
 
-    const rawCredentialsId =
+    const credentialsId = normalizeCredentialsId(
       'options' in block ? block.options?.credentialsId : undefined
-    // 'default' is the dropdown sentinel for "no credentials" — treat as absence.
-    const credentialsId =
-      rawCredentialsId && rawCredentialsId !== 'default'
-        ? rawCredentialsId
-        : undefined
+    )
     let credentialData
     if (credentialsId) {
       credentialData = await resolveRestApiCredentialData({

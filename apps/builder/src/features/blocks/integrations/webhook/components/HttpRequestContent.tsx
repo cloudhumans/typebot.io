@@ -8,6 +8,7 @@ import { LockedIcon } from '@/components/icons'
 import { useTranslate } from '@tolgee/react'
 import { defaultWebhookAttributes } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
 import { concatUrlPath } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
 type Props = {
   block: HttpRequestBlock
@@ -18,11 +19,7 @@ export const WebhookContent = ({ block: { options } }: Props) => {
   const { typebot } = useTypebot()
   const { workspace } = useWorkspace()
   const webhook = options?.webhook
-  // The dropdown emits 'default' to mean "no credentials"; treat it as absence.
-  const credentialsId =
-    options?.credentialsId && options.credentialsId !== 'default'
-      ? options.credentialsId
-      : undefined
+  const credentialsId = normalizeCredentialsId(options?.credentialsId)
   const method = webhook?.method ?? defaultWebhookAttributes.method
 
   const { data: credential, isError: isCredentialError } =

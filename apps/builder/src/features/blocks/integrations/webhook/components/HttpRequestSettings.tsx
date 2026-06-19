@@ -17,6 +17,7 @@ import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { trpc } from '@/lib/trpc'
 import { LockedIcon } from '@/components/icons'
 import { RestApiCredentialsModal } from './RestApiCredentialsModal'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 import { useTranslate } from '@tolgee/react'
 
 type Props = {
@@ -31,11 +32,7 @@ export const HttpRequestSettings = ({
   const { t } = useTranslate()
   const { workspace } = useWorkspace()
   const { isOpen, onOpen, onClose } = useDisclosure()
-  // The dropdown emits 'default' to mean "no credentials"; treat it as absence.
-  const credentialsId =
-    options?.credentialsId && options.credentialsId !== 'default'
-      ? options.credentialsId
-      : undefined
+  const credentialsId = normalizeCredentialsId(options?.credentialsId)
   const isSecureMode = !!credentialsId
 
   const { data: credential, isError: isCredentialError } =
@@ -56,12 +53,9 @@ export const HttpRequestSettings = ({
   }
 
   const updateCredentialsId = (newCredentialsId?: string) => {
-    // The dropdown emits the sentinel 'default' for the "no credentials" option.
-    // Normalize it (and empty) to undefined so the block falls back to custom URL.
-    const normalized =
-      newCredentialsId && newCredentialsId !== 'default'
-        ? newCredentialsId
-        : undefined
+    // Normalize the dropdown sentinel (and empty) to undefined so the block falls
+    // back to custom URL.
+    const normalized = normalizeCredentialsId(newCredentialsId)
     // Reset the URL field: a full URL typed in custom mode is invalid as a path
     // suffix once a credential is active (and vice-versa), so don't carry it over.
     onOptionsChange({

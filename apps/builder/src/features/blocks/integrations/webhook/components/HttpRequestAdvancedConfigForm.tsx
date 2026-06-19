@@ -39,6 +39,7 @@ import {
   defaultWebhookAttributes,
   defaultWebhookBlockOptions,
 } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
 type InheritedKeyValue = { key: string; value: string }
 
@@ -249,8 +250,7 @@ export const HttpRequestAdvancedConfigForm = ({
           </AccordionItem>
         </Accordion>
       </SwitchWithRelatedSettings>
-      {(webhook?.url ||
-        (options?.credentialsId && options.credentialsId !== 'default')) && (
+      {(webhook?.url || normalizeCredentialsId(options?.credentialsId)) && (
         <Button
           onClick={executeTestRequest}
           colorScheme="blue"

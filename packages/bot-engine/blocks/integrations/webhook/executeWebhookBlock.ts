@@ -40,6 +40,7 @@ import {
 } from './restApiCredential'
 import { resolveRestApiCredentialData } from './resolveRestApiCredential'
 import { parseResponseBody, safeJsonParse } from './parseResponseBody'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
 type ParsedWebhook = ExecutableHttpRequest & {
   basicAuth: { username?: string; password?: string }
@@ -90,14 +91,9 @@ export const executeWebhookBlock = async (
       : null)
   if (!webhook) return { outgoingEdgeId: block.outgoingEdgeId }
 
-  const rawCredentialsId =
+  const credentialsId = normalizeCredentialsId(
     'options' in block ? block.options?.credentialsId : undefined
-  // 'default' is the dropdown sentinel for "no credentials"; treat as absence
-  // in case it ever reaches the engine via stale persistence/import.
-  const credentialsId =
-    rawCredentialsId && rawCredentialsId !== 'default'
-      ? rawCredentialsId
-      : undefined
+  )
   let credentialData: RestApiCredentials['data'] | undefined
   if (credentialsId) {
     const resolved = await resolveRestApiCredentialData({

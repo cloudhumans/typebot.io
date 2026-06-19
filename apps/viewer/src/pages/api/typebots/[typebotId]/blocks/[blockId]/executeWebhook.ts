@@ -20,6 +20,7 @@ import {
   parseWebhookAttributes,
 } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
 import { isResolvedUrlSafe } from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 import { fetchLinkedParentTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedParentTypebots'
 import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedChildTypebots'
 import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/webhook/parseSampleResult'
@@ -100,10 +101,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Credential-backed HTTP blocks execute server-side in the bot-engine
     // (continueBotFlow), where membership is enforced and secrets stay on the
     // server. Reject them here instead of running them without their credential.
-    const rawCredentialsId = (block.options as { credentialsId?: string })
-      ?.credentialsId
-    const hasCredential = !!rawCredentialsId && rawCredentialsId !== 'default'
-    if (hasCredential)
+    const credentialsId = normalizeCredentialsId(
+      (block.options as { credentialsId?: string })?.credentialsId
+    )
+    if (credentialsId)
       return res.status(400).send({
         statusCode: 400,
         data: {
