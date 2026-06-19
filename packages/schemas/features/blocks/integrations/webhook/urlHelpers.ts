@@ -44,7 +44,13 @@ export const isSafeBaseUrl = (url: string): boolean => {
 export const concatUrlPath = (base: string, suffix?: string): string => {
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
   if (!suffix) return cleanBase
-  const pathOnly = suffix.split(/[?#]/)[0]
+  let pathOnly = suffix.split(/[?#]/)[0]
+  // Collapse double/triple percent-encoding (`%252e`, `%25252f`, …) first: a
+  // proxy/server that decodes more than once would otherwise turn these back into
+  // dot-segments/separators *after* our filter ran. Bounded to a few passes so a
+  // crafted `%25%25…` chain can't loop.
+  for (let i = 0; i < 3 && /%25/i.test(pathOnly); i++)
+    pathOnly = pathOnly.replace(/%25/gi, '%')
   const safePath = pathOnly
     // Treat encoded slashes as real separators so they can't hide a `..` segment.
     .replace(/%2f/gi, '/')

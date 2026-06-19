@@ -73,6 +73,15 @@ describe('cleanUrlConcat', () => {
     ).toBe('https://api.example.com/v1/admin')
   })
 
+  it('neutralizes double/triple percent-encoded traversal (%252e/%25252f)', () => {
+    expect(
+      cleanUrlConcat('https://api.example.com/v1', '%252e%252e%252fadmin')
+    ).toBe('https://api.example.com/v1/admin')
+    expect(
+      cleanUrlConcat('https://api.example.com/v1', '%25252e%25252e%25252fadmin')
+    ).toBe('https://api.example.com/v1/admin')
+  })
+
   it('drops a query/fragment from the suffix (those belong to dedicated fields)', () => {
     expect(cleanUrlConcat('https://api.example.com/v1', 'orders?token=x')).toBe(
       'https://api.example.com/v1/orders'
