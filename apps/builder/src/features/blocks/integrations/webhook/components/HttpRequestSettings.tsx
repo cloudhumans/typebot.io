@@ -35,14 +35,24 @@ export const HttpRequestSettings = ({
   const credentialsId = normalizeCredentialsId(options?.credentialsId)
   const isSecureMode = !!credentialsId
 
-  const { data: credential, isError: isCredentialError } =
-    trpc.credentials.getRestApiCredential.useQuery(
-      {
-        workspaceId: workspace?.id as string,
-        credentialsId: credentialsId as string,
-      },
-      { enabled: !!workspace?.id && !!credentialsId, retry: false }
-    )
+  const {
+    data: credential,
+    isError: isCredentialError,
+    error: credentialError,
+  } = trpc.credentials.getRestApiCredential.useQuery(
+    {
+      workspaceId: workspace?.id as string,
+      credentialsId: credentialsId as string,
+    },
+    { enabled: !!workspace?.id && !!credentialsId, retry: false }
+  )
+  // A decrypt failure (rotated ENCRYPTION_SECRET / corrupt IV) returns
+  // INTERNAL_SERVER_ERROR, not NOT_FOUND — show a read error, not a deletion hint.
+  const credentialErrorMessage = t(
+    credentialError?.data?.code === 'INTERNAL_SERVER_ERROR'
+      ? 'blocks.integrations.httpRequest.credentials.readError'
+      : 'blocks.integrations.httpRequest.credentials.notFound'
+  )
 
   const setLocalWebhook = async (newLocalWebhook: HttpRequest) => {
     onOptionsChange({ ...options, webhook: newLocalWebhook })
@@ -86,9 +96,7 @@ export const HttpRequestSettings = ({
       {isSecureMode ? (
         isCredentialError ? (
           <Tag size="lg" colorScheme="red" alignSelf="flex-start">
-            <Text>
-              {t('blocks.integrations.httpRequest.credentials.notFound')}
-            </Text>
+            <Text>{credentialErrorMessage}</Text>
           </Tag>
         ) : (
           <HStack align="stretch">
@@ -117,6 +125,10 @@ export const HttpRequestSettings = ({
       ) : (
         <TextInput
           key="custom-url"
+          // Switching to secure mode unmounts this input; flushing a pending edit
+          // here would call updateUrl with a stale `options` closure and clobber
+          // the just-set credentialsId / url reset. Cancel the pending edit instead.
+          flushOnUnmount={false}
           placeholder={t('blocks.integrations.httpRequest.url.placeholder')}
           defaultValue={options?.webhook?.url}
           onChange={updateUrl}

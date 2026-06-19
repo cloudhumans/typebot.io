@@ -151,6 +151,7 @@
   "blocks.integrations.httpRequest.credentials.name": "Credenciais REST API",
   "blocks.integrations.httpRequest.credentials.noCredentialLabel": "Sem credenciais (URL personalizada)",
   "blocks.integrations.httpRequest.credentials.notFound": "Credencial não encontrada — pode ter sido excluída. Selecione outra ou remova.",
+  "blocks.integrations.httpRequest.credentials.readError": "Não foi possível ler esta credencial — talvez precise ser recriada.",
   "blocks.integrations.httpRequest.pathSuffix.placeholder": "/caminho/sufixo",
   "blocks.integrations.httpRequest.url.placeholder": "Cole a URL...",
   "blocks.integrations.httpRequest.inheritedEntries.label": "Herdado das credenciais (somente leitura)",

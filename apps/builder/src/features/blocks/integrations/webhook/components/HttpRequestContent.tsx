@@ -22,14 +22,17 @@ export const WebhookContent = ({ block: { options } }: Props) => {
   const credentialsId = normalizeCredentialsId(options?.credentialsId)
   const method = webhook?.method ?? defaultWebhookAttributes.method
 
-  const { data: credential, isError: isCredentialError } =
-    trpc.credentials.getRestApiCredential.useQuery(
-      {
-        workspaceId: workspace?.id as string,
-        credentialsId: credentialsId as string,
-      },
-      { enabled: !!workspace?.id && !!credentialsId, retry: false }
-    )
+  const {
+    data: credential,
+    isError: isCredentialError,
+    error: credentialError,
+  } = trpc.credentials.getRestApiCredential.useQuery(
+    {
+      workspaceId: workspace?.id as string,
+      credentialsId: credentialsId as string,
+    },
+    { enabled: !!workspace?.id && !!credentialsId, retry: false }
+  )
 
   const responseMappings = options?.responseVariableMapping
     ?.filter((mapping) => mapping.variableId)
@@ -48,7 +51,11 @@ export const WebhookContent = ({ block: { options } }: Props) => {
     if (isCredentialError)
       return (
         <Text color="red.500" noOfLines={2} pr="6">
-          {t('blocks.integrations.httpRequest.credentials.notFound')}
+          {t(
+            credentialError?.data?.code === 'INTERNAL_SERVER_ERROR'
+              ? 'blocks.integrations.httpRequest.credentials.readError'
+              : 'blocks.integrations.httpRequest.credentials.notFound'
+          )}
         </Text>
       )
     const displayUrl = credential
