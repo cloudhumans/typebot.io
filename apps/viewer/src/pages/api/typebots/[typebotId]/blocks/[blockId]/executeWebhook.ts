@@ -7,7 +7,6 @@ import {
   Block,
   PublicTypebot,
   AnswerInSessionState,
-  RestApiCredentials,
 } from '@typebot.io/schemas'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { byId } from '@typebot.io/lib'
@@ -20,7 +19,6 @@ import {
   executeWebhook,
   parseWebhookAttributes,
 } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
-import { resolveRestApiCredentialData } from '@typebot.io/bot-engine/blocks/integrations/webhook/resolveRestApiCredential'
 import { isResolvedUrlSafe } from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
 import { fetchLinkedParentTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedParentTypebots'
 import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedChildTypebots'
@@ -95,28 +93,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
         )
 
-    // Resolve a workspace-scoped rest-api credential when the block references
-    // one, mirroring the bot-engine path so this endpoint stays consistent
-    // (credential merging, masking and the SSRF guard all apply here too).
+    // This endpoint is public and CORS-enabled, and it only validates an optional
+    // API token — never workspace membership. It must therefore never resolve a
+    // credential: doing so would let anyone who knows a typebot/block id trigger
+    // a server-side request carrying another workspace's decrypted secrets.
+    // Credential-backed HTTP blocks execute server-side in the bot-engine
+    // (continueBotFlow), where membership is enforced and secrets stay on the
+    // server. Reject them here instead of running them without their credential.
     const rawCredentialsId = (block.options as { credentialsId?: string })
       ?.credentialsId
-    const credentialsId =
-      rawCredentialsId && rawCredentialsId !== 'default'
-        ? rawCredentialsId
-        : undefined
-    let credentialData: RestApiCredentials['data'] | undefined
-    if (credentialsId) {
-      credentialData =
-        (await resolveRestApiCredentialData({
-          credentialsId,
-          workspaceId: typebot.workspaceId,
-        })) ?? undefined
-      if (!credentialData)
-        return res.status(400).send({
-          statusCode: 400,
-          data: { message: `Referenced credential could not be resolved.` },
-        })
-    }
+    const hasCredential = !!rawCredentialsId && rawCredentialsId !== 'default'
+    if (hasCredential)
+      return res.status(400).send({
+        statusCode: 400,
+        data: {
+          message:
+            'Credential-backed HTTP blocks cannot be executed through this endpoint.',
+        },
+      })
 
     const parsedWebhook = await parseWebhookAttributes({
       webhook,
@@ -131,7 +125,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }),
       },
       answers,
-      credentialData,
     })
 
     if (!parsedWebhook)
@@ -141,15 +134,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
 
     // Validate the resolved URL (post-interpolation). Genuinely unsafe URLs
-    // (bad scheme / metadata host) are blocked for every block; parse failures
-    // only abort credentialed ones, matching the bot-engine path and avoiding
-    // regressions for legacy flows whose URLs `ky` tolerates but `new URL()`
-    // does not.
+    // (bad scheme / metadata host) are blocked. Parse failures are tolerated to
+    // avoid regressing legacy flows whose URLs `ky` accepts but `new URL()` does
+    // not (credentialed blocks, which compose a base URL, are already rejected).
     const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
-    if (
-      !urlSafety.safe &&
-      (credentialData || urlSafety.reason !== 'Invalid URL')
-    )
+    if (!urlSafety.safe && urlSafety.reason !== 'Invalid URL')
       return res.status(400).send({
         statusCode: 400,
         data: { message: `Request URL rejected: ${urlSafety.reason}` },
