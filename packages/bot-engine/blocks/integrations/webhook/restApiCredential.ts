@@ -31,8 +31,11 @@ export const mergeKeyValues = (
   const localKeys = new Set((local ?? []).map((entry) => normalize(entry.key)))
   const globalAsKeyValues: KeyValue[] = (global ?? [])
     .filter((entry) => !localKeys.has(normalize(entry.key)))
-    .map((entry) => ({
-      id: `cred-${entry.key}`,
+    // Index the id, not just the key: credential entries aren't guaranteed unique
+    // keys, and a duplicated `cred-${key}` would collide as a React list key in
+    // the builder's TableList (broken render/edit).
+    .map((entry, index) => ({
+      id: `cred-${index}-${entry.key}`,
       key: entry.key,
       value: entry.value,
     }))
