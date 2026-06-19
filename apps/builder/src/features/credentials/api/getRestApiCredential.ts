@@ -41,7 +41,10 @@ export const getRestApiCredential = authenticatedProcedure
 
     const credential = workspace.credentials[0]
     if (!credential)
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Credential not found' })
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Credential not found',
+      })
 
     let decrypted: RestApiCredentials['data']
     try {

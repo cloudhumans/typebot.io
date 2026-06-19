@@ -80,7 +80,9 @@ export const HttpRequestSettings = ({
           currentCredentialsId={credentialsId}
           onCredentialsSelect={updateCredentialsId}
           onCreateNewClick={onOpen}
-          credentialsName={t('blocks.integrations.httpRequest.credentials.name')}
+          credentialsName={t(
+            'blocks.integrations.httpRequest.credentials.name'
+          )}
           defaultCredentialLabel={t(
             'blocks.integrations.httpRequest.credentials.noCredentialLabel'
           )}
@@ -131,7 +133,9 @@ export const HttpRequestSettings = ({
         webhook={options?.webhook}
         options={options}
         inheritedHeaders={credentialsId ? credential?.headers : undefined}
-        inheritedQueryParams={credentialsId ? credential?.queryParams : undefined}
+        inheritedQueryParams={
+          credentialsId ? credential?.queryParams : undefined
+        }
         onWebhookChange={setLocalWebhook}
         onOptionsChange={onOptionsChange}
       />

@@ -45,6 +45,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       include: { webhooks: true },
     })) as unknown as (Typebot & { webhooks: HttpRequest[] }) | null
     if (!typebot) return notFound(res)
+    // This endpoint issues a server-side HTTP request to a (variable-influenced)
+    // URL, so the caller must belong to the typebot's workspace. Without this an
+    // authenticated user could pass another workspace's typebotId and turn the
+    // builder into a cross-workspace SSRF proxy (and, with a credential, leak its
+    // secrets). Runs for every request, credentialed or not.
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: typebot.workspaceId },
+      select: { id: true, members: true },
+    })
+    if (!workspace || isReadWorkspaceFobidden(workspace, user))
+      return res
+        .status(403)
+        .send({ statusCode: 403, data: { message: 'Forbidden' } })
     const block = typebot.groups
       .flatMap<Block>((g) => g.blocks)
       .find(byId(blockId))
@@ -81,16 +94,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         : undefined
     let credentialData
     if (credentialsId) {
-      // Resolving a credential decrypts workspace secrets, so additionally
-      // require the caller to be a member of the typebot's workspace.
-      const workspace = await prisma.workspace.findFirst({
-        where: { id: typebot.workspaceId },
-        select: { id: true, members: true },
-      })
-      if (!workspace || isReadWorkspaceFobidden(workspace, user))
-        return res
-          .status(403)
-          .send({ statusCode: 403, data: { message: 'Forbidden' } })
       credentialData = await resolveRestApiCredentialData({
         credentialsId,
         workspaceId: typebot.workspaceId,

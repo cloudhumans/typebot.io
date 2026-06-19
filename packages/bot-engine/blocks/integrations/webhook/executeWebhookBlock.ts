@@ -220,15 +220,21 @@ export const parseWebhookAttributes = async ({
   // credential-level headers/query params with the block's own.
   const secretValues = new Set<string>()
   if (credentialData) {
-    const collectSecret = (value: string) =>
-      addMaskableSecret(secretValues, parseVariables(typebot.variables)(value))
-    credentialData.headers?.forEach((h) => collectSecret(h.value))
-    credentialData.queryParams?.forEach((q) => collectSecret(q.value))
     webhook = {
       ...webhook,
       headers: mergeKeyValues(credentialData.headers, webhook.headers),
       queryParams: mergeKeyValues(credentialData.queryParams, webhook.queryParams),
     }
+    // Mask every secret in the *merged* set: credential-level values AND the
+    // block's own headers/params (advanced-config overrides). In secure mode the
+    // block can carry auth material too, which would otherwise reach ChatLog
+    // details unmasked. Collecting after the merge covers both in one pass.
+    const collectSecret = (value: string | undefined) => {
+      if (!value) return
+      addMaskableSecret(secretValues, parseVariables(typebot.variables)(value))
+    }
+    webhook.headers?.forEach((h) => collectSecret(h.value))
+    webhook.queryParams?.forEach((q) => collectSecret(q.value))
   }
 
   const basicAuth: { username?: string; password?: string } = {}
