@@ -128,7 +128,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
 
     const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
-    if (!urlSafety.safe && (credentialData || urlSafety.reason !== 'Invalid URL'))
+    if (
+      !urlSafety.safe &&
+      (credentialData || urlSafety.reason !== 'Invalid URL')
+    )
       return res.status(400).send({
         statusCode: 400,
         data: { message: `Request URL rejected: ${urlSafety.reason}` },
