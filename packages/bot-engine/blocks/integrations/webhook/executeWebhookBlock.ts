@@ -29,11 +29,23 @@ import {
 import { env } from '@typebot.io/env'
 import { parseAnswers } from '@typebot.io/results/parseAnswers'
 import logger from '@typebot.io/lib/logger'
+import { RestApiCredentials } from '@typebot.io/schemas'
+import {
+  addMaskableSecret,
+  cleanUrlConcat,
+  isResolvedUrlSafe,
+  isSensitiveHeaderKey,
+  maskSecretsDeep,
+  mergeKeyValues,
+} from './restApiCredential'
+import { resolveRestApiCredentialData } from './resolveRestApiCredential'
 import { parseResponseBody, safeJsonParse } from './parseResponseBody'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
 type ParsedWebhook = ExecutableHttpRequest & {
   basicAuth: { username?: string; password?: string }
   isJson: boolean
+  secretValues?: Set<string>
 }
 
 export const longReqTimeoutWhitelist = [
@@ -78,11 +90,32 @@ export const executeWebhookBlock = async (
         })) as HttpRequest | null)
       : null)
   if (!webhook) return { outgoingEdgeId: block.outgoingEdgeId }
+
+  const credentialsId = normalizeCredentialsId(
+    'options' in block ? block.options?.credentialsId : undefined
+  )
+  let credentialData: RestApiCredentials['data'] | undefined
+  if (credentialsId) {
+    const resolved = await resolveRestApiCredentialData({
+      credentialsId,
+      workspaceId: state.typebotsQueue[0].typebot.workspaceId,
+    })
+    if (!resolved) {
+      logs.push({
+        status: 'error',
+        description: `Referenced credential could not be resolved for this workspace.`,
+      })
+      return { outgoingEdgeId: block.outgoingEdgeId, logs }
+    }
+    credentialData = resolved
+  }
+
   const parsedWebhook = await parseWebhookAttributes({
     webhook,
     isCustomBody: block.options?.isCustomBody,
     typebot: state.typebotsQueue[0].typebot,
     answers: state.typebotsQueue[0].answers,
+    credentialData,
   })
   if (!parsedWebhook) {
     logs.push({
@@ -91,7 +124,29 @@ export const executeWebhookBlock = async (
     })
     return { outgoingEdgeId: block.outgoingEdgeId, logs }
   }
-  if (block.options?.isExecutedOnClient && !state.whatsApp)
+
+  // Validate the resolved URL (after interpolation). Genuinely unsafe URLs
+  // (bad scheme / metadata host) are blocked for every block. Parse failures
+  // only abort credentialed blocks, to avoid regressing legacy flows whose
+  // URLs `ky` tolerates but `new URL()` does not. For credentialed blocks the
+  // resolved URL must also stay within the credential's locked base path.
+  const urlSafety = isResolvedUrlSafe(parsedWebhook.url, {
+    baseUrl: credentialData?.baseUrl,
+  })
+  if (
+    !urlSafety.safe &&
+    (credentialData || urlSafety.reason !== 'Invalid URL')
+  ) {
+    logs.push({
+      status: 'error',
+      description: `Request URL rejected: ${urlSafety.reason}`,
+    })
+    return { outgoingEdgeId: block.outgoingEdgeId, logs }
+  }
+
+  // Credential-backed blocks must never execute on the client, otherwise the
+  // resolved secret headers/params would be sent to the browser.
+  if (block.options?.isExecutedOnClient && !credentialData && !state.whatsApp)
     return {
       outgoingEdgeId: block.outgoingEdgeId,
       clientSideActions: [
@@ -149,13 +204,57 @@ export const parseWebhookAttributes = async ({
   isCustomBody,
   typebot,
   answers,
+  credentialData,
 }: {
   webhook: HttpRequest
   isCustomBody?: boolean
   typebot: TypebotInSession
   answers: AnswerInSessionState[]
+  credentialData?: RestApiCredentials['data']
 }): Promise<ParsedWebhook | undefined> => {
-  if (!webhook.url) return
+  // With a credential, the request URL is composed from the credential base
+  // URL even when the block's own URL (path suffix) is empty.
+  if (!webhook.url && !credentialData) return
+
+  // Collect resolved (interpolated) secret values for log masking, and merge
+  // credential-level headers/query params with the block's own.
+  const secretValues = new Set<string>()
+  if (credentialData) {
+    // Capture the block's own (local) entries before the merge so we can decide
+    // per-source what to mask.
+    const localHeaders = webhook.headers ?? []
+    const localQueryParams = webhook.queryParams ?? []
+    webhook = {
+      ...webhook,
+      // Header names are case-insensitive, so a block-level `authorization` must
+      // override a credential `Authorization` (and vice versa). Query param keys
+      // stay case-sensitive.
+      headers: mergeKeyValues(credentialData.headers, webhook.headers, {
+        caseInsensitiveKeys: true,
+      }),
+      queryParams: mergeKeyValues(
+        credentialData.queryParams,
+        webhook.queryParams
+      ),
+    }
+    const collectSecret = (value: string | undefined) => {
+      if (!value) return
+      addMaskableSecret(secretValues, parseVariables(typebot.variables)(value))
+    }
+    // Credential values are secret by definition -> always masked.
+    credentialData.headers?.forEach((h) => collectSecret(h.value))
+    credentialData.queryParams?.forEach((q) => collectSecret(q.value))
+    // Block-level overrides only carry auth material under sensitive keys
+    // (Authorization, Cookie, *token*, *api-key*, ...). Masking every block value
+    // would bullet out non-secrets like `Accept: application/json` in ChatLog.
+    localHeaders.forEach((h) => {
+      if (isSensitiveHeaderKey(h.key)) collectSecret(h.value)
+    })
+    localQueryParams.forEach((q) => {
+      if (isSensitiveHeaderKey(q.key)) collectSecret(q.value)
+    })
+  }
+
   const basicAuth: { username?: string; password?: string } = {}
   const basicAuthHeaderIdx = webhook.headers?.findIndex(
     (h) =>
@@ -171,6 +270,16 @@ export const parseWebhookAttributes = async ({
       webhook.headers?.at(basicAuthHeaderIdx)?.value?.slice(6).split(':') ?? []
     basicAuth.username = username
     basicAuth.password = password
+    // The user/pass get spread into the logged `request` object as separate
+    // fields, so the full "Basic user:pass" header value already collected
+    // wouldn't mask them. Mask the parts too when they came from a credential.
+    if (credentialData) {
+      // Mask even short user/pass: they're credential-derived secrets, and the
+      // API could echo a short value in an error/response body. Accepts some log
+      // noise as the safer trade-off (the full Basic header is masked too).
+      if (username) addMaskableSecret(secretValues, username, { allowShort: true })
+      if (password) addMaskableSecret(secretValues, password, { allowShort: true })
+    }
     webhook.headers?.splice(basicAuthHeaderIdx, 1)
   }
   const headers = convertKeyValueTableToObject(
@@ -196,15 +305,20 @@ export const parseWebhookAttributes = async ({
         )
       : { data: undefined, isJson: false }
 
+  const urlBase = credentialData
+    ? cleanUrlConcat(credentialData.baseUrl, webhook.url ?? '')
+    : webhook.url ?? ''
+
   return {
     url: parseVariables(typebot.variables)(
-      webhook.url + (queryParams !== '' ? `?${queryParams}` : '')
+      urlBase + (queryParams !== '' ? `?${queryParams}` : '')
     ),
     basicAuth,
     method,
     headers,
     body,
     isJson,
+    secretValues: credentialData ? secretValues : undefined,
   }
 }
 
@@ -220,6 +334,15 @@ export const executeWebhook = async (
   const logs: ChatLog[] = []
 
   const { headers, url, method, basicAuth, isJson } = webhook
+  const secretValues = webhook.secretValues ?? new Set<string>()
+  // Mask credential-derived secrets in anything that gets persisted/logged.
+  const mask = <T>(value: T): T => maskSecretsDeep(value, secretValues)
+  // `secretValues` is defined (even if empty) only for credential-backed
+  // requests. Those must not follow redirects: the SSRF guard only validates
+  // the initial URL, and `ky` would otherwise replay the secret headers to a
+  // 302 Location (e.g. the cloud metadata IP). 'manual' makes `ky` throw on a
+  // 3xx instead of following it, so the secret never leaves the validated host.
+  const isCredentialed = webhook.secretValues !== undefined
   const contentType = headers ? headers['Content-Type'] : undefined
 
   const isLongRequest = params.disableRequestTimeout
@@ -262,6 +385,7 @@ export const executeWebhook = async (
     json: !isFormData && body && isJson ? body : undefined,
     body: (isFormData && body ? body : undefined) as any,
     timeout: calculateTimeout(),
+    ...(isCredentialed ? { redirect: 'manual' as const } : {}),
   } satisfies Options & { url: string; body: any }
 
   const requestStartTime = Date.now()
@@ -272,10 +396,13 @@ export const executeWebhook = async (
     logs.push({
       status: 'success',
       description: webhookSuccessDescription,
+      // Mask request and response independently: maskSecretsDeep shares one scan
+      // budget per call, so masking them together would let a huge response body
+      // exhaust it before request.url/headers are reached.
       details: {
         statusCode: response.status,
-        response: body,
-        request,
+        response: mask(body),
+        request: mask(request),
       },
     })
     const httpDuration = Date.now() - requestStartTime
@@ -284,7 +411,7 @@ export const executeWebhook = async (
       {
         ...logContext,
         http: {
-          url: request.url,
+          url: mask(request.url),
           method: request.method,
           status_code: response.status,
           duration: httpDuration,
@@ -305,13 +432,24 @@ export const executeWebhook = async (
         statusCode: error.response.status,
         data: await parseResponseBody(error.response),
       }
+      // With redirect:'manual' (credential-backed requests) ky throws instead of
+      // following a redirect; surface a clear reason. Under Node/undici a manual
+      // redirect usually arrives as an opaque response (type 'opaqueredirect',
+      // status 0) rather than a 3xx, so detect both shapes.
+      const isBlockedRedirect =
+        isCredentialed &&
+        (error.response.status === 0 ||
+          error.response.type === 'opaqueredirect' ||
+          (error.response.status >= 300 && error.response.status < 400))
       logs.push({
         status: 'error',
-        description: webhookErrorDescription,
+        description: isBlockedRedirect
+          ? `Request blocked: the endpoint attempted a redirect, which is not followed for credential-backed requests.`
+          : webhookErrorDescription,
         details: {
           statusCode: error.response.status,
-          request,
-          response,
+          request: mask(request),
+          response: mask(response),
         },
       })
       logger.warn(
@@ -319,7 +457,7 @@ export const executeWebhook = async (
         {
           ...logContext,
           http: {
-            url: request.url,
+            url: mask(request.url),
             method: request.method,
             status_code: error.response.status,
             duration: Date.now() - requestStartTime,
@@ -343,8 +481,8 @@ export const executeWebhook = async (
           (request.timeout ? request.timeout : 0) / 1000
         }s)`,
         details: {
-          response,
-          request,
+          response: mask(response),
+          request: mask(request),
         },
       })
       logger.error(
@@ -352,7 +490,7 @@ export const executeWebhook = async (
         {
           ...logContext,
           http: {
-            url: request.url,
+            url: mask(request.url),
             method: request.method,
             timeout_ms: request.timeout || 0,
             duration: Date.now() - requestStartTime,
@@ -363,26 +501,28 @@ export const executeWebhook = async (
     }
     const response = {
       statusCode: 500,
-      data: { message: `Error from Typebot server: ${error}` },
+      // This message is returned to the flow (and may be persisted), and a raw
+      // error can embed the request URL/secret query params, so mask it.
+      data: { message: mask(`Error from Typebot server: ${error}`) },
     }
     logger.error(
       `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Failed`,
       {
         ...logContext,
         http: {
-          url: request.url,
+          url: mask(request.url),
           method: request.method,
           duration: Date.now() - requestStartTime,
         },
-        error: error instanceof Error ? error.message : String(error),
+        error: mask(error instanceof Error ? error.message : String(error)),
       }
     )
     logs.push({
       status: 'error',
       description: `Webhook failed to execute.`,
       details: {
-        response,
-        request,
+        response: mask(response),
+        request: mask(request),
       },
     })
     return { response, logs, startTimeShouldBeUpdated: true }

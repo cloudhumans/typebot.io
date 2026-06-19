@@ -28,6 +28,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const data = (
       typeof req.body === 'string' ? JSON.parse(req.body) : req.body
     ) as Credentials
+    // 'rest-api' credentials must go through the tRPC `createCredentials` route,
+    // which enforces the admin gate, base-URL safety validation (isSafeBaseUrl)
+    // and `createdById`. This legacy route only checks workspace membership and
+    // skips zod/admin validation, so allowing rest-api here would bypass all of
+    // that. Reject it explicitly; other credential types keep prior behavior.
+    if (data.type === 'rest-api')
+      return forbidden(
+        res,
+        'REST API credentials must be created via the credentials tRPC route.'
+      )
     const { encryptedData, iv } = await encrypt(data.data)
     const workspace = await prisma.workspace.findFirst({
       where: { id: workspaceId, members: { some: { userId: user.id } } },

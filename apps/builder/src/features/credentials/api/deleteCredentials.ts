@@ -3,6 +3,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { isWriteWorkspaceForbidden } from '@/features/workspace/helpers/isWriteWorkspaceForbidden'
+import { isAdminWriteWorkspaceForbidden } from '@/features/workspace/helpers/isAdminWriteWorkspaceForbidden'
 import { findCredentialsUsages } from '@typebot.io/lib/credentials/findCredentialsUsages'
 
 export const deleteCredentials = authenticatedProcedure
@@ -38,6 +39,22 @@ export const deleteCredentials = authenticatedProcedure
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Workspace not found',
+        })
+
+      // REST API credentials are admin-only to create; deletion must match that
+      // bar, otherwise a non-admin member could remove an admin-managed
+      // credential. Other credential types keep the write-access gate above.
+      const credential = await prisma.credentials.findFirst({
+        where: { id: credentialsId, workspaceId },
+        select: { type: true },
+      })
+      if (
+        credential?.type === 'rest-api' &&
+        isAdminWriteWorkspaceForbidden(workspace, user)
+      )
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only workspace admins can delete REST API credentials',
         })
 
       const result = await prisma.$transaction(

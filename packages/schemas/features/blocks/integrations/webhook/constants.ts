@@ -24,3 +24,8 @@ export const defaultWebhookBlockOptions = {
 
 export const defaultTimeout = 10
 export const maxTimeout = 120
+
+// Single source of truth for the credential-secret mask string, shared by the
+// runtime (bot-engine log masking) and the builder (masked credential read), so
+// the UI never shows a different representation than the one used in logs.
+export const maskedValue = '••••••••'

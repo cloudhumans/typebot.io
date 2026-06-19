@@ -27,7 +27,9 @@
     "locales:sync": "tolgee sync './apps/builder/src/**/*.ts?(x)' --continue-on-warning --remove-unused",
     "create-new-block": "cd packages/forge/cli && pnpm start",
     "format:check": "turbo run format:check",
-    "patch-embed-libs": "bun scripts/patch-embed-libs.ts"
+    "patch-embed-libs": "bun scripts/patch-embed-libs.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@tolgee/cli": "1.3.2",
@@ -36,7 +38,8 @@
     "cz-emoji": "1.3.2-canary.2",
     "husky": "8.0.3",
     "prettier": "2.8.8",
-    "turbo": "1.11.3"
+    "turbo": "1.11.3",
+    "vitest": "1.6.0"
   },
   "config": {
     "commitizen": {

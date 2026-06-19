@@ -19,6 +19,8 @@ import {
   executeWebhook,
   parseWebhookAttributes,
 } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
+import { isResolvedUrlSafe } from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 import { fetchLinkedParentTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedParentTypebots'
 import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedChildTypebots'
 import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/webhook/parseSampleResult'
@@ -92,6 +94,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
         )
 
+    // This endpoint is public and CORS-enabled, and it only validates an optional
+    // API token — never workspace membership. It must therefore never resolve a
+    // credential: doing so would let anyone who knows a typebot/block id trigger
+    // a server-side request carrying another workspace's decrypted secrets.
+    // Credential-backed HTTP blocks execute server-side in the bot-engine
+    // (continueBotFlow), where membership is enforced and secrets stay on the
+    // server. Reject them here instead of running them without their credential.
+    const credentialsId = normalizeCredentialsId(
+      (block.options as { credentialsId?: string })?.credentialsId
+    )
+    if (credentialsId)
+      return res.status(400).send({
+        statusCode: 400,
+        data: {
+          message:
+            'Credential-backed HTTP blocks cannot be executed through this endpoint.',
+        },
+      })
+
     const parsedWebhook = await parseWebhookAttributes({
       webhook,
       isCustomBody: block.options?.isCustomBody,
@@ -111,6 +132,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(500).send({
         statusCode: 500,
         data: { message: `Couldn't parse webhook attributes` },
+      })
+
+    // Validate the resolved URL (post-interpolation). Genuinely unsafe URLs
+    // (bad scheme / metadata host) are blocked. Parse failures are tolerated to
+    // avoid regressing legacy flows whose URLs `ky` accepts but `new URL()` does
+    // not (credentialed blocks, which compose a base URL, are already rejected).
+    const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
+    if (!urlSafety.safe && urlSafety.reason !== 'Invalid URL')
+      return res.status(400).send({
+        statusCode: 400,
+        data: { message: `Request URL rejected: ${urlSafety.reason}` },
       })
 
     const { response, logs } = await executeWebhook(parsedWebhook, {

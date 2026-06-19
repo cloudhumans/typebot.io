@@ -5,6 +5,7 @@ import { smtpCredentialsSchema } from './blocks/integrations/sendEmail'
 import { whatsAppCredentialsSchema } from './whatsapp'
 import { zemanticAiCredentialsSchema } from './blocks'
 import { openAICredentialsSchema } from './blocks/integrations/openai'
+import { restApiCredentialsSchema } from './blocks/integrations/webhook/schema'
 
 export const credentialsSchema = z.discriminatedUnion('type', [
   smtpCredentialsSchema,
@@ -13,6 +14,7 @@ export const credentialsSchema = z.discriminatedUnion('type', [
   openAICredentialsSchema,
   whatsAppCredentialsSchema,
   zemanticAiCredentialsSchema,
+  restApiCredentialsSchema,
 ])
 
 export type Credentials = z.infer<typeof credentialsSchema>
