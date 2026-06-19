@@ -7,6 +7,7 @@ import {
 } from '@typebot.io/lib/api'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import { findCredentialsUsages } from '@typebot.io/lib/credentials/findCredentialsUsages'
+import { isAdminWriteWorkspaceForbidden } from '@/features/workspace/helpers/isAdminWriteWorkspaceForbidden'
 import logger from '@typebot.io/lib/logger'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -24,6 +25,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     })
     if (!membership)
       return res.status(404).send({ message: 'Workspace not found' })
+
+    // REST API credentials are admin-only to create and delete (mirrors the tRPC
+    // deleteCredentials gate). This legacy REST route would otherwise let any
+    // member remove an admin-managed credential, bypassing that lifecycle.
+    const credential = await prisma.credentials.findFirst({
+      where: { id: credentialsId, workspaceId },
+      select: { type: true },
+    })
+    if (credential?.type === 'rest-api') {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { id: true, members: true },
+      })
+      if (!workspace || isAdminWriteWorkspaceForbidden(workspace, user))
+        return res.status(403).send({
+          message: 'Only workspace admins can delete REST API credentials',
+        })
+    }
 
     try {
       const result = await prisma.$transaction(
