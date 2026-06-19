@@ -121,21 +121,28 @@ export const HttpRequestAdvancedConfigForm = ({
   const executeTestRequest = async () => {
     if (!typebot) return
     setIsTestResponseLoading(true)
-    if (!options?.webhook) await save()
-    else await save()
-    const { data, error } = await executeWebhook(
-      typebot.id,
-      convertVariablesForTestToVariables(
-        options?.variablesForTest ?? [],
-        typebot.variables
-      ),
-      { blockId }
-    )
-    if (error)
-      return showToast({ title: error.name, description: error.message })
-    setTestResponse(JSON.stringify(data, undefined, 2))
-    setResponseKeys(getDeepKeys(data))
-    setIsTestResponseLoading(false)
+    // finally: always clear the spinner. The early return on `error` (and any
+    // throw from save/executeWebhook) previously left it stuck spinning, now
+    // that the credential-backed flow lets the test run with an empty suffix.
+    try {
+      await save()
+      const { data, error } = await executeWebhook(
+        typebot.id,
+        convertVariablesForTestToVariables(
+          options?.variablesForTest ?? [],
+          typebot.variables
+        ),
+        { blockId }
+      )
+      if (error) {
+        showToast({ title: error.name, description: error.message })
+        return
+      }
+      setTestResponse(JSON.stringify(data, undefined, 2))
+      setResponseKeys(getDeepKeys(data))
+    } finally {
+      setIsTestResponseLoading(false)
+    }
   }
 
   const ResponseMappingInputs = useMemo(
