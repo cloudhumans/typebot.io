@@ -5,8 +5,7 @@ import { decrypt } from '@typebot.io/lib/api/encryption/decrypt'
 import { z } from 'zod'
 import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
 import { RestApiCredentials } from '@typebot.io/schemas'
-
-const maskedValue = '••••••••'
+import { maskedValue } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
 
 export const getRestApiCredential = authenticatedProcedure
   .input(

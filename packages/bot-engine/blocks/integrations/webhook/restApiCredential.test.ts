@@ -69,9 +69,9 @@ describe('cleanUrlConcat', () => {
     expect(cleanUrlConcat('https://api.example.com/v1', '..%2Fadmin')).toBe(
       'https://api.example.com/v1/admin'
     )
-    expect(
-      cleanUrlConcat('https://api.example.com/v1', '%2e%2e%2fadmin')
-    ).toBe('https://api.example.com/v1/admin')
+    expect(cleanUrlConcat('https://api.example.com/v1', '%2e%2e%2fadmin')).toBe(
+      'https://api.example.com/v1/admin'
+    )
   })
 
   it('neutralizes double/triple percent-encoded traversal (%252e/%25252f)', () => {
@@ -128,7 +128,9 @@ describe('mergeKeyValues', () => {
 
   it('handles undefined global/local', () => {
     expect(mergeKeyValues(undefined, undefined)).toEqual([])
-    expect(mergeKeyValues([{ key: 'X', value: '1' }], undefined)).toHaveLength(1)
+    expect(mergeKeyValues([{ key: 'X', value: '1' }], undefined)).toHaveLength(
+      1
+    )
   })
 
   it('treats query-param keys as case-sensitive by default (Token !== token)', () => {
@@ -256,9 +258,9 @@ describe('isResolvedUrlSafe', () => {
     expect(
       isResolvedUrlSafe('http://[::ffff:169.254.169.254]/latest/meta-data').safe
     ).toBe(false)
-    expect(isResolvedUrlSafe('http://[fd00:ec2::254]/latest/meta-data').safe).toBe(
-      false
-    )
+    expect(
+      isResolvedUrlSafe('http://[fd00:ec2::254]/latest/meta-data').safe
+    ).toBe(false)
   })
 
   it('rejects alternate IP encodings of the metadata/link-local address', () => {
@@ -278,6 +280,27 @@ describe('isResolvedUrlSafe', () => {
     expect(isResolvedUrlSafe('http://[fd12:3456:789a::1]/').safe).toBe(false)
     expect(isResolvedUrlSafe('http://[fe80::1]/').safe).toBe(false)
     expect(isResolvedUrlSafe('http://[FE80::abcd]/').safe).toBe(false)
+  })
+
+  it('rejects a trailing-dot FQDN of the metadata host', () => {
+    // `metadata.google.internal.` resolves the same as without the dot, so it
+    // must not slip past the exact-match set.
+    expect(isResolvedUrlSafe('http://metadata.google.internal./').safe).toBe(
+      false
+    )
+    expect(isResolvedUrlSafe('http://169.254.169.254./latest/').safe).toBe(
+      false
+    )
+  })
+
+  it('rejects IPv4-mapped IPv6 forms of the link-local range', () => {
+    // new URL() compresses `[::ffff:169.254.0.1]` to `[::ffff:a9fe:1]`; both the
+    // dotted and the compressed-hex tail must be caught by the link-local guard.
+    expect(isResolvedUrlSafe('http://[::ffff:169.254.0.1]/').safe).toBe(false)
+    expect(isResolvedUrlSafe('http://[::ffff:a9fe:1]/').safe).toBe(false)
+    expect(isResolvedUrlSafe('http://[::ffff:169.254.169.254]/').safe).toBe(
+      false
+    )
   })
 
   it('still allows normal public/private IPs and hosts', () => {
@@ -322,8 +345,9 @@ describe('isResolvedUrlSafe', () => {
         .safe
     ).toBe(false)
     expect(
-      isResolvedUrlSafe('https://api.example.com/v1/%2e%2e%2fadmin', { baseUrl })
-        .safe
+      isResolvedUrlSafe('https://api.example.com/v1/%2e%2e%2fadmin', {
+        baseUrl,
+      }).safe
     ).toBe(false)
     // Double-encoded variant.
     expect(
@@ -344,9 +368,9 @@ describe('isResolvedUrlSafe', () => {
 
   it('with a baseUrl, allows the base path and its descendants', () => {
     const baseUrl = 'https://api.example.com/v1'
-    expect(isResolvedUrlSafe('https://api.example.com/v1', { baseUrl }).safe).toBe(
-      true
-    )
+    expect(
+      isResolvedUrlSafe('https://api.example.com/v1', { baseUrl }).safe
+    ).toBe(true)
     expect(
       isResolvedUrlSafe('https://api.example.com/v1/orders?q=1', { baseUrl })
         .safe
@@ -365,7 +389,7 @@ describe('isResolvedUrlSafe', () => {
 })
 
 describe('rfc3986Encode', () => {
-  it('escapes the sub-delims encodeURIComponent leaves intact (!*\'())', () => {
+  it("escapes the sub-delims encodeURIComponent leaves intact (!*'())", () => {
     expect(rfc3986Encode("sk-secret!*'()")).toBe('sk-secret%21%2A%27%28%29')
   })
 
@@ -386,8 +410,8 @@ describe('addMaskableSecret', () => {
 
   it('adds the raw value and its encoded forms for maskable secrets', () => {
     const set = new Set<string>()
-    addMaskableSecret(set, "sk-live-secret!")
-    expect(set.has("sk-live-secret!")).toBe(true)
+    addMaskableSecret(set, 'sk-live-secret!')
+    expect(set.has('sk-live-secret!')).toBe(true)
     // qs.stringify (RFC 3986) form must be covered so it cannot leak in a URL.
     expect(set.has('sk-live-secret%21')).toBe(true)
   })
@@ -428,7 +452,13 @@ describe('isSensitiveHeaderKey', () => {
   })
 
   it('does not match ordinary non-secret header keys', () => {
-    for (const key of ['Accept', 'Content-Type', 'User-Agent', 'X-Request-Id', ''])
+    for (const key of [
+      'Accept',
+      'Content-Type',
+      'User-Agent',
+      'X-Request-Id',
+      '',
+    ])
       expect(isSensitiveHeaderKey(key)).toBe(false)
     expect(isSensitiveHeaderKey(undefined)).toBe(false)
   })

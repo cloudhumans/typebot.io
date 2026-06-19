@@ -1,6 +1,10 @@
 import { KeyValue } from '@typebot.io/schemas'
 
-export const maskedValue = '••••••••'
+// Shared with the builder's masked credential read via @typebot.io/schemas so a
+// single definition drives both the runtime log mask and the UI. Re-exported
+// here under the historical name this module's callers and tests import.
+import { maskedValue } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
+export { maskedValue }
 
 // Single source of truth lives in @typebot.io/schemas so the runtime, builder
 // and schema stay in lockstep. Re-exported under the historical name used by
@@ -58,7 +62,9 @@ export const tooLargeToMask = '[omitted: payload too large to mask]'
  */
 export const maskSecretsDeep = <T>(value: T, secretValues: Set<string>): T => {
   if (secretValues.size === 0) return value
-  return maskWithinBudget(value, secretValues, { remaining: MAX_MASK_SCAN_CHARS })
+  return maskWithinBudget(value, secretValues, {
+    remaining: MAX_MASK_SCAN_CHARS,
+  })
 }
 
 const maskWithinBudget = <T>(
@@ -148,10 +154,18 @@ const metadataHosts = new Set([
   'fd00:ec2::254',
 ])
 
-// Normalizes a URL hostname for metadata-host comparison: strips IPv6 brackets
-// and lowercases, so `[::ffff:169.254.169.254]` and `[FD00:EC2::254]` match.
+// Normalizes a URL hostname for metadata-host comparison: trims, lowercases,
+// strips IPv6 brackets (so `[::ffff:169.254.169.254]` and `[FD00:EC2::254]`
+// match), and drops a trailing FQDN dot. `metadata.google.internal.` resolves
+// the same as the dotless form, so the trailing dot must not slip past the
+// exact-match set.
 const normalizeHostname = (hostname: string) =>
-  hostname.toLowerCase().replace(/^\[/, '').replace(/\]$/, '')
+  hostname
+    .trim()
+    .toLowerCase()
+    .replace(/^\[/, '')
+    .replace(/\]$/, '')
+    .replace(/\.+$/, '')
 
 // Parses a hostname written as an IPv4 address in any common encoding (dotted
 // decimal, a single decimal integer, or hex) into a 32-bit int. Returns null
@@ -178,6 +192,24 @@ const hostnameToIpv4Int = (host: string): number | null => {
 
 // 169.254.0.0/16 (link-local, includes the cloud metadata IP 169.254.169.254).
 const isLinkLocalIpv4 = (ipInt: number) => ipInt >>> 16 === 0xa9fe
+
+// Extracts the embedded IPv4 (as a 32-bit int) from an IPv4-mapped IPv6 host, so
+// the link-local guard also catches the metadata range reached over IPv6 —
+// `[::ffff:169.254.0.1]`, which WHATWG `new URL()` compresses to the hex form
+// `::ffff:a9fe:1`. Without this the IPv4 parser (sees colons → null) and the
+// IPv6 leading-hextet check (a leading `::` → 0) both miss it.
+const ipv4MappedIpv6ToInt = (host: string): number | null => {
+  const tail = /^::ffff:(.+)$/i.exec(host)?.[1]
+  if (tail === undefined) return null
+  // Dotted-quad tail, e.g. ::ffff:169.254.0.1
+  if (tail.includes('.')) return hostnameToIpv4Int(tail)
+  // Compressed two-hextet tail, e.g. ::ffff:a9fe:1
+  const parts = tail.split(':')
+  if (parts.length !== 2 || !parts.every((p) => /^[0-9a-f]{1,4}$/.test(p)))
+    return null
+  const [hi, lo] = parts.map((p) => parseInt(p, 16))
+  return ((hi << 16) | lo) >>> 0
+}
 
 // Returns the leading 16-bit hextet of an IPv6 hostname (bracket-stripped,
 // lowercased), or null when the host is not IPv6. Only the first group is
@@ -213,7 +245,10 @@ const isBlockedIpv6 = (host: string): boolean => {
  * resolves to `../admin` only escapes once `new URL()` normalizes the final URL —
  * which is exactly what this check sees.
  */
-export const isWithinBaseUrl = (baseUrl: string, resolvedUrl: string): boolean => {
+export const isWithinBaseUrl = (
+  baseUrl: string,
+  resolvedUrl: string
+): boolean => {
   let base: URL
   let resolved: URL
   try {
@@ -285,7 +320,7 @@ export const isResolvedUrlSafe = (
   const host = normalizeHostname(parsed.hostname)
   if (metadataHosts.has(host))
     return { safe: false, reason: 'Blocked metadata host' }
-  const ipInt = hostnameToIpv4Int(host)
+  const ipInt = hostnameToIpv4Int(host) ?? ipv4MappedIpv6ToInt(host)
   if (ipInt !== null && isLinkLocalIpv4(ipInt))
     return { safe: false, reason: 'Blocked link-local/metadata address' }
   if (isBlockedIpv6(host))
@@ -294,4 +329,3 @@ export const isResolvedUrlSafe = (
     return { safe: false, reason: 'URL escapes the credential base path' }
   return { safe: true }
 }
-
