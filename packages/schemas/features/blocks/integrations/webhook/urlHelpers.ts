@@ -32,17 +32,22 @@ export const isSafeBaseUrl = (url: string): boolean => {
  *
  * The suffix is treated as a path only and is hardened: a query/fragment is
  * dropped (those have a dedicated query-params field and must not ride in the
- * path), and `.` / `..` segments — including percent-encoded forms like `%2e` —
- * are removed. Otherwise a block author (who may be less privileged than the
- * admin who owns the credential) could set a suffix like `../admin` that
- * normalizes outside the admin-locked base path, sending the credential's secret
- * headers to an unintended endpoint on the same host.
+ * path), and `.` / `..` segments are removed. Encoded forms are neutralized too —
+ * `%2e` (`.`) is normalized before the dot check, and `%2f` (`/`) is treated as a
+ * separator so a suffix like `%2F..%2Fadmin` is split rather than smuggled
+ * through as one segment (some servers decode `%2F` to `/` before routing).
+ * Otherwise a block author (who may be less privileged than the admin who owns
+ * the credential) could set a suffix like `../admin` that normalizes outside the
+ * admin-locked base path, sending the credential's secret headers to an
+ * unintended endpoint on the same host.
  */
 export const concatUrlPath = (base: string, suffix?: string): string => {
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
   if (!suffix) return cleanBase
   const pathOnly = suffix.split(/[?#]/)[0]
   const safePath = pathOnly
+    // Treat encoded slashes as real separators so they can't hide a `..` segment.
+    .replace(/%2f/gi, '/')
     .split('/')
     .filter((segment) => {
       if (segment === '') return false

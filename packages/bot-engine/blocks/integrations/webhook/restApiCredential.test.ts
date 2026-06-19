@@ -61,6 +61,18 @@ describe('cleanUrlConcat', () => {
     )
   })
 
+  it('neutralizes encoded-slash traversal (%2f hiding a .. segment)', () => {
+    expect(cleanUrlConcat('https://api.example.com/v1', '%2F..%2Fadmin')).toBe(
+      'https://api.example.com/v1/admin'
+    )
+    expect(cleanUrlConcat('https://api.example.com/v1', '..%2Fadmin')).toBe(
+      'https://api.example.com/v1/admin'
+    )
+    expect(
+      cleanUrlConcat('https://api.example.com/v1', '%2e%2e%2fadmin')
+    ).toBe('https://api.example.com/v1/admin')
+  })
+
   it('drops a query/fragment from the suffix (those belong to dedicated fields)', () => {
     expect(cleanUrlConcat('https://api.example.com/v1', 'orders?token=x')).toBe(
       'https://api.example.com/v1/orders'
