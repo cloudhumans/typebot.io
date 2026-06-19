@@ -202,14 +202,47 @@ const isBlockedIpv6 = (host: string): boolean => {
 }
 
 /**
+ * Confirms a *resolved* (post-interpolation) URL still sits within the
+ * credential's locked base URL: same origin, no injected userinfo, and a path
+ * that is the base path or a descendant of it (segment-boundary aware, so `/v1`
+ * does not match `/v1evil`). This is the backstop for variable-valued path
+ * suffixes: `concatUrlPath` strips `..` from the *template*, but a `{{var}}` that
+ * resolves to `../admin` only escapes once `new URL()` normalizes the final URL —
+ * which is exactly what this check sees.
+ */
+export const isWithinBaseUrl = (baseUrl: string, resolvedUrl: string): boolean => {
+  let base: URL
+  let resolved: URL
+  try {
+    base = new URL(baseUrl)
+    resolved = new URL(resolvedUrl)
+  } catch {
+    return false
+  }
+  if (resolved.origin !== base.origin) return false
+  // A suffix can't legitimately introduce userinfo; reject the `…@host` shape.
+  if (resolved.username !== '' || resolved.password !== '') return false
+  const basePath = base.pathname.endsWith('/')
+    ? base.pathname.slice(0, -1)
+    : base.pathname
+  return (
+    resolved.pathname === basePath ||
+    resolved.pathname.startsWith(`${basePath}/`)
+  )
+}
+
+/**
  * Conservative SSRF guard for the *resolved* request URL (after variable
  * interpolation). Enforces an http/https scheme allowlist and blocks the cloud
  * metadata endpoint (IPv4 and IPv6 forms, including the link-local/unique-local
  * ranges). Broader private-range blocking is intentionally left out to preserve
- * self-hosted setups where webhooks call internal hostnames.
+ * self-hosted setups where webhooks call internal hostnames. When `baseUrl` is
+ * given (credential-backed requests), the resolved URL must additionally stay
+ * within that locked base URL.
  */
 export const isResolvedUrlSafe = (
-  url: string
+  url: string,
+  opts?: { baseUrl?: string }
 ): { safe: true } | { safe: false; reason: string } => {
   let parsed: URL
   try {
@@ -227,6 +260,8 @@ export const isResolvedUrlSafe = (
     return { safe: false, reason: 'Blocked link-local/metadata address' }
   if (isBlockedIpv6(host))
     return { safe: false, reason: 'Blocked link-local/metadata address' }
+  if (opts?.baseUrl && !isWithinBaseUrl(opts.baseUrl, url))
+    return { safe: false, reason: 'URL escapes the credential base path' }
   return { safe: true }
 }
 

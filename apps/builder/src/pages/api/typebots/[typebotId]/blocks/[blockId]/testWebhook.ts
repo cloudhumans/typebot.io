@@ -124,7 +124,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         data: { message: `Couldn't parse webhook attributes` },
       })
 
-    const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
+    const urlSafety = isResolvedUrlSafe(parsedWebhook.url, {
+      baseUrl: credentialData?.baseUrl,
+    })
     if (
       !urlSafety.safe &&
       (credentialData || urlSafety.reason !== 'Invalid URL')

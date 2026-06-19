@@ -280,6 +280,48 @@ describe('isResolvedUrlSafe', () => {
   it('rejects malformed URLs', () => {
     expect(isResolvedUrlSafe('not a url').safe).toBe(false)
   })
+
+  it('with a baseUrl, rejects a resolved URL that escapes the locked base path', () => {
+    const baseUrl = 'https://api.example.com/v1'
+    // The variable-traversal outcome: suffix {{x}}=../admin -> normalized here.
+    expect(
+      isResolvedUrlSafe('https://api.example.com/admin', { baseUrl }).safe
+    ).toBe(false)
+    // Sibling-prefix must not be treated as "within" (segment boundary).
+    expect(
+      isResolvedUrlSafe('https://api.example.com/v1evil', { baseUrl }).safe
+    ).toBe(false)
+    // Different origin on the same-ish host family.
+    expect(
+      isResolvedUrlSafe('https://evil.example.com/v1/x', { baseUrl }).safe
+    ).toBe(false)
+    // Injected userinfo.
+    expect(
+      isResolvedUrlSafe('https://user:pass@api.example.com/v1/x', { baseUrl })
+        .safe
+    ).toBe(false)
+  })
+
+  it('with a baseUrl, allows the base path and its descendants', () => {
+    const baseUrl = 'https://api.example.com/v1'
+    expect(isResolvedUrlSafe('https://api.example.com/v1', { baseUrl }).safe).toBe(
+      true
+    )
+    expect(
+      isResolvedUrlSafe('https://api.example.com/v1/orders?q=1', { baseUrl })
+        .safe
+    ).toBe(true)
+  })
+
+  it('with a path-less baseUrl, allows any path on the same origin only', () => {
+    const baseUrl = 'https://api.example.com'
+    expect(
+      isResolvedUrlSafe('https://api.example.com/anything', { baseUrl }).safe
+    ).toBe(true)
+    expect(
+      isResolvedUrlSafe('https://other.example.com/anything', { baseUrl }).safe
+    ).toBe(false)
+  })
 })
 
 describe('rfc3986Encode', () => {

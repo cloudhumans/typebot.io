@@ -128,8 +128,11 @@ export const executeWebhookBlock = async (
   // Validate the resolved URL (after interpolation). Genuinely unsafe URLs
   // (bad scheme / metadata host) are blocked for every block. Parse failures
   // only abort credentialed blocks, to avoid regressing legacy flows whose
-  // URLs `ky` tolerates but `new URL()` does not.
-  const urlSafety = isResolvedUrlSafe(parsedWebhook.url)
+  // URLs `ky` tolerates but `new URL()` does not. For credentialed blocks the
+  // resolved URL must also stay within the credential's locked base path.
+  const urlSafety = isResolvedUrlSafe(parsedWebhook.url, {
+    baseUrl: credentialData?.baseUrl,
+  })
   if (
     !urlSafety.safe &&
     (credentialData || urlSafety.reason !== 'Invalid URL')
