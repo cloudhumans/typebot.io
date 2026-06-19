@@ -34,6 +34,7 @@ import {
   addMaskableSecret,
   cleanUrlConcat,
   isResolvedUrlSafe,
+  isSensitiveHeaderKey,
   maskSecretsDeep,
   mergeKeyValues,
 } from './restApiCredential'
@@ -220,6 +221,10 @@ export const parseWebhookAttributes = async ({
   // credential-level headers/query params with the block's own.
   const secretValues = new Set<string>()
   if (credentialData) {
+    // Capture the block's own (local) entries before the merge so we can decide
+    // per-source what to mask.
+    const localHeaders = webhook.headers ?? []
+    const localQueryParams = webhook.queryParams ?? []
     webhook = {
       ...webhook,
       // Header names are case-insensitive, so a block-level `authorization` must
@@ -233,16 +238,22 @@ export const parseWebhookAttributes = async ({
         webhook.queryParams
       ),
     }
-    // Mask every secret in the *merged* set: credential-level values AND the
-    // block's own headers/params (advanced-config overrides). In secure mode the
-    // block can carry auth material too, which would otherwise reach ChatLog
-    // details unmasked. Collecting after the merge covers both in one pass.
     const collectSecret = (value: string | undefined) => {
       if (!value) return
       addMaskableSecret(secretValues, parseVariables(typebot.variables)(value))
     }
-    webhook.headers?.forEach((h) => collectSecret(h.value))
-    webhook.queryParams?.forEach((q) => collectSecret(q.value))
+    // Credential values are secret by definition -> always masked.
+    credentialData.headers?.forEach((h) => collectSecret(h.value))
+    credentialData.queryParams?.forEach((q) => collectSecret(q.value))
+    // Block-level overrides only carry auth material under sensitive keys
+    // (Authorization, Cookie, *token*, *api-key*, ...). Masking every block value
+    // would bullet out non-secrets like `Accept: application/json` in ChatLog.
+    localHeaders.forEach((h) => {
+      if (isSensitiveHeaderKey(h.key)) collectSecret(h.value)
+    })
+    localQueryParams.forEach((q) => {
+      if (isSensitiveHeaderKey(q.key)) collectSecret(q.value)
+    })
   }
 
   const basicAuth: { username?: string; password?: string } = {}

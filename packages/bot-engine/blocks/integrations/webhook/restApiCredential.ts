@@ -115,6 +115,16 @@ export const addMaskableSecret = (
     if (encoded !== value) secretValues.add(encoded)
 }
 
+// Header/query-param keys whose *values* should be treated as secrets for log
+// masking. Credential values are always masked; this only governs block-level
+// overrides, so non-secret values like `Accept: application/json` aren't bulleted
+// out of ChatLog details. Matches the usual auth-bearing names as a substring.
+const sensitiveKeyPattern =
+  /authorization|cookie|api[-_]?key|token|secret|password/i
+
+export const isSensitiveHeaderKey = (key: string | undefined): boolean =>
+  !!key && sensitiveKeyPattern.test(key)
+
 const metadataHosts = new Set([
   '169.254.169.254',
   'metadata.google.internal',

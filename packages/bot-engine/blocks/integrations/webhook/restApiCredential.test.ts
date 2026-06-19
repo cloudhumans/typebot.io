@@ -7,6 +7,7 @@ import {
   maskedValue,
   addMaskableSecret,
   rfc3986Encode,
+  isSensitiveHeaderKey,
   MAX_MASK_SCAN_CHARS,
   tooLargeToMask,
 } from './restApiCredential'
@@ -284,5 +285,29 @@ describe('addMaskableSecret', () => {
     addMaskableSecret(set, 'token with/space')
     expect(set.has('token with/space')).toBe(true)
     expect(set.has(encodeURIComponent('token with/space'))).toBe(true)
+  })
+})
+
+describe('isSensitiveHeaderKey', () => {
+  it('matches the usual auth-bearing keys (case-insensitive, substring)', () => {
+    for (const key of [
+      'Authorization',
+      'authorization',
+      'Cookie',
+      'X-Api-Key',
+      'x-api-key',
+      'apikey',
+      'X-Auth-Token',
+      'access_token',
+      'X-Secret',
+      'password',
+    ])
+      expect(isSensitiveHeaderKey(key)).toBe(true)
+  })
+
+  it('does not match ordinary non-secret header keys', () => {
+    for (const key of ['Accept', 'Content-Type', 'User-Agent', 'X-Request-Id', ''])
+      expect(isSensitiveHeaderKey(key)).toBe(false)
+    expect(isSensitiveHeaderKey(undefined)).toBe(false)
   })
 })
