@@ -74,6 +74,40 @@ describe('mergeKeyValues', () => {
     expect(mergeKeyValues(undefined, undefined)).toEqual([])
     expect(mergeKeyValues([{ key: 'X', value: '1' }], undefined)).toHaveLength(1)
   })
+
+  it('treats query-param keys as case-sensitive by default (Token !== token)', () => {
+    const merged = mergeKeyValues(
+      [{ key: 'Token', value: 'global' }],
+      [{ id: 'l1', key: 'token', value: 'local' }]
+    )
+    // Different keys per RFC 3986 -> both kept.
+    expect(merged).toHaveLength(2)
+    expect(merged.map((e) => e.value).sort()).toEqual(['global', 'local'])
+  })
+
+  it('with caseInsensitiveKeys, a local header overrides a differently-cased global one', () => {
+    const merged = mergeKeyValues(
+      [{ key: 'Authorization', value: 'cred' }],
+      [{ id: 'l1', key: 'authorization', value: 'block' }],
+      { caseInsensitiveKeys: true }
+    )
+    // The credential entry is dropped; only the block's casing/value survives, so
+    // the client never receives two conflicting Authorization headers.
+    expect(merged).toHaveLength(1)
+    expect(merged[0]).toMatchObject({ key: 'authorization', value: 'block' })
+  })
+
+  it('with caseInsensitiveKeys, a local empty header clears a differently-cased global one', () => {
+    const merged = mergeKeyValues(
+      [{ key: 'Authorization', value: 'cred-secret' }],
+      [{ id: 'l1', key: 'authorization', value: '' }],
+      { caseInsensitiveKeys: true }
+    )
+    expect(merged.filter((e) => e.value === 'cred-secret')).toHaveLength(0)
+    expect(merged).toEqual([
+      expect.objectContaining({ key: 'authorization', value: '' }),
+    ])
+  })
 })
 
 describe('maskSecretsDeep', () => {

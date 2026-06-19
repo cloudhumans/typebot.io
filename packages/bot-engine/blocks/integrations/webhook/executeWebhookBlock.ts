@@ -222,8 +222,16 @@ export const parseWebhookAttributes = async ({
   if (credentialData) {
     webhook = {
       ...webhook,
-      headers: mergeKeyValues(credentialData.headers, webhook.headers),
-      queryParams: mergeKeyValues(credentialData.queryParams, webhook.queryParams),
+      // Header names are case-insensitive, so a block-level `authorization` must
+      // override a credential `Authorization` (and vice versa). Query param keys
+      // stay case-sensitive.
+      headers: mergeKeyValues(credentialData.headers, webhook.headers, {
+        caseInsensitiveKeys: true,
+      }),
+      queryParams: mergeKeyValues(
+        credentialData.queryParams,
+        webhook.queryParams
+      ),
     }
     // Mask every secret in the *merged* set: credential-level values AND the
     // block's own headers/params (advanced-config overrides). In secure mode the

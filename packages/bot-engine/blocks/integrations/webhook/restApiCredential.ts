@@ -14,14 +14,23 @@ export { concatUrlPath as cleanUrlConcat } from '@typebot.io/schemas/features/bl
  * one entirely (the downstream object reducer discards empty values), so the
  * "local overrides global" contract holds even for removal. Remaining global
  * entries come first so locals win for any key still present in both.
+ *
+ * `caseInsensitiveKeys` controls how a global/local key collision is detected:
+ * pass `true` for HTTP headers (`Authorization` and `authorization` are the same
+ * name, so a local entry must override either casing — otherwise both reach the
+ * client and the override silently breaks), and leave it `false` for query
+ * params, whose keys are case-sensitive per RFC 3986 (`?Token=` ≠ `?token=`).
  */
 export const mergeKeyValues = (
   global: { key: string; value: string }[] | undefined,
-  local: KeyValue[] | undefined
+  local: KeyValue[] | undefined,
+  { caseInsensitiveKeys = false }: { caseInsensitiveKeys?: boolean } = {}
 ): KeyValue[] => {
-  const localKeys = new Set((local ?? []).map((entry) => entry.key))
+  const normalize = (key: string | undefined) =>
+    caseInsensitiveKeys ? key?.toLowerCase() : key
+  const localKeys = new Set((local ?? []).map((entry) => normalize(entry.key)))
   const globalAsKeyValues: KeyValue[] = (global ?? [])
-    .filter((entry) => !localKeys.has(entry.key))
+    .filter((entry) => !localKeys.has(normalize(entry.key)))
     .map((entry) => ({
       id: `cred-${entry.key}`,
       key: entry.key,
