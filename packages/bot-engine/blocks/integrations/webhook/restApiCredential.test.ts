@@ -188,12 +188,12 @@ describe('maskSecretsDeep', () => {
     expect(maskSecretsDeep({ a: 'b' }, new Set())).toEqual({ a: 'b' })
   })
 
-  it('caps work on oversized payloads and never leaks the secret past budget', () => {
+  it('omits an oversized field without scanning it, but still masks smaller siblings', () => {
     const secret = 'SUPER-SECRET-TOKEN-VALUE'
     const masked = maskSecretsDeep(
       {
         early: `Authorization: ${secret}`,
-        filler: 'x'.repeat(MAX_MASK_SCAN_CHARS), // exhausts the scan budget
+        filler: 'x'.repeat(MAX_MASK_SCAN_CHARS + 1), // alone exceeds the budget
         late: `also ${secret} here`,
       },
       new Set([secret])
@@ -201,9 +201,27 @@ describe('maskSecretsDeep', () => {
     // Scanned within budget -> masked normally.
     expect(masked.early).toContain(maskedValue)
     expect(masked.early).not.toContain(secret)
-    // Beyond budget -> dropped wholesale, so the secret cannot leak.
-    expect(masked.late).toBe(tooLargeToMask)
+    // Too large to scan -> dropped wholesale (fail-safe, can't leak)...
+    expect(masked.filler).toBe(tooLargeToMask)
+    // ...but the oversized field doesn't consume the budget, so a smaller sibling
+    // after it is still masked rather than collateral-omitted.
+    expect(masked.late).toContain(maskedValue)
     expect(masked.late).not.toContain(secret)
+  })
+
+  it('never leaks a secret once the cumulative budget is exhausted', () => {
+    const secret = 'SUPER-SECRET-TOKEN-VALUE'
+    // A first field that consumes the whole budget, then a field holding the
+    // secret: the second can't be scanned, so it must be omitted, not leaked.
+    const masked = maskSecretsDeep(
+      {
+        filler: 'x'.repeat(MAX_MASK_SCAN_CHARS),
+        secretField: `token=${secret}`,
+      },
+      new Set([secret])
+    )
+    expect(masked.secretField).toBe(tooLargeToMask)
+    expect(masked.secretField).not.toContain(secret)
   })
 })
 
@@ -297,6 +315,16 @@ describe('addMaskableSecret', () => {
     addMaskableSecret(set, 'token with/space')
     expect(set.has('token with/space')).toBe(true)
     expect(set.has(encodeURIComponent('token with/space'))).toBe(true)
+  })
+
+  it('with allowShort, masks short values too (e.g. basic-auth fragments)', () => {
+    const set = new Set<string>()
+    addMaskableSecret(set, 'ab', { allowShort: true })
+    expect(set.has('ab')).toBe(true)
+    // Still rejects empty/undefined regardless of allowShort.
+    addMaskableSecret(set, '', { allowShort: true })
+    addMaskableSecret(set, undefined, { allowShort: true })
+    expect(set.has('')).toBe(false)
   })
 })
 

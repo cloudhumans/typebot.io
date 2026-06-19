@@ -64,7 +64,12 @@ const maskWithinBudget = <T>(
   budget: { remaining: number }
 ): T => {
   if (typeof value === 'string') {
-    if (budget.remaining <= 0) return tooLargeToMask as unknown as T
+    // Omit (without scanning) any string that alone would exceed the remaining
+    // budget. This is what actually bounds the O(size × secrets) work: scanning a
+    // huge string first and only then noticing the budget is blown would defeat
+    // the cap. Fail-safe — an omitted value is never emitted unmasked. The budget
+    // is left untouched so smaller sibling fields can still be masked.
+    if (value.length > budget.remaining) return tooLargeToMask as unknown as T
     budget.remaining -= value.length
     let masked: string = value
     for (const secret of secretValues) {
@@ -105,11 +110,16 @@ export const rfc3986Encode = (value: string): string =>
 
 // Adds a resolved secret and the encoded forms it may take in a request URL to
 // the mask set, skipping values too short to mask without corrupting logs.
+// `allowShort` bypasses the length floor for values that are known-secret by
+// origin (e.g. credential basic-auth user/pass split out of the header): there
+// the leak risk of an echoed short value outweighs the log-noise of masking it.
 export const addMaskableSecret = (
   secretValues: Set<string>,
-  value: string | undefined
+  value: string | undefined,
+  { allowShort = false }: { allowShort?: boolean } = {}
 ): void => {
-  if (!value || value.length < MIN_MASKABLE_SECRET_LENGTH) return
+  if (!value) return
+  if (!allowShort && value.length < MIN_MASKABLE_SECRET_LENGTH) return
   secretValues.add(value)
   for (const encoded of [encodeURIComponent(value), rfc3986Encode(value)])
     if (encoded !== value) secretValues.add(encoded)
