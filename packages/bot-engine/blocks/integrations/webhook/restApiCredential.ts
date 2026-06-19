@@ -230,12 +230,16 @@ export const isWithinBaseUrl = (baseUrl: string, resolvedUrl: string): boolean =
   // way a permissive server might (collapse `%25`, then `%2e`/`%2f`), bounded
   // against a decode-bomb, then let `new URL()` resolve `.`/`..` so the prefix
   // check sees the path the server will actually serve.
+  // `%5c` (backslash) is included because WHATWG `new URL()` treats a literal `\`
+  // as `/` for http(s) — so its *encoded* form is an equivalent separator that a
+  // server can decode into a traversal.
   let decodedPath = resolved.pathname
-  for (let i = 0; i < 3 && /%(25|2e|2f)/i.test(decodedPath); i++)
+  for (let i = 0; i < 3 && /%(25|2e|2f|5c)/i.test(decodedPath); i++)
     decodedPath = decodedPath
       .replace(/%25/gi, '%')
       .replace(/%2e/gi, '.')
       .replace(/%2f/gi, '/')
+      .replace(/%5c/gi, '/')
   let canonical: URL
   try {
     // Resolve against the full base so a decoded protocol-relative `//host`

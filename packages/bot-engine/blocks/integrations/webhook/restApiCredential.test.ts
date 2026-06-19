@@ -8,6 +8,7 @@ import {
   addMaskableSecret,
   rfc3986Encode,
   isSensitiveHeaderKey,
+  isWithinBaseUrl,
   MAX_MASK_SCAN_CHARS,
   tooLargeToMask,
 } from './restApiCredential'
@@ -430,5 +431,120 @@ describe('isSensitiveHeaderKey', () => {
     for (const key of ['Accept', 'Content-Type', 'User-Agent', 'X-Request-Id', ''])
       expect(isSensitiveHeaderKey(key)).toBe(false)
     expect(isSensitiveHeaderKey(undefined)).toBe(false)
+  })
+})
+
+describe('path-traversal fuzz (locked base URL invariant)', () => {
+  const BASE = 'https://api.example.com/v1'
+
+  // Percent-encoding layers for "." and for path separators ("/" and "\").
+  const DOT = ['.', '%2e', '%2E', '%252e', '%252E', '%25252e']
+  const SEP = [
+    '/',
+    '%2f',
+    '%2F',
+    '%252f',
+    '%25252f',
+    '\\',
+    '%5c',
+    '%5C',
+    '%255c',
+  ]
+
+  // Worst-case server oracle: fully percent-decode (iteratively), treat backslash
+  // as a separator, then resolve dot-segments via the URL parser. Used ONLY to
+  // decide which payloads truly escape, so we can assert the guard never *accepts*
+  // one of them (over-blocking would be safe; under-blocking is the bug we hunt).
+  const oracleEscapes = (resolvedUrl: string): boolean => {
+    let p: string
+    try {
+      p = new URL(resolvedUrl).pathname
+    } catch {
+      return false
+    }
+    for (let i = 0; i < 6; i++) {
+      let d: string
+      try {
+        d = decodeURIComponent(p)
+      } catch {
+        break
+      }
+      if (d === p) break
+      p = d
+    }
+    p = p.replace(/\\/g, '/')
+    try {
+      const canon = new URL(p, 'https://api.example.com').pathname
+      return !(canon === '/v1' || canon.startsWith('/v1/'))
+    } catch {
+      return false
+    }
+  }
+
+  // Generate every encoded ".." + separator + out-of-base segment.
+  const generated: string[] = []
+  for (const a of DOT)
+    for (const b of DOT)
+      for (const s of SEP) generated.push(`${a}${b}${s}admin`)
+
+  const structuralEscapes = [
+    '../admin',
+    '../../admin',
+    'foo/../../admin',
+    '/%2e%2e/admin',
+    '..%2f..%2fadmin',
+    '%2e%2e/%2e%2e/admin',
+    '..\\admin',
+    '%2e%2e%5cadmin',
+    '..%255c..%255cadmin',
+  ]
+
+  const escapes = [...generated, ...structuralEscapes]
+
+  it('isWithinBaseUrl never accepts a traversal that a decoding server would escape', () => {
+    for (const payload of escapes) {
+      const resolved = `${BASE}/${payload}`
+      // Only assert on payloads the worst-case oracle agrees actually escape.
+      if (!oracleEscapes(resolved)) continue
+      expect(
+        isWithinBaseUrl(BASE, resolved),
+        `isWithinBaseUrl should reject: ${payload}`
+      ).toBe(false)
+    }
+  })
+
+  it('concatUrlPath neutralizes every traversal variant in a static suffix', () => {
+    for (const payload of escapes) {
+      const out = cleanUrlConcat(BASE, payload)
+      expect(
+        isWithinBaseUrl(BASE, out),
+        `concat output escaped for "${payload}" -> ${out}`
+      ).toBe(true)
+    }
+  })
+
+  const benign = [
+    'orders',
+    'orders/123',
+    'order%20list',
+    'file%2ename',
+    'a/b/c',
+    'v2',
+    './orders',
+    '%2e/orders',
+    'sub/./deep',
+  ]
+
+  it('does not over-block benign suffixes that stay within the base', () => {
+    for (const payload of benign) {
+      const resolved = `${BASE}/${payload}`
+      expect(oracleEscapes(resolved), `oracle says benign: ${payload}`).toBe(
+        false
+      )
+      expect(
+        isWithinBaseUrl(BASE, resolved),
+        `isWithinBaseUrl should allow: ${payload}`
+      ).toBe(true)
+    }
   })
 })

@@ -52,8 +52,12 @@ export const concatUrlPath = (base: string, suffix?: string): string => {
   for (let i = 0; i < 3 && /%25/i.test(pathOnly); i++)
     pathOnly = pathOnly.replace(/%25/gi, '%')
   const safePath = pathOnly
-    // Treat encoded slashes as real separators so they can't hide a `..` segment.
+    // Treat encoded slashes and back-slashes (literal + encoded) as real
+    // separators so they can't hide a `..` segment — http(s) servers and the
+    // WHATWG URL parser fold `\` into `/`.
     .replace(/%2f/gi, '/')
+    .replace(/%5c/gi, '/')
+    .replace(/\\/g, '/')
     .split('/')
     .filter((segment) => {
       if (segment === '') return false
