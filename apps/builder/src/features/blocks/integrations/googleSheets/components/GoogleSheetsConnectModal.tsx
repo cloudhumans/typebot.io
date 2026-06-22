@@ -13,7 +13,6 @@ import {
   Flex,
 } from '@chakra-ui/react'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
-import Link from 'next/link'
 import React from 'react'
 import { AlertInfo } from '@/components/AlertInfo'
 import { GoogleLogo } from '@/components/GoogleLogo'
@@ -33,6 +32,26 @@ export const GoogleSheetConnectModal = ({
   onClose,
 }: Props) => {
   const { workspace } = useWorkspace()
+
+  // Run the OAuth consent in a top-level popup instead of navigating the current
+  // frame. Embedded inside CloudChat's iframe, Google refuses to render consent
+  // (Sec-Fetch-Dest: iframe → 403); a popup that escapes the iframe sandbox is a
+  // real top-level context. The callback hands the result back via postMessage,
+  // which GoogleSheetsSettings listens for. See helpers/popupMessaging.ts.
+  const openConsentPopup = () => {
+    const consentUrl = new URL(
+      getGoogleSheetsConsentScreenUrlQuery(
+        globalThis.location.href,
+        blockId,
+        workspace?.id,
+        typebotId
+      ),
+      globalThis.location.origin
+    ).toString()
+    globalThis.open(consentUrl, 'gs-oauth', 'popup,width=600,height=720')
+    onClose()
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
@@ -57,17 +76,10 @@ export const GoogleSheetConnectModal = ({
           </AlertInfo>
           <Flex>
             <Button
-              as={Link}
               leftIcon={<GoogleLogo />}
               data-testid="google"
-              isLoading={['loading', 'authenticated'].includes(status)}
               variant="outline"
-              href={getGoogleSheetsConsentScreenUrlQuery(
-                window.location.href,
-                blockId,
-                workspace?.id,
-                typebotId
-              )}
+              onClick={openConsentPopup}
               mx="auto"
             >
               Continue with Google

@@ -93,8 +93,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         groups,
       },
     })
+    // The block already has credentialsId persisted above. Hand control to a
+    // minimal completion page that, when opened as a popup (embedded mode),
+    // postMessages the result back to the builder and closes itself. When there
+    // is no opener (standalone, no popup) it falls back to the old behaviour of
+    // redirecting the builder with `?blockId=`.
+    const fallbackRedirectUrl = `${
+      redirectUrl?.split('?')[0] ?? env.NEXTAUTH_URL
+    }?blockId=${blockId}`
+    const completeParams = new URLSearchParams({
+      blockId,
+      credentialsId,
+      redirectUrl: fallbackRedirectUrl,
+    })
     res.redirect(
-      `${redirectUrl.split('?')[0]}?blockId=${blockId}` ?? `${env.NEXTAUTH_URL}`
+      `${
+        env.NEXTAUTH_URL
+      }/credentials/google-sheets/callback-complete?${completeParams.toString()}`
     )
   }
 }

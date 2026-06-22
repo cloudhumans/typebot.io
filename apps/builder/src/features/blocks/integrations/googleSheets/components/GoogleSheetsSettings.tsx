@@ -19,7 +19,7 @@ import {
   GoogleSheetsInsertRowOptions,
   GoogleSheetsUpdateRowOptionsV6,
 } from '@typebot.io/schemas'
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { isDefined } from '@typebot.io/lib'
 import { SheetsDropdown } from './SheetsDropdown'
 import { CellWithValueStack } from './CellWithValueStack'
@@ -37,6 +37,8 @@ import {
   totalRowsToExtractOptions,
 } from '@typebot.io/schemas/features/blocks/integrations/googleSheets/constants'
 import { GoogleSpreadsheetPicker } from './GoogleSpreadsheetPicker'
+import { trpc } from '@/lib/trpc'
+import { parseGoogleSheetsConnectedMessage } from '../helpers/popupMessaging'
 
 type Props = {
   options: GoogleSheetsBlock['options']
@@ -52,6 +54,7 @@ export const GoogleSheetsSettings = ({
   const { workspace } = useWorkspace()
   const { typebot } = useTypebot()
   const { save } = useTypebot()
+  const trpcContext = trpc.useContext()
   const { sheets, isLoading } = useSheets({
     credentialsId: options?.credentialsId,
     spreadsheetId: options?.spreadsheetId,
@@ -66,6 +69,25 @@ export const GoogleSheetsSettings = ({
       ...options,
       credentialsId,
     })
+
+  // The connect flow runs in a top-level popup (embedded mode can't render
+  // Google's consent inside CloudChat's iframe). On success the callback page
+  // postMessages the new credentialsId back; refresh the credentials list and
+  // select it. credentialsId is already persisted on the block server-side.
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== globalThis.location.origin) return
+      const message = parseGoogleSheetsConnectedMessage(event.data)
+      if (!message || message.blockId !== blockId) return
+      trpcContext.credentials.listCredentials.invalidate()
+      handleCredentialsIdChange(message.credentialsId)
+    }
+    globalThis.addEventListener('message', handleMessage)
+    return () => globalThis.removeEventListener('message', handleMessage)
+    // handleCredentialsIdChange is recreated each render; blockId is the stable
+    // identity that matters for this listener.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockId, trpcContext])
   const handleSpreadsheetIdChange = (spreadsheetId: string | undefined) =>
     onOptionsChange({ ...options, spreadsheetId })
   const handleSheetIdChange = (sheetId: string | undefined) =>
