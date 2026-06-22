@@ -1,13 +1,10 @@
 import { FileIcon } from '@/components/icons'
 import { trpc } from '@/lib/trpc'
 import { Button, Flex, HStack, IconButton, Text } from '@chakra-ui/react'
-import { env } from '@typebot.io/env'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect } from 'react'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const window: any
+import { parseGoogleSheetsSpreadsheetPickedMessage } from '../helpers/popupMessaging'
 
 type Props = {
   spreadsheetId?: string
@@ -22,12 +19,6 @@ export const GoogleSpreadsheetPicker = ({
   credentialsId,
   onSpreadsheetIdSelect,
 }: Props) => {
-  const [isPickerInitialized, setIsPickerInitialized] = useState(false)
-
-  const { data } = trpc.sheets.getAccessToken.useQuery({
-    workspaceId,
-    credentialsId,
-  })
   const { data: spreadsheetData, status } =
     trpc.sheets.getSpreadsheetName.useQuery(
       {
@@ -38,55 +29,29 @@ export const GoogleSpreadsheetPicker = ({
       { enabled: !!spreadsheetId }
     )
 
+  // The Picker runs in a top-level popup (see pages/google-picker.tsx) so it
+  // works both standalone and embedded inside CloudChat's iframe, where Google
+  // refuses to render its account chooser. The popup hands the picked
+  // spreadsheet id back here via postMessage.
   useEffect(() => {
-    loadScript('gapi', 'https://apis.google.com/js/api.js', () => {
-      window.gapi.load('picker', () => {
-        setIsPickerInitialized(true)
-      })
-    })
-  }, [])
-
-  const loadScript = (
-    id: string,
-    src: string,
-    callback: { (): void; (): void; (): void }
-  ) => {
-    const existingScript = document.getElementById(id)
-    if (existingScript) {
-      callback()
-      return
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== globalThis.location.origin) return
+      const message = parseGoogleSheetsSpreadsheetPickedMessage(event.data)
+      if (!message) return
+      onSpreadsheetIdSelect(message.spreadsheetId)
     }
-    const script = document.createElement('script')
-    script.type = 'text/javascript'
+    globalThis.addEventListener('message', handleMessage)
+    return () => globalThis.removeEventListener('message', handleMessage)
+  }, [onSpreadsheetIdSelect])
 
-    script.onload = function () {
-      callback()
-    }
-
-    script.src = src
-    document.head.appendChild(script)
-  }
-
-  const createPicker = () => {
-    if (!data) return
-    if (!isPickerInitialized) throw new Error('Google Picker not inited')
-
-    const picker = new window.google.picker.PickerBuilder()
-      .addView(window.google.picker.ViewId.SPREADSHEETS)
-      .setOAuthToken(data.accessToken)
-      .setDeveloperKey(env.NEXT_PUBLIC_GOOGLE_API_KEY)
-      .setCallback(pickerCallback)
-      .build()
-
-    picker.setVisible(true)
-  }
-
-  const pickerCallback = (data: { action: string; docs: { id: string }[] }) => {
-    if (data.action !== 'picked') return
-    const spreadsheetId = data.docs[0]?.id
-    if (!spreadsheetId) return
-    onSpreadsheetIdSelect(spreadsheetId)
-  }
+  const openPicker = useCallback(() => {
+    const params = new URLSearchParams({ workspaceId, credentialsId })
+    globalThis.open(
+      `/google-picker?${params.toString()}`,
+      'gs-picker',
+      'popup,width=720,height=600'
+    )
+  }, [workspaceId, credentialsId])
 
   if (spreadsheetData && spreadsheetData.name !== '')
     return (
@@ -98,19 +63,15 @@ export const GoogleSpreadsheetPicker = ({
         <IconButton
           size="sm"
           icon={<FileIcon />}
-          onClick={createPicker}
-          isLoading={!isPickerInitialized}
+          onClick={openPicker}
           aria-label={'Pick another spreadsheet'}
         />
       </Flex>
     )
   return (
     <Button
-      onClick={createPicker}
-      isLoading={
-        !isPickerInitialized ||
-        (isDefined(spreadsheetId) && status === 'loading')
-      }
+      onClick={openPicker}
+      isLoading={isDefined(spreadsheetId) && status === 'loading'}
     >
       Pick a spreadsheet
     </Button>
