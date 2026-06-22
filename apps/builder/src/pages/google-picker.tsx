@@ -16,6 +16,11 @@ declare const window: any
 // GoogleSpreadsheetPicker so the Picker (which renders Google's account chooser)
 // runs outside CloudChat's iframe, where Google would otherwise return 403.
 //
+// In embedded mode the popup carries embedded=true&jwt; EmbeddedAuthWrapper
+// (in _app.tsx) runs the handshake and only renders this page once a first-party
+// session exists, so the access-token query can safely fire — the builder's
+// Partitioned NextAuth cookie is not sent to this top-level eddie context.
+//
 // The access token is fetched here via tRPC (never passed in the URL, to keep it
 // out of the browser history). On selection the picked spreadsheet id is handed
 // back to the opener via postMessage and the popup closes.

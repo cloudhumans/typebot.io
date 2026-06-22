@@ -2,9 +2,14 @@ import { FileIcon } from '@/components/icons'
 import { trpc } from '@/lib/trpc'
 import { Button, Flex, HStack, IconButton, Text } from '@chakra-ui/react'
 import React, { useCallback, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
 import { parseGoogleSheetsSpreadsheetPickedMessage } from '../helpers/popupMessaging'
+import {
+  appendEmbeddedAuthParams,
+  readEmbeddedAuthParams,
+} from '../helpers/embeddedPopupParams'
 
 type Props = {
   spreadsheetId?: string
@@ -19,6 +24,7 @@ export const GoogleSpreadsheetPicker = ({
   credentialsId,
   onSpreadsheetIdSelect,
 }: Props) => {
+  const searchParams = useSearchParams()
   const { data: spreadsheetData, status } =
     trpc.sheets.getSpreadsheetName.useQuery(
       {
@@ -44,14 +50,20 @@ export const GoogleSpreadsheetPicker = ({
     return () => globalThis.removeEventListener('message', handleMessage)
   }, [onSpreadsheetIdSelect])
 
+  // Embedded: forward embedded=true&jwt so the picker popup (top-level on
+  // eddie, no first-party session) can authenticate itself before fetching the
+  // access token. Standalone: open without them.
   const openPicker = useCallback(() => {
-    const params = new URLSearchParams({ workspaceId, credentialsId })
+    const params = appendEmbeddedAuthParams(
+      new URLSearchParams({ workspaceId, credentialsId }),
+      readEmbeddedAuthParams(searchParams)
+    )
     globalThis.open(
       `/google-picker?${params.toString()}`,
       'gs-picker',
       'popup,width=720,height=600'
     )
-  }, [workspaceId, credentialsId])
+  }, [workspaceId, credentialsId, searchParams])
 
   if (spreadsheetData && spreadsheetData.name !== '')
     return (
