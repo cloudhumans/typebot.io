@@ -24,7 +24,8 @@ declare const window: any
 //
 // The access token is fetched here via tRPC (never passed in the URL, to keep it
 // out of the browser history). On selection the picked spreadsheet id is handed
-// back to the opener via postMessage and the popup closes.
+// back over the same-origin BroadcastChannel (GOOGLE_SHEETS_OAUTH_CHANNEL) and
+// the popup closes.
 const firstQueryValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value
 

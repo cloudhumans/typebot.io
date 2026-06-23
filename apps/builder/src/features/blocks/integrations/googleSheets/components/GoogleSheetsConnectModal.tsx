@@ -44,8 +44,9 @@ export const GoogleSheetConnectModal = ({
   // Run the OAuth consent in a top-level popup instead of navigating the current
   // frame. Embedded inside CloudChat's iframe, Google refuses to render consent
   // (Sec-Fetch-Dest: iframe → 403); a popup that escapes the iframe sandbox is a
-  // real top-level context. The callback hands the result back via postMessage,
-  // which GoogleSheetsSettings listens for. See helpers/popupMessaging.ts.
+  // real top-level context. The callback hands the result back over a same-origin
+  // BroadcastChannel, which the durable useGoogleSheetsOAuthListener (mounted at
+  // the editor root) receives. See helpers/popupMessaging.ts.
   //
   // Embedded: the popup has no first-party session, so route it through the
   // /connect bootstrap page (carrying embedded=true&jwt) which authenticates
