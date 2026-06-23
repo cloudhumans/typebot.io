@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Center, Spinner, Text, VStack } from '@chakra-ui/react'
+import { Button, Center, Spinner, Text, VStack } from '@chakra-ui/react'
 import { env } from '@typebot.io/env'
 import { trpc } from '@/lib/trpc'
 import {
@@ -114,6 +114,8 @@ export default function Page() {
   }, [isPickerReady, data, blockId])
 
   if (error)
+    // Keep the error visible (the user needs to know the credential failed) but
+    // offer an explicit way to dismiss the popup, so it isn't left orphaned.
     return (
       <Center h="100vh">
         <VStack spacing={2}>
@@ -121,6 +123,7 @@ export default function Page() {
             Could not open the spreadsheet picker
           </Text>
           <Text color="gray.500">{error.message}</Text>
+          <Button onClick={() => globalThis.close()}>Close</Button>
         </VStack>
       </Center>
     )
