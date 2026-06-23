@@ -48,14 +48,24 @@ export default function Page() {
 
   const workspaceId = firstQueryValue(router.query.workspaceId)
   const credentialsId = firstQueryValue(router.query.credentialsId)
+  const blockId = firstQueryValue(router.query.blockId)
 
   const { data, error } = trpc.sheets.getAccessToken.useQuery(
     {
       workspaceId: workspaceId as string,
       credentialsId: credentialsId as string,
     },
-    { enabled: router.isReady && !!workspaceId && !!credentialsId }
+    {
+      enabled: router.isReady && !!workspaceId && !!credentialsId && !!blockId,
+    }
   )
+
+  // Required params missing: the query stays disabled, so close the popup
+  // instead of hanging on a spinner forever.
+  useEffect(() => {
+    if (!router.isReady) return
+    if (!workspaceId || !credentialsId || !blockId) globalThis.close()
+  }, [router.isReady, workspaceId, credentialsId, blockId])
 
   useEffect(() => {
     loadGapiPicker(() => setIsPickerReady(true))
@@ -80,11 +90,12 @@ export default function Page() {
         return
       }
       const spreadsheetId = extractPickedSpreadsheetId(picked)
-      if (!spreadsheetId) return
+      if (!spreadsheetId || !blockId) return
       const opener = globalThis.opener as WindowProxy | null
       if (opener) {
         const message: GoogleSheetsSpreadsheetPickedMessage = {
           type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
+          blockId,
           spreadsheetId,
         }
         opener.postMessage(message, globalThis.location.origin)
@@ -100,7 +111,7 @@ export default function Page() {
       .setCallback(handlePicked)
       .build()
     picker.setVisible(true)
-  }, [isPickerReady, data])
+  }, [isPickerReady, data, blockId])
 
   if (error)
     return (

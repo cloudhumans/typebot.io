@@ -54,21 +54,34 @@ describe('parseGoogleSheetsSpreadsheetPickedMessage', () => {
     expect(
       parseGoogleSheetsSpreadsheetPickedMessage({
         type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
+        blockId: 'block-1',
         spreadsheetId: 'sheet-1',
       })
     ).toEqual({
       type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
+      blockId: 'block-1',
       spreadsheetId: 'sheet-1',
     })
   })
 
   const rejectedCases: { label: string; payload: unknown }[] = [
     { label: 'null', payload: null },
-    { label: 'a wrong type', payload: { type: 'other', spreadsheetId: 's' } },
+    {
+      label: 'a wrong type',
+      payload: { type: 'other', blockId: 'b', spreadsheetId: 's' },
+    },
+    {
+      label: 'a missing blockId',
+      payload: {
+        type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
+        spreadsheetId: 's',
+      },
+    },
     {
       label: 'a non-string spreadsheetId',
       payload: {
         type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
+        blockId: 'b',
         spreadsheetId: 2,
       },
     },

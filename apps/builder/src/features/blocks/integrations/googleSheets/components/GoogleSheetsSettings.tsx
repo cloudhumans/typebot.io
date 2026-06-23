@@ -135,6 +135,7 @@ export const GoogleSheetsSettings = ({
           spreadsheetId={options.spreadsheetId}
           workspaceId={workspace.id}
           credentialsId={options.credentialsId}
+          blockId={blockId}
           onSpreadsheetIdSelect={handleSpreadsheetIdChange}
         />
       )}

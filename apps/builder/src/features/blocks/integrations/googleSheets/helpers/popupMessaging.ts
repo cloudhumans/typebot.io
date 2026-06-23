@@ -19,6 +19,7 @@ export type GoogleSheetsConnectedMessage = {
 
 export type GoogleSheetsSpreadsheetPickedMessage = {
   type: typeof GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE
+  blockId: string
   spreadsheetId: string
 }
 
@@ -50,9 +51,14 @@ export const parseGoogleSheetsSpreadsheetPickedMessage = (
   if (typeof data !== 'object' || data === null) return null
   const message = data as Record<string, unknown>
   if (message.type !== GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE) return null
-  if (typeof message.spreadsheetId !== 'string') return null
+  if (
+    typeof message.blockId !== 'string' ||
+    typeof message.spreadsheetId !== 'string'
+  )
+    return null
   return {
     type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
+    blockId: message.blockId,
     spreadsheetId: message.spreadsheetId,
   }
 }

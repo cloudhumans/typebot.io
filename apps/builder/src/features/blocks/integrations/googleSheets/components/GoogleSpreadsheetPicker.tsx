@@ -16,6 +16,7 @@ type Props = {
   spreadsheetId?: string
   credentialsId: string
   workspaceId: string
+  blockId: string
   onSpreadsheetIdSelect: (spreadsheetId: string) => void
 }
 
@@ -23,6 +24,7 @@ export const GoogleSpreadsheetPicker = ({
   spreadsheetId,
   workspaceId,
   credentialsId,
+  blockId,
   onSpreadsheetIdSelect,
 }: Props) => {
   const searchParams = useSearchParams()
@@ -40,24 +42,26 @@ export const GoogleSpreadsheetPicker = ({
   // The Picker runs in a top-level popup (see pages/google-picker.tsx) so it
   // works both standalone and embedded inside CloudChat's iframe, where Google
   // refuses to render its account chooser. The popup hands the picked
-  // spreadsheet id back here via postMessage.
+  // spreadsheet id back here via postMessage. We require the message's blockId
+  // to match ours so a pick can't land on the wrong block if the user switched
+  // blocks while the popup was open.
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== globalThis.location.origin) return
       const message = parseGoogleSheetsSpreadsheetPickedMessage(event.data)
-      if (!message) return
+      if (!message || message.blockId !== blockId) return
       onSpreadsheetIdSelect(message.spreadsheetId)
     }
     globalThis.addEventListener('message', handleMessage)
     return () => globalThis.removeEventListener('message', handleMessage)
-  }, [onSpreadsheetIdSelect])
+  }, [blockId, onSpreadsheetIdSelect])
 
   // Embedded: forward embedded=true&jwt so the picker popup (top-level on
   // eddie, no first-party session) can authenticate itself before fetching the
   // access token. Standalone: open without them.
   const openPicker = useCallback(() => {
     const params = appendEmbeddedAuthParams(
-      new URLSearchParams({ workspaceId, credentialsId }),
+      new URLSearchParams({ workspaceId, credentialsId, blockId }),
       readEmbeddedAuthParams(searchParams)
     )
     const popup = globalThis.open(
@@ -70,7 +74,7 @@ export const GoogleSpreadsheetPicker = ({
       showToast({
         description: 'Please allow popups for this site to pick a spreadsheet.',
       })
-  }, [workspaceId, credentialsId, searchParams, showToast])
+  }, [workspaceId, credentialsId, blockId, searchParams, showToast])
 
   if (spreadsheetData && spreadsheetData.name !== '')
     return (
