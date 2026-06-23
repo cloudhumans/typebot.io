@@ -17,6 +17,7 @@ import React from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AlertInfo } from '@/components/AlertInfo'
 import { GoogleLogo } from '@/components/GoogleLogo'
+import { useToast } from '@/hooks/useToast'
 import { getGoogleSheetsConsentScreenUrlQuery } from '../queries/getGoogleSheetsConsentScreenUrlQuery'
 import {
   appendEmbeddedAuthParams,
@@ -38,6 +39,7 @@ export const GoogleSheetConnectModal = ({
 }: Props) => {
   const { workspace } = useWorkspace()
   const searchParams = useSearchParams()
+  const { showToast } = useToast()
 
   // Run the OAuth consent in a top-level popup instead of navigating the current
   // frame. Embedded inside CloudChat's iframe, Google refuses to render consent
@@ -50,8 +52,14 @@ export const GoogleSheetConnectModal = ({
   // before bouncing to Google. Standalone: open the consent URL directly.
   const buildPopupUrl = () => {
     const embeddedAuth = readEmbeddedAuthParams(searchParams)
+    // redirectUrl is only used by the callback to send the builder back here; it
+    // strips the query (`split('?')[0]`) anyway. Pass origin+pathname only so the
+    // embedded jwt never rides along into the consent GET — a multi-KB jwt in the
+    // request would risk blowing Kong's header limit (502). The jwt travels solely
+    // in the dedicated, short `jwt` param of the bootstrap popup URL.
+    const redirectUrl = `${globalThis.location.origin}${globalThis.location.pathname}`
     const consentUrl = getGoogleSheetsConsentScreenUrlQuery(
-      globalThis.location.href,
+      redirectUrl,
       blockId,
       workspace?.id,
       typebotId
@@ -61,7 +69,7 @@ export const GoogleSheetConnectModal = ({
 
     const bootstrapParams = appendEmbeddedAuthParams(
       new URLSearchParams({
-        redirectUrl: globalThis.location.href,
+        redirectUrl,
         blockId,
         ...(workspace?.id ? { workspaceId: workspace.id } : {}),
         ...(typebotId ? { typebotId } : {}),
@@ -75,7 +83,20 @@ export const GoogleSheetConnectModal = ({
   }
 
   const openConsentPopup = () => {
-    globalThis.open(buildPopupUrl(), 'gs-oauth', 'popup,width=600,height=720')
+    const popup = globalThis.open(
+      buildPopupUrl(),
+      'gs-oauth',
+      'popup,width=600,height=720'
+    )
+    // A null handle means the browser blocked the popup; keep the modal open and
+    // tell the user, instead of silently closing it (the flow can't continue).
+    if (!popup) {
+      showToast({
+        description:
+          'Please allow popups for this site to connect your Google account.',
+      })
+      return
+    }
     onClose()
   }
 
