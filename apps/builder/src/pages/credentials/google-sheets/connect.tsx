@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { Center, Spinner } from '@chakra-ui/react'
 import { getGoogleSheetsConsentScreenUrlQuery } from '@/features/blocks/integrations/googleSheets/queries/getGoogleSheetsConsentScreenUrlQuery'
@@ -19,9 +19,12 @@ const firstQueryValue = (value: string | string[] | undefined) =>
 
 export default function Page() {
   const router = useRouter()
+  const hasRunRef = useRef(false)
 
   useEffect(() => {
-    if (!router.isReady) return
+    // router.query has an unstable identity; guard so we replace() exactly once.
+    if (!router.isReady || hasRunRef.current) return
+    hasRunRef.current = true
     const redirectUrl = firstQueryValue(router.query.redirectUrl)
     const blockId = firstQueryValue(router.query.blockId)
     const workspaceId = firstQueryValue(router.query.workspaceId)

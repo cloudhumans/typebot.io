@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { Button, Center, Spinner, Text, VStack } from '@chakra-ui/react'
 import {
@@ -37,9 +37,13 @@ const isSameOriginUrl = (url: string): boolean => {
 export default function Page() {
   const router = useRouter()
   const [hasBroadcast, setHasBroadcast] = useState(false)
+  const hasRunRef = useRef(false)
 
   useEffect(() => {
-    if (!router.isReady) return
+    // router.query has an unstable identity; guard so we broadcast and schedule
+    // the close exactly once (re-running would re-post and re-arm close).
+    if (!router.isReady || hasRunRef.current) return
+    hasRunRef.current = true
     const blockId = firstQueryValue(router.query.blockId)
     const credentialsId = firstQueryValue(router.query.credentialsId)
     const redirectUrl = firstQueryValue(router.query.redirectUrl)
