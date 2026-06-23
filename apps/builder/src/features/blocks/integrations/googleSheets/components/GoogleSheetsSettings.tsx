@@ -19,7 +19,7 @@ import {
   GoogleSheetsInsertRowOptions,
   GoogleSheetsUpdateRowOptionsV6,
 } from '@typebot.io/schemas'
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { isDefined } from '@typebot.io/lib'
 import { SheetsDropdown } from './SheetsDropdown'
 import { CellWithValueStack } from './CellWithValueStack'
@@ -70,6 +70,13 @@ export const GoogleSheetsSettings = ({
       credentialsId,
     })
 
+  // The connect popup may resolve long after it was opened, during which the
+  // user can keep editing other options. Read the latest setter from a ref so
+  // the listener never spreads a stale `options` snapshot and clobbers those
+  // edits; the effect itself stays mounted once (stable deps).
+  const handleCredentialsIdChangeRef = useRef(handleCredentialsIdChange)
+  handleCredentialsIdChangeRef.current = handleCredentialsIdChange
+
   // The connect flow runs in a top-level popup (embedded mode can't render
   // Google's consent inside CloudChat's iframe). On success the callback page
   // postMessages the new credentialsId back; refresh the credentials list and
@@ -80,13 +87,10 @@ export const GoogleSheetsSettings = ({
       const message = parseGoogleSheetsConnectedMessage(event.data)
       if (!message || message.blockId !== blockId) return
       trpcContext.credentials.listCredentials.invalidate()
-      handleCredentialsIdChange(message.credentialsId)
+      handleCredentialsIdChangeRef.current(message.credentialsId)
     }
     globalThis.addEventListener('message', handleMessage)
     return () => globalThis.removeEventListener('message', handleMessage)
-    // handleCredentialsIdChange is recreated each render; blockId is the stable
-    // identity that matters for this listener.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blockId, trpcContext])
   const handleSpreadsheetIdChange = (spreadsheetId: string | undefined) =>
     onOptionsChange({ ...options, spreadsheetId })
