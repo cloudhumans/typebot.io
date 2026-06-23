@@ -2,7 +2,11 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { Prisma } from '@typebot.io/prisma'
 import prisma from '@typebot.io/lib/prisma'
 import { googleSheetsScopes } from './consent-url'
-import { badRequest, notAuthenticated } from '@typebot.io/lib/api'
+import {
+  badRequest,
+  methodNotAllowed,
+  notAuthenticated,
+} from '@typebot.io/lib/api'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import { env } from '@typebot.io/env'
 import { encrypt } from '@typebot.io/lib/api/encryption/encrypt'
@@ -116,12 +120,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       credentialsId,
       redirectUrl: fallbackRedirectUrl,
     })
-    res.redirect(
+    return res.redirect(
       `${
         env.NEXTAUTH_URL
       }/credentials/google-sheets/callback-complete?${completeParams.toString()}`
     )
   }
+  // The handler only supports GET (Google redirects here). Respond explicitly to
+  // other methods instead of leaving the request hanging until timeout.
+  return methodNotAllowed(res)
 }
 
 export default handler
