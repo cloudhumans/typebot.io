@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   GOOGLE_SHEETS_CONNECTED_MESSAGE,
+  GOOGLE_SHEETS_OAUTH_CHANNEL,
   GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
   extractPickedSpreadsheetId,
   parseGoogleSheetsConnectedMessage,
@@ -123,4 +124,35 @@ describe('extractPickedSpreadsheetId', () => {
       expect(extractPickedSpreadsheetId(payload)).toBeNull()
     })
   })
+})
+
+describe('BroadcastChannel roundtrip', () => {
+  // Sanity-check the channel carries a connected message between two channels on
+  // the same name and that the parser narrows the received payload. A channel
+  // doesn't receive its own posts, so we use a separate sender and receiver.
+  it('delivers a connected message that parses on the other end', () =>
+    new Promise<void>((resolve, reject) => {
+      const receiver = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
+      const sender = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
+      receiver.onmessage = (event) => {
+        try {
+          expect(parseGoogleSheetsConnectedMessage(event.data)).toEqual({
+            type: GOOGLE_SHEETS_CONNECTED_MESSAGE,
+            blockId: 'block-1',
+            credentialsId: 'cred-1',
+          })
+          resolve()
+        } catch (error) {
+          reject(error)
+        } finally {
+          receiver.close()
+          sender.close()
+        }
+      }
+      sender.postMessage({
+        type: GOOGLE_SHEETS_CONNECTED_MESSAGE,
+        blockId: 'block-1',
+        credentialsId: 'cred-1',
+      })
+    }))
 })

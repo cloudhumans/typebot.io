@@ -4,7 +4,17 @@
 // different origin), Google refuses to render its consent / account-chooser
 // screens (Sec-Fetch-Dest: iframe → 403) and partitions cookies/storage. We run
 // both the OAuth connect and the Drive Picker in a top-level popup that escapes
-// the iframe sandbox, then hand the result back to the opener via postMessage.
+// the iframe sandbox, then hand the result back over a same-origin
+// BroadcastChannel.
+//
+// Why BroadcastChannel instead of window.opener.postMessage: after a popup
+// navigates to Google's OAuth and back, COOP can sever window.opener (a
+// browsing-context-group switch the spec never restores). BroadcastChannel is
+// same-origin and opener-independent — the popup returns to our origin
+// (callback-complete / google-picker) and posts; the builder on the same origin
+// receives it regardless. A single channel carries both message types; each
+// listener filters by message `type`.
+export const GOOGLE_SHEETS_OAUTH_CHANNEL = 'google-sheets-oauth' as const
 
 export const GOOGLE_SHEETS_CONNECTED_MESSAGE =
   'google-sheets-connected' as const
@@ -23,8 +33,9 @@ export type GoogleSheetsSpreadsheetPickedMessage = {
   spreadsheetId: string
 }
 
-// Narrows an untrusted postMessage payload to the "connected" message. Callers
-// must still validate `event.origin` against `window.location.origin` first.
+// Narrows an untrusted channel payload to the "connected" message. The channel
+// is same-origin by design, so there's no origin to check — but we still
+// validate the shape since any same-origin code could post to it.
 export const parseGoogleSheetsConnectedMessage = (
   data: unknown
 ): GoogleSheetsConnectedMessage | null => {
@@ -43,8 +54,9 @@ export const parseGoogleSheetsConnectedMessage = (
   }
 }
 
-// Narrows an untrusted postMessage payload to the "spreadsheet picked" message.
-// Callers must still validate `event.origin` against `window.location.origin`.
+// Narrows an untrusted channel payload to the "spreadsheet picked" message. The
+// channel is same-origin by design; we still validate the shape (and callers
+// still match blockId to their own block).
 export const parseGoogleSheetsSpreadsheetPickedMessage = (
   data: unknown
 ): GoogleSheetsSpreadsheetPickedMessage | null => {
