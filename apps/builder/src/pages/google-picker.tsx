@@ -28,20 +28,29 @@ const firstQueryValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value
 
 const loadGapiPicker = (onReady: () => void, onError: () => void) => {
-  const existingScript = document.getElementById('gapi')
-  if (existingScript) {
+  // Gate on the real object, not the <script> element: under StrictMode the
+  // script can be present but still in-flight (window.gapi undefined), so
+  // calling window.gapi.load would throw.
+  if (window.gapi?.load) {
     window.gapi.load('picker', onReady)
     return
   }
-  const script = document.createElement('script')
-  script.id = 'gapi'
-  script.type = 'text/javascript'
-  script.src = 'https://apis.google.com/js/api.js'
-  script.onload = () => window.gapi.load('picker', onReady)
+  // Reuse the in-flight script if it exists; otherwise create it. Either way we
+  // wait for its load. We use addEventListener (not onload=/onerror=) so
+  // multiple mounts don't overwrite each other's handlers and so a handler
+  // attached while the script is already in-flight still fires.
+  let script = document.getElementById('gapi') as HTMLScriptElement | null
+  if (!script) {
+    script = document.createElement('script')
+    script.id = 'gapi'
+    script.type = 'text/javascript'
+    script.src = 'https://apis.google.com/js/api.js'
+    document.head.appendChild(script)
+  }
+  script.addEventListener('load', () => window.gapi.load('picker', onReady))
   // If api.js can't load (offline, blocker, CSP), isPickerReady would never
   // flip and the popup would hang on a spinner. Surface the error state instead.
-  script.onerror = onError
-  document.head.appendChild(script)
+  script.addEventListener('error', onError)
 }
 
 export default function Page() {
