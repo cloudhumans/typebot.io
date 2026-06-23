@@ -48,10 +48,13 @@ const loadGapiPicker = (onReady: () => void, onError: () => void) => {
     script.src = 'https://apis.google.com/js/api.js'
     document.head.appendChild(script)
   }
-  script.addEventListener('load', () => window.gapi.load('picker', onReady))
+  // { once: true } so repeated mounts (StrictMode) don't pile up handlers.
+  script.addEventListener('load', () => window.gapi.load('picker', onReady), {
+    once: true,
+  })
   // If api.js can't load (offline, blocker, CSP), isPickerReady would never
   // flip and the popup would hang on a spinner. Surface the error state instead.
-  script.addEventListener('error', onError)
+  script.addEventListener('error', onError, { once: true })
 }
 
 export default function Page() {
