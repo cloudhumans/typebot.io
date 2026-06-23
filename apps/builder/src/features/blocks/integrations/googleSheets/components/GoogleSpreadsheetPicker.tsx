@@ -5,6 +5,7 @@ import React, { useCallback, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
+import { useToast } from '@/hooks/useToast'
 import { parseGoogleSheetsSpreadsheetPickedMessage } from '../helpers/popupMessaging'
 import {
   appendEmbeddedAuthParams,
@@ -25,6 +26,7 @@ export const GoogleSpreadsheetPicker = ({
   onSpreadsheetIdSelect,
 }: Props) => {
   const searchParams = useSearchParams()
+  const { showToast } = useToast()
   const { data: spreadsheetData, status } =
     trpc.sheets.getSpreadsheetName.useQuery(
       {
@@ -58,12 +60,17 @@ export const GoogleSpreadsheetPicker = ({
       new URLSearchParams({ workspaceId, credentialsId }),
       readEmbeddedAuthParams(searchParams)
     )
-    globalThis.open(
+    const popup = globalThis.open(
       `/google-picker?${params.toString()}`,
       'gs-picker',
       'popup,width=720,height=600'
     )
-  }, [workspaceId, credentialsId, searchParams])
+    // A null handle means the browser blocked the popup; warn the user.
+    if (!popup)
+      showToast({
+        description: 'Please allow popups for this site to pick a spreadsheet.',
+      })
+  }, [workspaceId, credentialsId, searchParams, showToast])
 
   if (spreadsheetData && spreadsheetData.name !== '')
     return (

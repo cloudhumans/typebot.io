@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { Center, Spinner, Text, VStack } from '@chakra-ui/react'
 import { env } from '@typebot.io/env'
@@ -44,6 +44,7 @@ const loadGapiPicker = (onReady: () => void) => {
 export default function Page() {
   const router = useRouter()
   const [isPickerReady, setIsPickerReady] = useState(false)
+  const hasOpenedPicker = useRef(false)
 
   const workspaceId = firstQueryValue(router.query.workspaceId)
   const credentialsId = firstQueryValue(router.query.credentialsId)
@@ -62,11 +63,22 @@ export default function Page() {
 
   useEffect(() => {
     if (!isPickerReady || !data) return
+    // Build the Picker exactly once. The effect re-runs on data/ready changes
+    // (and twice under React StrictMode); a second PickerBuilder would stack a
+    // duplicate overlay.
+    if (hasOpenedPicker.current) return
+    hasOpenedPicker.current = true
 
     const handlePicked = (picked: {
       action?: string
       docs?: { id?: string }[]
     }) => {
+      // The user dismissed the Picker without choosing: close the popup so it
+      // doesn't hang on a spinner. Other actions (e.g. 'loaded') are ignored.
+      if (picked.action === 'cancel') {
+        globalThis.close()
+        return
+      }
       const spreadsheetId = extractPickedSpreadsheetId(picked)
       if (!spreadsheetId) return
       const opener = globalThis.opener as WindowProxy | null
