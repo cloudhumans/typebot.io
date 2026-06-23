@@ -154,22 +154,23 @@ export const executeGroup = async (
           name: bubbleTypebot.workspaceName,
         })} - Block Executed`,
         {
-        workspace: {
-          id: bubbleTypebot.workspaceId ?? 'unknown',
-          name: bubbleWorkspaceName,
-        },
-        workflow: {
-          id: bubbleTypebot.id,
-          name: bubbleTypebot.name ?? 'unknown',
-          schema_version: String(bubbleTypebot.version ?? 'unknown'),
-          execution_id: sessionId ?? 'preview',
-          version_id: bubbleTypebot.typebotHistoryId ?? 'unknown',
-        },
-        typebot_block: {
-          id: block.id,
-          type: block.type,
-        },
-      })
+          workspace: {
+            id: bubbleTypebot.workspaceId ?? 'unknown',
+            name: bubbleWorkspaceName,
+          },
+          workflow: {
+            id: bubbleTypebot.id,
+            name: bubbleTypebot.name ?? 'unknown',
+            schema_version: String(bubbleTypebot.version ?? 'unknown'),
+            execution_id: sessionId ?? 'preview',
+            version_id: bubbleTypebot.typebotHistoryId ?? 'unknown',
+          },
+          typebot_block: {
+            id: block.id,
+            type: block.type,
+          },
+        }
+      )
 
       continue
     }
@@ -240,22 +241,23 @@ export const executeGroup = async (
         name: typebot.workspaceName,
       })} - Block Executed`,
       {
-      workspace: {
-        id: typebot.workspaceId ?? 'unknown',
-        name: workspaceName,
-      },
-      workflow: {
-        id: typebot.id,
-        name: typebot.name ?? 'unknown',
-        schema_version: String(typebot.version ?? 'unknown'),
-        execution_id: sessionId ?? 'preview',
-        version_id: typebot.typebotHistoryId ?? 'unknown',
-      },
-      typebot_block: {
-        id: block.id,
-        type: block.type,
-      },
-    })
+        workspace: {
+          id: typebot.workspaceId ?? 'unknown',
+          name: workspaceName,
+        },
+        workflow: {
+          id: typebot.id,
+          name: typebot.name ?? 'unknown',
+          schema_version: String(typebot.version ?? 'unknown'),
+          execution_id: sessionId ?? 'preview',
+          version_id: typebot.typebotHistoryId ?? 'unknown',
+        },
+        typebot_block: {
+          id: block.id,
+          type: block.type,
+        },
+      }
+    )
 
     if (
       executionResponse.newSetVariableHistory &&

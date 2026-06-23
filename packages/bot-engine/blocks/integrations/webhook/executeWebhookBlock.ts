@@ -281,8 +281,10 @@ export const parseWebhookAttributes = async ({
       // Mask even short user/pass: they're credential-derived secrets, and the
       // API could echo a short value in an error/response body. Accepts some log
       // noise as the safer trade-off (the full Basic header is masked too).
-      if (username) addMaskableSecret(secretValues, username, { allowShort: true })
-      if (password) addMaskableSecret(secretValues, password, { allowShort: true })
+      if (username)
+        addMaskableSecret(secretValues, username, { allowShort: true })
+      if (password)
+        addMaskableSecret(secretValues, password, { allowShort: true })
     }
     webhook.headers?.splice(basicAuthHeaderIdx, 1)
   }

@@ -106,14 +106,11 @@ export const enforceBlockVisitLimit = ({
   }
 
   if (visitCount === warnThreshold) {
-    logger.warn(
-      `${workspaceLabel} - Block visit warning threshold reached`,
-      {
-        ...baseLogPayload,
-        visit_count: visitCount,
-        threshold: warnThreshold,
-      }
-    )
+    logger.warn(`${workspaceLabel} - Block visit warning threshold reached`, {
+      ...baseLogPayload,
+      visit_count: visitCount,
+      threshold: warnThreshold,
+    })
   }
 
   if (visitCount > limit) {
