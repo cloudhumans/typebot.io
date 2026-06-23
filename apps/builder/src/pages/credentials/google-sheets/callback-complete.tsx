@@ -18,6 +18,18 @@ import {
 const firstQueryValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value
 
+// This page is unauthenticated and reachable directly, so the query-supplied
+// redirectUrl is attacker-controllable. Only navigate to it when it is
+// same-origin (the legitimate case redirects back to our own builder); reject
+// external or malformed URLs to avoid an open redirect.
+const isSameOriginUrl = (url: string): boolean => {
+  try {
+    return new URL(url).origin === globalThis.location.origin
+  } catch {
+    return false
+  }
+}
+
 export default function Page() {
   const router = useRouter()
 
@@ -39,9 +51,10 @@ export default function Page() {
       return
     }
 
-    // Standalone fallback: send the builder back. With neither an opener nor a
-    // redirectUrl there's nowhere to go — close the popup instead of hanging.
-    if (redirectUrl) {
+    // Standalone fallback: send the builder back, but only for a same-origin
+    // redirectUrl. Anything external/invalid (or absent) → close the popup
+    // instead of redirecting or hanging.
+    if (redirectUrl && isSameOriginUrl(redirectUrl)) {
       globalThis.location.replace(redirectUrl)
       return
     }
