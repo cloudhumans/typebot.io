@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Center, Spinner } from '@chakra-ui/react'
+import { Button, Center, Spinner, Text, VStack } from '@chakra-ui/react'
 import {
   GOOGLE_SHEETS_CONNECTED_MESSAGE,
   GOOGLE_SHEETS_OAUTH_CHANNEL,
@@ -36,6 +36,7 @@ const isSameOriginUrl = (url: string): boolean => {
 
 export default function Page() {
   const router = useRouter()
+  const [hasBroadcast, setHasBroadcast] = useState(false)
 
   useEffect(() => {
     if (!router.isReady) return
@@ -54,6 +55,11 @@ export default function Page() {
       // when we still need to deliver. The builder receives it on the channel.
       const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
       channel.postMessage(message)
+      // Show a success state with a manual Close: the auto-close below usually
+      // fires first, but a popup whose opener COOP severed may be blocked from
+      // self-closing — without this the user would be stuck on a spinner despite
+      // a successful connect.
+      setHasBroadcast(true)
       // BroadcastChannel delivery across windows is async; closing in the same
       // tick can drop the message. Give it a moment to flush before closing.
       const timeout = globalThis.setTimeout(() => {
@@ -77,6 +83,17 @@ export default function Page() {
     }
     globalThis.close()
   }, [router.isReady, router.query])
+
+  if (hasBroadcast)
+    return (
+      <Center h="100vh">
+        <VStack spacing={2}>
+          <Text fontWeight="semibold">Account connected successfully</Text>
+          <Text color="gray.500">You can now close this window.</Text>
+          <Button onClick={() => globalThis.close()}>Close</Button>
+        </VStack>
+      </Center>
+    )
 
   return (
     <Center h="100vh">
