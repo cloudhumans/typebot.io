@@ -26,7 +26,12 @@ export default function Page() {
     const blockId = firstQueryValue(router.query.blockId)
     const workspaceId = firstQueryValue(router.query.workspaceId)
     const typebotId = firstQueryValue(router.query.typebotId)
-    if (!redirectUrl || !blockId) return
+    // Required params are missing — nothing to bootstrap. Close the popup
+    // instead of leaving it stuck on a spinner.
+    if (!redirectUrl || !blockId) {
+      globalThis.close()
+      return
+    }
 
     const consentUrl = getGoogleSheetsConsentScreenUrlQuery(
       redirectUrl,

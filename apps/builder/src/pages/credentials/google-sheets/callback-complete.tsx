@@ -39,7 +39,13 @@ export default function Page() {
       return
     }
 
-    if (redirectUrl) globalThis.location.replace(redirectUrl)
+    // Standalone fallback: send the builder back. With neither an opener nor a
+    // redirectUrl there's nowhere to go — close the popup instead of hanging.
+    if (redirectUrl) {
+      globalThis.location.replace(redirectUrl)
+      return
+    }
+    globalThis.close()
   }, [router.isReady, router.query])
 
   return (

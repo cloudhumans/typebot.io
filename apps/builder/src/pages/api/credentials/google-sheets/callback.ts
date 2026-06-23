@@ -98,9 +98,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // postMessages the result back to the builder and closes itself. When there
     // is no opener (standalone, no popup) it falls back to the old behaviour of
     // redirecting the builder with `?blockId=`.
-    const fallbackRedirectUrl = `${
-      redirectUrl?.split('?')[0] ?? env.NEXTAUTH_URL
-    }?blockId=${blockId}`
+    // `redirectUrl` comes from the base64 `state`; guard that it's a string
+    // before `.split` so a malformed state can't throw a 500.
+    const redirectBase =
+      typeof redirectUrl === 'string'
+        ? redirectUrl.split('?')[0]
+        : env.NEXTAUTH_URL
+    const fallbackRedirectUrl = `${redirectBase}?blockId=${blockId}`
     const completeParams = new URLSearchParams({
       blockId,
       credentialsId,
