@@ -12,7 +12,7 @@ import {
 // this page only has to deliver the result back to wherever the flow started:
 //
 // - Popup (the normal case): broadcast the result on the same-origin
-//   BroadcastChannel and close. The builder (useGoogleSheetsConnectListener)
+//   BroadcastChannel and close. The builder (useGoogleSheetsOAuthListener)
 //   receives it and applies the credentialsId to the block. We broadcast rather
 //   than use window.opener because COOP can sever the opener across the Google
 //   OAuth navigation; BroadcastChannel is opener-independent.

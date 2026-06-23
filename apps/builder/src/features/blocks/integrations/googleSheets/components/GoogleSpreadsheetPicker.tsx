@@ -1,15 +1,11 @@
 import { FileIcon } from '@/components/icons'
 import { trpc } from '@/lib/trpc'
 import { Button, Flex, HStack, IconButton, Text } from '@chakra-ui/react'
-import React, { useCallback, useEffect, useRef } from 'react'
+import React, { useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
 import { useToast } from '@/hooks/useToast'
-import {
-  GOOGLE_SHEETS_OAUTH_CHANNEL,
-  parseGoogleSheetsSpreadsheetPickedMessage,
-} from '../helpers/popupMessaging'
 import {
   appendEmbeddedAuthParams,
   readEmbeddedAuthParams,
@@ -20,15 +16,18 @@ type Props = {
   credentialsId: string
   workspaceId: string
   blockId: string
-  onSpreadsheetIdSelect: (spreadsheetId: string) => void
 }
 
+// This component only opens the picker popup and renders the current
+// spreadsheet's label. The picked result is applied by the durable
+// useGoogleSheetsOAuthListener (mounted at the editor root), which survives this
+// panel unmounting while the popup is open — so there's no onSelect callback or
+// message listener here.
 export const GoogleSpreadsheetPicker = ({
   spreadsheetId,
   workspaceId,
   credentialsId,
   blockId,
-  onSpreadsheetIdSelect,
 }: Props) => {
   const searchParams = useSearchParams()
   const { showToast } = useToast()
@@ -41,29 +40,6 @@ export const GoogleSpreadsheetPicker = ({
       },
       { enabled: !!spreadsheetId }
     )
-
-  // The Picker runs in a top-level popup (see pages/google-picker.tsx) so it
-  // works both standalone and embedded inside CloudChat's iframe, where Google
-  // refuses to render its account chooser. The popup hands the picked
-  // spreadsheet id back over a same-origin BroadcastChannel (opener-independent
-  // — COOP can sever the opener across the Google navigation). We require the
-  // message's blockId to match ours so a pick can't land on the wrong block if
-  // the user switched blocks while the popup was open.
-  //
-  // onSpreadsheetIdSelect is recreated by the parent each render; read it from a
-  // ref so the listener stays registered for the popup's whole lifetime instead
-  // of being torn down/re-added every render (which could drop a message).
-  const onSpreadsheetIdSelectRef = useRef(onSpreadsheetIdSelect)
-  onSpreadsheetIdSelectRef.current = onSpreadsheetIdSelect
-  useEffect(() => {
-    const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
-    channel.onmessage = (event: MessageEvent) => {
-      const message = parseGoogleSheetsSpreadsheetPickedMessage(event.data)
-      if (!message || message.blockId !== blockId) return
-      onSpreadsheetIdSelectRef.current(message.spreadsheetId)
-    }
-    return () => channel.close()
-  }, [blockId])
 
   // Embedded: forward embedded=true&jwt so the picker popup (top-level on
   // eddie, no first-party session) can authenticate itself before fetching the

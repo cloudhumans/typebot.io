@@ -17,7 +17,7 @@ import {
   useEditor,
 } from '../providers/EditorProvider'
 import { useTypebot } from '../providers/TypebotProvider'
-import { useGoogleSheetsConnectListener } from '@/features/blocks/integrations/googleSheets/hooks/useGoogleSheetsConnectListener'
+import { useGoogleSheetsOAuthListener } from '@/features/blocks/integrations/googleSheets/hooks/useGoogleSheetsOAuthListener'
 import { BlocksSideBar } from './BlocksSideBar'
 import { BoardMenuButton } from './BoardMenuButton'
 import { GettingStartedModal } from './GettingStartedModal'
@@ -30,8 +30,8 @@ export const EditorPage = () => {
   const { typebot, currentUserMode, is404 } = useTypebot()
   const { workspace } = useWorkspace()
   // Mounted at the editor root so it survives the block settings panel
-  // unmounting while the Google Sheets OAuth popup is open.
-  useGoogleSheetsConnectListener()
+  // unmounting while a Google Sheets popup (connect or picker) is open.
+  useGoogleSheetsOAuthListener()
   const backgroundImage = useColorModeValue(
     'radial-gradient(#c6d0e1 1px, transparent 0)',
     'radial-gradient(#2f2f39 1px, transparent 0)'
