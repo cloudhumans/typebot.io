@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { trpc } from '@/lib/trpc'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import type { GoogleSheetsBlock } from '@typebot.io/schemas'
+import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
 import {
   GOOGLE_SHEETS_OAUTH_CHANNEL,
   parseGoogleSheetsConnectedMessage,
@@ -52,17 +53,23 @@ export const useGoogleSheetsConnectListener = () => {
         )
         if (blockIndex === -1) continue
         const block = currentTypebot.groups[groupIndex].blocks[blockIndex]
+        // Guard the block type: a malformed same-origin message (or a blockId
+        // pointing at another block type) must not inject `options` into a
+        // non-Sheets block and corrupt the typebot schema. Bail without updating
+        // or invalidating the cache.
+        if (block.type !== IntegrationBlockType.GOOGLE_SHEETS) return
         // Merge into existing options so we don't clobber sibling option fields
         // the user may have set (spreadsheetId, sheetId, action, ...).
-        const options = ('options' in block ? block.options : undefined) as
+        const options = block.options as
           | GoogleSheetsBlock['options']
           | undefined
         updateBlockRef.current({ groupIndex, blockIndex }, {
           options: { ...options, credentialsId: message.credentialsId },
         } as Partial<GoogleSheetsBlock>)
-        break
+        // Only refresh the credentials list when an update actually happened.
+        trpcContext.credentials.listCredentials.invalidate()
+        return
       }
-      trpcContext.credentials.listCredentials.invalidate()
     }
     return () => channel.close()
   }, [trpcContext])
