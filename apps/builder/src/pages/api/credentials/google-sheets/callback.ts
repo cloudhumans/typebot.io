@@ -20,10 +20,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   )
   if (req.method === 'GET') {
     const code = req.query.code as string | undefined
-    if (!workspaceId) return badRequest(res)
-    // blockId comes from the untrusted state and is later interpolated into
+    // typebotId/blockId/workspaceId come from the untrusted base64 state (parsed
+    // as any) and are later used in Prisma queries and interpolated into
     // redirect URLs / query params; reject a malformed state rather than emit
-    // `blockId=undefined` or `[object Object]`.
+    // `undefined`/`[object Object]` or run an invalid query.
+    if (typeof workspaceId !== 'string') return badRequest(res)
+    if (typeof typebotId !== 'string') return badRequest(res)
     if (typeof blockId !== 'string') return badRequest(res)
     if (!code)
       return res.status(400).send({ message: "Bad request, couldn't get code" })
@@ -98,10 +100,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       },
     })
     // The block already has credentialsId persisted above. Hand control to a
-    // minimal completion page that, when opened as a popup (embedded mode),
-    // postMessages the result back to the builder and closes itself. When there
-    // is no opener (standalone, no popup) it falls back to the old behaviour of
-    // redirecting the builder with `?blockId=`.
+    // minimal completion page that, when opened as a popup, broadcasts the result
+    // back to the builder over a same-origin BroadcastChannel (opener-independent)
+    // and closes itself. On direct access (no popup) it falls back to redirecting
+    // the builder with `?blockId=`.
     // `redirectUrl` comes from the base64 `state`; guard that it's a string
     // before `.split` so a malformed state can't throw a 500.
     const redirectBase =

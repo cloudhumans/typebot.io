@@ -60,7 +60,12 @@ export default function Page() {
         channel.close()
         globalThis.close()
       }, 200)
-      return () => globalThis.clearTimeout(timeout)
+      // If the page unmounts before the timeout (navigation/StrictMode), close
+      // the channel too so it doesn't leak. close() is idempotent.
+      return () => {
+        globalThis.clearTimeout(timeout)
+        channel.close()
+      }
     }
 
     // Direct access without the ids to broadcast: send the builder back, but
