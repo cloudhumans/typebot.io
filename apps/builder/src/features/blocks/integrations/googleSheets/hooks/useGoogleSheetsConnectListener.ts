@@ -2,7 +2,10 @@ import { useEffect, useRef } from 'react'
 import { trpc } from '@/lib/trpc'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import type { GoogleSheetsBlock } from '@typebot.io/schemas'
-import { parseGoogleSheetsConnectedMessage } from '../helpers/popupMessaging'
+import {
+  GOOGLE_SHEETS_OAUTH_CHANNEL,
+  parseGoogleSheetsConnectedMessage,
+} from '../helpers/popupMessaging'
 
 // Durable listener for the Google Sheets OAuth connect result.
 //
@@ -18,6 +21,10 @@ import { parseGoogleSheetsConnectedMessage } from '../helpers/popupMessaging'
 // mounted for the whole editing session, and applies the credentialsId to the
 // block named by message.blockId regardless of which block is selected. State
 // is read from refs so the listener stays registered once for the session.
+//
+// The popup hands the result over a same-origin BroadcastChannel rather than
+// window.opener (COOP can sever the opener across the Google OAuth navigation);
+// see popupMessaging.ts.
 export const useGoogleSheetsConnectListener = () => {
   const { typebot, updateBlock } = useTypebot()
   const trpcContext = trpc.useContext()
@@ -28,8 +35,8 @@ export const useGoogleSheetsConnectListener = () => {
   updateBlockRef.current = updateBlock
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== globalThis.location.origin) return
+    const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
+    channel.onmessage = (event: MessageEvent) => {
       const message = parseGoogleSheetsConnectedMessage(event.data)
       if (!message) return
 
@@ -57,7 +64,6 @@ export const useGoogleSheetsConnectListener = () => {
       }
       trpcContext.credentials.listCredentials.invalidate()
     }
-    globalThis.addEventListener('message', handleMessage)
-    return () => globalThis.removeEventListener('message', handleMessage)
+    return () => channel.close()
   }, [trpcContext])
 }

@@ -6,7 +6,10 @@ import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
 import { useToast } from '@/hooks/useToast'
-import { parseGoogleSheetsSpreadsheetPickedMessage } from '../helpers/popupMessaging'
+import {
+  GOOGLE_SHEETS_OAUTH_CHANNEL,
+  parseGoogleSheetsSpreadsheetPickedMessage,
+} from '../helpers/popupMessaging'
 import {
   appendEmbeddedAuthParams,
   readEmbeddedAuthParams,
@@ -42,9 +45,10 @@ export const GoogleSpreadsheetPicker = ({
   // The Picker runs in a top-level popup (see pages/google-picker.tsx) so it
   // works both standalone and embedded inside CloudChat's iframe, where Google
   // refuses to render its account chooser. The popup hands the picked
-  // spreadsheet id back here via postMessage. We require the message's blockId
-  // to match ours so a pick can't land on the wrong block if the user switched
-  // blocks while the popup was open.
+  // spreadsheet id back over a same-origin BroadcastChannel (opener-independent
+  // — COOP can sever the opener across the Google navigation). We require the
+  // message's blockId to match ours so a pick can't land on the wrong block if
+  // the user switched blocks while the popup was open.
   //
   // onSpreadsheetIdSelect is recreated by the parent each render; read it from a
   // ref so the listener stays registered for the popup's whole lifetime instead
@@ -52,14 +56,13 @@ export const GoogleSpreadsheetPicker = ({
   const onSpreadsheetIdSelectRef = useRef(onSpreadsheetIdSelect)
   onSpreadsheetIdSelectRef.current = onSpreadsheetIdSelect
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== globalThis.location.origin) return
+    const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
+    channel.onmessage = (event: MessageEvent) => {
       const message = parseGoogleSheetsSpreadsheetPickedMessage(event.data)
       if (!message || message.blockId !== blockId) return
       onSpreadsheetIdSelectRef.current(message.spreadsheetId)
     }
-    globalThis.addEventListener('message', handleMessage)
-    return () => globalThis.removeEventListener('message', handleMessage)
+    return () => channel.close()
   }, [blockId])
 
   // Embedded: forward embedded=true&jwt so the picker popup (top-level on

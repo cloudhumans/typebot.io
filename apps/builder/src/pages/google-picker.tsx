@@ -4,6 +4,7 @@ import { Button, Center, Spinner, Text, VStack } from '@chakra-ui/react'
 import { env } from '@typebot.io/env'
 import { trpc } from '@/lib/trpc'
 import {
+  GOOGLE_SHEETS_OAUTH_CHANNEL,
   GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
   extractPickedSpreadsheetId,
   type GoogleSheetsSpreadsheetPickedMessage,
@@ -107,16 +108,20 @@ export default function Page() {
       }
       const spreadsheetId = extractPickedSpreadsheetId(picked)
       if (!spreadsheetId || !blockId) return
-      const opener = globalThis.opener as WindowProxy | null
-      if (opener) {
-        const message: GoogleSheetsSpreadsheetPickedMessage = {
-          type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
-          blockId,
-          spreadsheetId,
-        }
-        opener.postMessage(message, globalThis.location.origin)
+      const message: GoogleSheetsSpreadsheetPickedMessage = {
+        type: GOOGLE_SHEETS_SPREADSHEET_PICKED_MESSAGE,
+        blockId,
+        spreadsheetId,
       }
-      globalThis.close()
+      // Broadcast on the same-origin channel (opener-independent — see
+      // popupMessaging.ts). Delivery across windows is async, so let it flush
+      // before closing or the message is dropped.
+      const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
+      channel.postMessage(message)
+      globalThis.setTimeout(() => {
+        channel.close()
+        globalThis.close()
+      }, 200)
     }
 
     const picker = new window.google.picker.PickerBuilder()

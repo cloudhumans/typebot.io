@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { Center, Spinner } from '@chakra-ui/react'
 import {
   GOOGLE_SHEETS_CONNECTED_MESSAGE,
+  GOOGLE_SHEETS_OAUTH_CHANNEL,
   type GoogleSheetsConnectedMessage,
 } from '@/features/blocks/integrations/googleSheets/helpers/popupMessaging'
 
@@ -10,11 +11,14 @@ import {
 // already created the Credentials and persisted credentialsId on the block, so
 // this page only has to deliver the result back to wherever the flow started:
 //
-// - Embedded (popup): postMessage the result to the opener and close. The
-//   builder (GoogleSheetsSettings) listens for it, refetches credentials and
-//   selects the new one.
-// - Standalone (no opener): fall back to the legacy behaviour of redirecting
-//   the builder with `?blockId=` so it can refresh its credentials list.
+// - Popup (the normal case): broadcast the result on the same-origin
+//   BroadcastChannel and close. The builder (useGoogleSheetsConnectListener)
+//   receives it and applies the credentialsId to the block. We broadcast rather
+//   than use window.opener because COOP can sever the opener across the Google
+//   OAuth navigation; BroadcastChannel is opener-independent.
+// - Direct access without the ids to broadcast: fall back to a same-origin
+//   redirect to the builder with `?blockId=` so it can refresh from the
+//   server-persisted state.
 const firstQueryValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value
 
@@ -39,21 +43,29 @@ export default function Page() {
     const credentialsId = firstQueryValue(router.query.credentialsId)
     const redirectUrl = firstQueryValue(router.query.redirectUrl)
 
-    const opener = globalThis.opener as WindowProxy | null
-    if (opener && blockId && credentialsId) {
+    if (blockId && credentialsId) {
       const message: GoogleSheetsConnectedMessage = {
         type: GOOGLE_SHEETS_CONNECTED_MESSAGE,
         blockId,
         credentialsId,
       }
-      opener.postMessage(message, globalThis.location.origin)
-      globalThis.close()
-      return
+      // Broadcast unconditionally (not gated on window.opener): COOP may have
+      // severed the opener across the Google OAuth navigation, which is exactly
+      // when we still need to deliver. The builder receives it on the channel.
+      const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
+      channel.postMessage(message)
+      // BroadcastChannel delivery across windows is async; closing in the same
+      // tick can drop the message. Give it a moment to flush before closing.
+      const timeout = globalThis.setTimeout(() => {
+        channel.close()
+        globalThis.close()
+      }, 200)
+      return () => globalThis.clearTimeout(timeout)
     }
 
-    // Standalone fallback: send the builder back, but only for a same-origin
-    // redirectUrl. Anything external/invalid (or absent) → close the popup
-    // instead of redirecting or hanging.
+    // Direct access without the ids to broadcast: send the builder back, but
+    // only for a same-origin redirectUrl. Anything external/invalid (or absent)
+    // → close.
     if (redirectUrl && isSameOriginUrl(redirectUrl)) {
       globalThis.location.replace(redirectUrl)
       return
