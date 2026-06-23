@@ -26,9 +26,11 @@ export default function Page() {
     const blockId = firstQueryValue(router.query.blockId)
     const workspaceId = firstQueryValue(router.query.workspaceId)
     const typebotId = firstQueryValue(router.query.typebotId)
-    // Required params are missing — nothing to bootstrap. Close the popup
-    // instead of leaving it stuck on a spinner.
-    if (!redirectUrl || !blockId) {
+    // Fail early if any param the callback needs is missing: workspaceId (else
+    // the callback 400s) and typebotId (else it can't update the block → 404),
+    // plus redirectUrl/blockId. Closing here avoids making the user complete
+    // Google's consent only to hit an error on the callback.
+    if (!redirectUrl || !blockId || !workspaceId || !typebotId) {
       globalThis.close()
       return
     }
