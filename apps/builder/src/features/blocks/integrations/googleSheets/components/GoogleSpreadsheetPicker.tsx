@@ -1,7 +1,7 @@
 import { FileIcon } from '@/components/icons'
 import { trpc } from '@/lib/trpc'
 import { Button, Flex, HStack, IconButton, Text } from '@chakra-ui/react'
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
@@ -45,16 +45,22 @@ export const GoogleSpreadsheetPicker = ({
   // spreadsheet id back here via postMessage. We require the message's blockId
   // to match ours so a pick can't land on the wrong block if the user switched
   // blocks while the popup was open.
+  //
+  // onSpreadsheetIdSelect is recreated by the parent each render; read it from a
+  // ref so the listener stays registered for the popup's whole lifetime instead
+  // of being torn down/re-added every render (which could drop a message).
+  const onSpreadsheetIdSelectRef = useRef(onSpreadsheetIdSelect)
+  onSpreadsheetIdSelectRef.current = onSpreadsheetIdSelect
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== globalThis.location.origin) return
       const message = parseGoogleSheetsSpreadsheetPickedMessage(event.data)
       if (!message || message.blockId !== blockId) return
-      onSpreadsheetIdSelect(message.spreadsheetId)
+      onSpreadsheetIdSelectRef.current(message.spreadsheetId)
     }
     globalThis.addEventListener('message', handleMessage)
     return () => globalThis.removeEventListener('message', handleMessage)
-  }, [blockId, onSpreadsheetIdSelect])
+  }, [blockId])
 
   // Embedded: forward embedded=true&jwt so the picker popup (top-level on
   // eddie, no first-party session) can authenticate itself before fetching the
