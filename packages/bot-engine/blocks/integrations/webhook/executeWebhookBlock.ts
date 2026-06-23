@@ -39,6 +39,7 @@ import {
   mergeKeyValues,
 } from './restApiCredential'
 import { resolveRestApiCredentialData } from './resolveRestApiCredential'
+import { workspaceLogLabel } from '../../../workspaceLogLabel'
 import { parseResponseBody, safeJsonParse } from './parseResponseBody'
 import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
@@ -351,7 +352,7 @@ export const executeWebhook = async (
       return maskSecretsDeep(value, secretValues)
     } catch (maskError) {
       logger.error(
-        `${logContext?.workspace.name ?? 'unknown'} - Secret masking failed`,
+        `${workspaceLogLabel(logContext?.workspace)} - Secret masking failed`,
         {
           ...logContext,
           error:
@@ -422,7 +423,7 @@ export const executeWebhook = async (
     // detail masking below — observability must not depend on serializing the
     // full request/response.
     logger.info(
-      `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Executed`,
+      `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Executed`,
       {
         ...logContext,
         http: {
@@ -469,7 +470,7 @@ export const executeWebhook = async (
           error.response.type === 'opaqueredirect' ||
           (error.response.status >= 300 && error.response.status < 400))
       logger.warn(
-        `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Error`,
+        `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Error`,
         {
           ...logContext,
           http: {
@@ -503,7 +504,7 @@ export const executeWebhook = async (
         },
       }
       logger.error(
-        `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Timeout`,
+        `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Timeout`,
         {
           ...logContext,
           http: {
@@ -533,7 +534,7 @@ export const executeWebhook = async (
       data: { message: mask(`Error from Typebot server: ${error}`) },
     }
     logger.error(
-      `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Failed`,
+      `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Failed`,
       {
         ...logContext,
         http: {
