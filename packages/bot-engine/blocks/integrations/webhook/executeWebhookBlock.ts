@@ -57,7 +57,7 @@ export const longReqTimeoutWhitelist = [
   'https://api.anthropic.com',
 ]
 
-export const webhookSuccessDescription = `Webhook successfuly executed.`
+export const webhookSuccessDescription = `Webhook successfully executed.`
 export const webhookErrorDescription = `Webhook returned an error.`
 // Substituted for any value whose masking threw. Fail-safe: a value that
 // couldn't be masked is dropped, never emitted unmasked.
@@ -364,11 +364,14 @@ export const executeWebhook = async (
       return maskingFailed as unknown as T
     }
   }
-  // `secretValues` is defined (even if empty) only for credential-backed
-  // requests. Those must not follow redirects: the SSRF guard only validates
-  // the initial URL, and `ky` would otherwise replay the secret headers to a
-  // 302 Location (e.g. the cloud metadata IP). 'manual' makes `ky` throw on a
-  // 3xx instead of following it, so the secret never leaves the validated host.
+  // `webhook.secretValues` is defined (even if an empty Set) only for
+  // credential-backed requests — the local `secretValues` above always
+  // defaults to a Set, so `webhook.secretValues !== undefined` is what actually
+  // distinguishes them. Credentialed requests must not follow redirects: the
+  // SSRF guard only validates the initial URL, and `ky` would otherwise replay
+  // the secret headers to a 302 Location (e.g. the cloud metadata IP). 'manual'
+  // makes `ky` throw on a 3xx instead of following it, so the secret never
+  // leaves the validated host.
   const isCredentialed = webhook.secretValues !== undefined
   const contentType = headers ? headers['Content-Type'] : undefined
 
