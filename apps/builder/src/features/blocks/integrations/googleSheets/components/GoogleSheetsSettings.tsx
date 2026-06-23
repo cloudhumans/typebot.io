@@ -19,7 +19,7 @@ import {
   GoogleSheetsInsertRowOptions,
   GoogleSheetsUpdateRowOptionsV6,
 } from '@typebot.io/schemas'
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useMemo } from 'react'
 import { isDefined } from '@typebot.io/lib'
 import { SheetsDropdown } from './SheetsDropdown'
 import { CellWithValueStack } from './CellWithValueStack'
@@ -37,8 +37,6 @@ import {
   totalRowsToExtractOptions,
 } from '@typebot.io/schemas/features/blocks/integrations/googleSheets/constants'
 import { GoogleSpreadsheetPicker } from './GoogleSpreadsheetPicker'
-import { trpc } from '@/lib/trpc'
-import { parseGoogleSheetsConnectedMessage } from '../helpers/popupMessaging'
 
 type Props = {
   options: GoogleSheetsBlock['options']
@@ -54,7 +52,6 @@ export const GoogleSheetsSettings = ({
   const { workspace } = useWorkspace()
   const { typebot } = useTypebot()
   const { save } = useTypebot()
-  const trpcContext = trpc.useContext()
   const { sheets, isLoading } = useSheets({
     credentialsId: options?.credentialsId,
     spreadsheetId: options?.spreadsheetId,
@@ -70,28 +67,10 @@ export const GoogleSheetsSettings = ({
       credentialsId,
     })
 
-  // The connect popup may resolve long after it was opened, during which the
-  // user can keep editing other options. Read the latest setter from a ref so
-  // the listener never spreads a stale `options` snapshot and clobbers those
-  // edits; the effect itself stays mounted once (stable deps).
-  const handleCredentialsIdChangeRef = useRef(handleCredentialsIdChange)
-  handleCredentialsIdChangeRef.current = handleCredentialsIdChange
-
-  // The connect flow runs in a top-level popup (embedded mode can't render
-  // Google's consent inside CloudChat's iframe). On success the callback page
-  // postMessages the new credentialsId back; refresh the credentials list and
-  // select it. credentialsId is already persisted on the block server-side.
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== globalThis.location.origin) return
-      const message = parseGoogleSheetsConnectedMessage(event.data)
-      if (!message || message.blockId !== blockId) return
-      trpcContext.credentials.listCredentials.invalidate()
-      handleCredentialsIdChangeRef.current(message.credentialsId)
-    }
-    globalThis.addEventListener('message', handleMessage)
-    return () => globalThis.removeEventListener('message', handleMessage)
-  }, [blockId, trpcContext])
+  // The connect popup result is handled by a durable listener mounted at the
+  // editor root (useGoogleSheetsConnectListener), which applies the new
+  // credentialsId to the block by id even if this settings panel has unmounted.
+  // When this panel is mounted it re-renders from the updated typebot state.
   const handleSpreadsheetIdChange = (spreadsheetId: string | undefined) =>
     onOptionsChange({ ...options, spreadsheetId })
   const handleSheetIdChange = (sheetId: string | undefined) =>
