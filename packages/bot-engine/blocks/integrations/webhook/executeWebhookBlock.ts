@@ -58,6 +58,9 @@ export const longReqTimeoutWhitelist = [
 
 export const webhookSuccessDescription = `Webhook successfuly executed.`
 export const webhookErrorDescription = `Webhook returned an error.`
+// Substituted for any value whose masking threw. Fail-safe: a value that
+// couldn't be masked is dropped, never emitted unmasked.
+export const maskingFailed = '[omitted: secret masking failed]'
 
 type Params = {
   disableRequestTimeout?: boolean
@@ -336,7 +339,28 @@ export const executeWebhook = async (
   const { headers, url, method, basicAuth, isJson } = webhook
   const secretValues = webhook.secretValues ?? new Set<string>()
   // Mask credential-derived secrets in anything that gets persisted/logged.
-  const mask = <T>(value: T): T => maskSecretsDeep(value, secretValues)
+  // Total by construction: a masking failure must never throw out of this
+  // logging path. #214 placed mask() on the critical path of both the ChatLog
+  // detail and the structured logger calls, so a throw here (e.g. an over-deep
+  // payload) would lose BOTH and escape as an unhandled rejection that crashes
+  // the request. On failure we emit a structured error (with workspace context,
+  // so the offending flow is findable) and fall back to a marker — never the
+  // unmasked value.
+  const mask = <T>(value: T): T => {
+    try {
+      return maskSecretsDeep(value, secretValues)
+    } catch (maskError) {
+      logger.error(
+        `${logContext?.workspace.name ?? 'unknown'} - Secret masking failed`,
+        {
+          ...logContext,
+          error:
+            maskError instanceof Error ? maskError.message : String(maskError),
+        }
+      )
+      return maskingFailed as unknown as T
+    }
+  }
   // `secretValues` is defined (even if empty) only for credential-backed
   // requests. Those must not follow redirects: the SSRF guard only validates
   // the initial URL, and `ky` would otherwise replay the secret headers to a
@@ -393,19 +417,10 @@ export const executeWebhook = async (
   try {
     const response = await ky(request.url, omit(request, 'url'))
     const body = await parseResponseBody(response)
-    logs.push({
-      status: 'success',
-      description: webhookSuccessDescription,
-      // Mask request and response independently: maskSecretsDeep shares one scan
-      // budget per call, so masking them together would let a huge response body
-      // exhaust it before request.url/headers are reached.
-      details: {
-        statusCode: response.status,
-        response: mask(body),
-        request: mask(request),
-      },
-    })
     const httpDuration = Date.now() - requestStartTime
+    // Emit the lightweight structured log first, before the heavier ChatLog
+    // detail masking below — observability must not depend on serializing the
+    // full request/response.
     logger.info(
       `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Executed`,
       {
@@ -418,6 +433,18 @@ export const executeWebhook = async (
         },
       }
     )
+    logs.push({
+      status: 'success',
+      description: webhookSuccessDescription,
+      // Mask request and response independently: maskSecretsDeep shares one scan
+      // budget per call, so masking them together would let a huge response body
+      // exhaust it before request.url/headers are reached.
+      details: {
+        statusCode: response.status,
+        response: mask(body),
+        request: mask(request),
+      },
+    })
     return {
       response: {
         statusCode: response.status,
@@ -441,17 +468,6 @@ export const executeWebhook = async (
         (error.response.status === 0 ||
           error.response.type === 'opaqueredirect' ||
           (error.response.status >= 300 && error.response.status < 400))
-      logs.push({
-        status: 'error',
-        description: isBlockedRedirect
-          ? `Request blocked: the endpoint attempted a redirect, which is not followed for credential-backed requests.`
-          : webhookErrorDescription,
-        details: {
-          statusCode: error.response.status,
-          request: mask(request),
-          response: mask(response),
-        },
-      })
       logger.warn(
         `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Error`,
         {
@@ -464,6 +480,17 @@ export const executeWebhook = async (
           },
         }
       )
+      logs.push({
+        status: 'error',
+        description: isBlockedRedirect
+          ? `Request blocked: the endpoint attempted a redirect, which is not followed for credential-backed requests.`
+          : webhookErrorDescription,
+        details: {
+          statusCode: error.response.status,
+          request: mask(request),
+          response: mask(response),
+        },
+      })
       return { response, logs, startTimeShouldBeUpdated: true }
     }
     if (error instanceof TimeoutError) {
@@ -475,16 +502,6 @@ export const executeWebhook = async (
           }s)`,
         },
       }
-      logs.push({
-        status: 'error',
-        description: `Webhook request timed out. (${
-          (request.timeout ? request.timeout : 0) / 1000
-        }s)`,
-        details: {
-          response: mask(response),
-          request: mask(request),
-        },
-      })
       logger.error(
         `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Timeout`,
         {
@@ -497,6 +514,16 @@ export const executeWebhook = async (
           },
         }
       )
+      logs.push({
+        status: 'error',
+        description: `Webhook request timed out. (${
+          (request.timeout ? request.timeout : 0) / 1000
+        }s)`,
+        details: {
+          response: mask(response),
+          request: mask(request),
+        },
+      })
       return { response, logs, startTimeShouldBeUpdated: true }
     }
     const response = {
