@@ -1,4 +1,5 @@
 import { env } from '@typebot.io/env'
+import { badRequest } from '@typebot.io/lib/api'
 import { OAuth2Client } from 'google-auth-library'
 import { NextApiRequest, NextApiResponse } from 'next'
 
@@ -26,12 +27,22 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
     // treats these as strings, e.g. `redirectUrl.split`) can't handle.
     const firstValue = (value: string | string[] | undefined) =>
       Array.isArray(value) ? value[0] : value
+    const typebotId = firstValue(req.query.typebotId)
+    const blockId = firstValue(req.query.blockId)
+    const workspaceId = firstValue(req.query.workspaceId)
+    const redirectUrl = firstValue(req.query.redirectUrl)
+    // Defense in depth: fail early instead of generating a consent URL with an
+    // `undefined`-laden state that the callback can't act on. The embedded
+    // bootstrap already validates these client-side; this covers standalone and
+    // direct hits.
+    if (!typebotId || !blockId || !workspaceId || !redirectUrl)
+      return badRequest(res)
     const state = Buffer.from(
       JSON.stringify({
-        typebotId: firstValue(req.query.typebotId),
-        blockId: firstValue(req.query.blockId),
-        workspaceId: firstValue(req.query.workspaceId),
-        redirectUrl: firstValue(req.query.redirectUrl)?.split('?')[0],
+        typebotId,
+        blockId,
+        workspaceId,
+        redirectUrl: redirectUrl.split('?')[0],
       })
     ).toString('base64')
     const url = oauth2Client.generateAuthUrl({

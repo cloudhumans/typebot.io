@@ -21,6 +21,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const code = req.query.code as string | undefined
     if (!workspaceId) return badRequest(res)
+    // blockId comes from the untrusted state and is later interpolated into
+    // redirect URLs / query params; reject a malformed state rather than emit
+    // `blockId=undefined` or `[object Object]`.
+    if (typeof blockId !== 'string') return badRequest(res)
     if (!code)
       return res.status(400).send({ message: "Bad request, couldn't get code" })
     const oauth2Client = new OAuth2Client(
