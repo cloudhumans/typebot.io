@@ -27,7 +27,7 @@ declare const window: any
 const firstQueryValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value
 
-const loadGapiPicker = (onReady: () => void) => {
+const loadGapiPicker = (onReady: () => void, onError: () => void) => {
   const existingScript = document.getElementById('gapi')
   if (existingScript) {
     window.gapi.load('picker', onReady)
@@ -38,12 +38,16 @@ const loadGapiPicker = (onReady: () => void) => {
   script.type = 'text/javascript'
   script.src = 'https://apis.google.com/js/api.js'
   script.onload = () => window.gapi.load('picker', onReady)
+  // If api.js can't load (offline, blocker, CSP), isPickerReady would never
+  // flip and the popup would hang on a spinner. Surface the error state instead.
+  script.onerror = onError
   document.head.appendChild(script)
 }
 
 export default function Page() {
   const router = useRouter()
   const [isPickerReady, setIsPickerReady] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const hasOpenedPicker = useRef(false)
 
   const workspaceId = firstQueryValue(router.query.workspaceId)
@@ -68,7 +72,10 @@ export default function Page() {
   }, [router.isReady, workspaceId, credentialsId, blockId])
 
   useEffect(() => {
-    loadGapiPicker(() => setIsPickerReady(true))
+    loadGapiPicker(
+      () => setIsPickerReady(true),
+      () => setLoadError(true)
+    )
   }, [])
 
   useEffect(() => {
@@ -113,16 +120,20 @@ export default function Page() {
     picker.setVisible(true)
   }, [isPickerReady, data, blockId])
 
-  if (error)
-    // Keep the error visible (the user needs to know the credential failed) but
-    // offer an explicit way to dismiss the popup, so it isn't left orphaned.
+  if (error || loadError)
+    // Keep the error visible (the user needs to know what failed) but offer an
+    // explicit way to dismiss the popup, so it isn't left orphaned.
     return (
       <Center h="100vh">
         <VStack spacing={2}>
           <Text fontWeight="semibold">
             Could not open the spreadsheet picker
           </Text>
-          <Text color="gray.500">{error.message}</Text>
+          <Text color="gray.500">
+            {error
+              ? error.message
+              : 'Failed to load Google APIs. Please check your connection and try again.'}
+          </Text>
           <Button onClick={() => globalThis.close()}>Close</Button>
         </VStack>
       </Center>
