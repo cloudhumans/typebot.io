@@ -240,11 +240,13 @@ describe('maskSecretsDeep', () => {
 
   it('does not overflow the stack on a deeply nested payload (prod incident 2026-06-23)', () => {
     const secret = 'SUPER-SECRET-TOKEN-VALUE'
-    // Far deeper than MAX_MASK_DEPTH and deep enough to blow the call stack
-    // before the depth guard existed. Light on strings, so the char budget
-    // never trips — only the depth guard can stop this.
+    // Deep enough to overflow the call stack without the depth guard (well past
+    // V8's frame limit), but no deeper than needed: the guard stops the masker
+    // at MAX_MASK_DEPTH, so this whole chain is never traversed at runtime.
+    // Light on strings, so the char budget never trips — only the depth guard
+    // can stop this.
     let nested: unknown = `token=${secret}`
-    for (let i = 0; i < 100_000; i++) nested = { next: nested }
+    for (let i = 0; i < 20_000; i++) nested = { next: nested }
     expect(() =>
       maskSecretsDeep({ root: nested }, new Set([secret]))
     ).not.toThrow()
