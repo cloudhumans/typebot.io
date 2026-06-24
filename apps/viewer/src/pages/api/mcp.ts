@@ -4,6 +4,7 @@ import {
   executeWorkflow,
   sanitizeToolName,
   extractToolOutput,
+  hasErrorLog,
   transformToMCPTool,
   checkBearerAuth,
 } from '@typebot.io/mcp-tools'
@@ -239,12 +240,20 @@ export default async function handler(
         const durationMs = Date.now() - startTime
 
         const output = extractToolOutput(result)
+        // Webhook/upstream failures don't throw — the engine records them as an
+        // error-status log and the flow continues, embedding the error text in
+        // the output (e.g. "Error from Typebot server: TypeError: fetch failed").
+        // Flag those so the MCP client (LangChain adapter) yields a ToolMessage
+        // with status:"error" instead of treating the embedded error as a normal
+        // answer. Thrown errors keep going through the JSON-RPC error path below.
+        const isError = hasErrorLog(result)
         logger.info('MCP tools/call completed', {
           tenant,
           toolName: name,
           workflowId: tool.id,
           publicName: tool.publicName,
           durationMs,
+          isError,
           requestId: id,
         })
 
@@ -252,6 +261,7 @@ export default async function handler(
           jsonrpc: '2.0',
           result: {
             content: [{ type: 'text', text: output }],
+            ...(isError ? { isError: true } : {}),
           },
           id,
         })
