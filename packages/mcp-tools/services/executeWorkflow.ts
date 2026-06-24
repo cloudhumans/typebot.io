@@ -1,5 +1,6 @@
 import { startChat } from '@typebot.io/bot-engine/apiHandlers/startChat'
 import logger from '@typebot.io/lib/logger'
+import { hasErrorLog } from '../helpers/hasErrorLog'
 
 interface ExecuteWorkflowParams {
   publicId: string
@@ -7,8 +8,11 @@ interface ExecuteWorkflowParams {
 }
 
 /**
- * Execute a workflow typebot with prefilled variables.
- * Wraps the startChat function for MCP usage.
+ * Execute a workflow typebot with prefilled variables. Wraps `startChat` for
+ * MCP usage and derives the run's failure verdict here (the one MCP-owned place
+ * that knows it), so the route maps a typed `isError` onto the envelope instead
+ * of reaching into `logs[].status` itself. See `hasErrorLog` for why this needs
+ * the unfiltered logs.
  */
 export async function executeWorkflow({
   publicId,
@@ -28,13 +32,13 @@ export async function executeWorkflow({
     isStreamEnabled: false,
     prefilledVariables,
     textBubbleContentFormat: 'markdown',
-    // Trusted, bearer-authed server-to-server call: keep error-status logs that the
-    // public filter strips by description (e.g. `webhookErrorDescription` on HTTP
-    // 4xx/5xx) so the MCP route can detect failed webhook/upstream runs via
-    // `hasErrorLog`. Log details are already secret-masked at push time.
+    // Trusted, bearer-authed call: keep the error-status logs the public filter
+    // strips by description, so `hasErrorLog` can see failed webhook/upstream
+    // runs. Details are already secret-masked at push time. (see hasErrorLog)
     skipSensitiveLogFiltering: true,
   })
 
-  logger.info('executeWorkflow: completed', { publicId })
-  return result
+  const isError = hasErrorLog(result)
+  logger.info('executeWorkflow: completed', { publicId, isError })
+  return { result, isError }
 }
