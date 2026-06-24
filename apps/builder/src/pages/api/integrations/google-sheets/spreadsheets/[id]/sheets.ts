@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { getAuthenticatedGoogleClient } from '@/lib/googleSheets'
-import { isDefined } from '@typebot.io/lib'
 import {
   badRequest,
   methodNotAllowed,
@@ -28,25 +27,31 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const doc = new GoogleSpreadsheet(spreadsheetId, auth.client)
     await doc.loadInfo()
     return res.send({
-      sheets: (
-        await Promise.all(
-          Array.from(Array(doc.sheetCount)).map(async (_, idx) => {
-            const sheet = doc.sheetsByIndex[idx]
-            try {
-              await sheet.loadHeaderRow()
-            } catch (err) {
-              if (err && typeof err === 'object' && 'message' in err)
-                logger.error(err.message)
-              return
-            }
+      sheets: await Promise.all(
+        Array.from(Array(doc.sheetCount)).map(async (_, idx) => {
+          const sheet = doc.sheetsByIndex[idx]
+          try {
+            await sheet.loadHeaderRow()
             return {
               id: sheet.sheetId.toString(),
               name: sheet.title,
               columns: sheet.headerValues,
             }
-          })
-        )
-      ).filter(isDefined),
+          } catch (err) {
+            const message =
+              err && typeof err === 'object' && 'message' in err
+                ? String(err.message)
+                : 'Failed to load header row'
+            logger.error(message)
+            return {
+              id: sheet.sheetId.toString(),
+              name: sheet.title,
+              columns: [],
+              error: message,
+            }
+          }
+        })
+      ),
     })
   }
   return methodNotAllowed(res)
