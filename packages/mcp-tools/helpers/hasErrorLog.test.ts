@@ -35,4 +35,27 @@ describe('hasErrorLog', () => {
     ).toBe(true)
     expect(hasErrorLog({ logs: [undefined as never] })).toBe(false)
   })
+
+  // Regression: these error logs are emitted on HTTP 4xx/5xx webhook responses
+  // (`webhookErrorDescription`) and on thrown fetches (`Webhook failed to
+  // execute.`). The public log filter strips the former by description, so the
+  // MCP path must call startChat with skipSensitiveLogFiltering:true for them to
+  // reach hasErrorLog. Given unfiltered logs, both must be detected.
+  it('detects an HTTP 4xx/5xx webhook error log (Webhook returned an error.)', () => {
+    expect(
+      hasErrorLog({
+        logs: [
+          { status: 'error', description: 'Webhook returned an error.' },
+        ],
+      })
+    ).toBe(true)
+  })
+
+  it('detects a thrown-fetch webhook error log (Webhook failed to execute.)', () => {
+    expect(
+      hasErrorLog({
+        logs: [{ status: 'error', description: 'Webhook failed to execute.' }],
+      })
+    ).toBe(true)
+  })
 })

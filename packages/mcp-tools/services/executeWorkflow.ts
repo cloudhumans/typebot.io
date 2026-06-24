@@ -28,6 +28,11 @@ export async function executeWorkflow({
     isStreamEnabled: false,
     prefilledVariables,
     textBubbleContentFormat: 'markdown',
+    // Trusted, bearer-authed server-to-server call: keep error-status logs that the
+    // public filter strips by description (e.g. `webhookErrorDescription` on HTTP
+    // 4xx/5xx) so the MCP route can detect failed webhook/upstream runs via
+    // `hasErrorLog`. Log details are already secret-masked at push time.
+    skipSensitiveLogFiltering: true,
   })
 
   logger.info('executeWorkflow: completed', { publicId })
