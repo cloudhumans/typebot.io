@@ -4,6 +4,7 @@ import {
   AccordionIcon,
   AccordionItem,
   AccordionPanel,
+  Box,
   Flex,
   HStack,
   IconButton,
@@ -11,6 +12,7 @@ import {
   Text,
   useColorModeValue,
 } from '@chakra-ui/react'
+import { useEffect, useState } from 'react'
 import { AlertIcon, CloseIcon, InfoIcon, SmileIcon } from './icons'
 import { CodeEditor } from './inputs/CodeEditor'
 import { LanguageName } from '@uiw/codemirror-extensions-langs'
@@ -26,6 +28,7 @@ export type ToastProps = {
   icon?: React.ReactNode
   primaryButton?: React.ReactNode
   secondaryButton?: React.ReactNode
+  duration?: number | null | undefined
   onClose: () => void
 }
 
@@ -37,10 +40,17 @@ export const Toast = ({
   icon,
   primaryButton,
   secondaryButton,
+  duration,
   onClose,
 }: ToastProps) => {
   const bgColor = useColorModeValue('white', 'gray.800')
   const detailsLabelColor = useColorModeValue('gray.600', 'gray.400')
+  const [scale, setScale] = useState(1)
+  useEffect(() => {
+    if (!duration) return
+    const raf = requestAnimationFrame(() => setScale(0))
+    return () => cancelAnimationFrame(raf)
+  }, [duration])
 
   return (
     <Flex
@@ -51,6 +61,7 @@ export const Toast = ({
       shadow="sm"
       fontSize="sm"
       pos="relative"
+      zIndex={9999}
       maxW={details ? '450px' : '300px'}
     >
       <HStack alignItems="flex-start" pr="7" spacing="3" w="full">
@@ -105,6 +116,31 @@ export const Toast = ({
         top={1}
         right={1}
       />
+
+      {duration ? (
+        <Box
+          pos="absolute"
+          left={0}
+          right={0}
+          bottom={0}
+          height="3px"
+          bg="transparent"
+        >
+          <Box
+            pos="absolute"
+            left={0}
+            right={0}
+            top={0}
+            bottom={0}
+            bgColor={`${parseColor(status)}.500`}
+            style={{
+              transformOrigin: 'right',
+              transform: `scaleX(${scale})`,
+              transition: `transform ${duration}ms linear`,
+            }}
+          />
+        </Box>
+      ) : null}
     </Flex>
   )
 }

@@ -15,9 +15,17 @@ export const useToast = () => {
       primaryButton,
       secondaryButton,
     }: Omit<ToastProps, 'onClose'>) => {
+      let duration: number | null | undefined
+
+      if (status === 'error' || status === 'success') {
+        duration = 30000 // 30 segundos
+      } else {
+        duration = undefined // Default
+      }
+
       toast({
         position: 'top-right',
-        duration: details && status === 'error' ? null : undefined,
+        duration,
         render: ({ onClose }) => (
           <Toast
             title={title}
@@ -25,6 +33,7 @@ export const useToast = () => {
             status={status}
             icon={icon}
             details={details}
+            duration={duration}
             onClose={onClose}
             primaryButton={primaryButton}
             secondaryButton={secondaryButton}
