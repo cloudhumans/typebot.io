@@ -1,12 +1,30 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { executeWorkflow } from './executeWorkflow'
 import { startChat } from '@typebot.io/bot-engine/apiHandlers/startChat'
-import { webhookErrorDescription } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
-import { sendEmailErrorDescription } from '@typebot.io/bot-engine/blocks/integrations/sendEmail/executeSendEmailBlock'
+
+// Literals mirrored from bot-engine (importing the block modules would pull the
+// whole engine + Prisma into this unit suite). filterPotentiallySensitiveLogs
+// strips logs by these exact descriptions.
+const webhookErrorDescription = 'Webhook returned an error.'
+const sendEmailErrorDescription = 'Email not sent'
 
 vi.mock('@typebot.io/bot-engine/apiHandlers/startChat', () => ({
   startChat: vi.fn(),
 }))
+// executeWorkflow also imports filterPotentiallySensitiveLogs from bot-engine;
+// stub it with the real predicate so the suite stays Prisma-free.
+vi.mock(
+  '@typebot.io/bot-engine/logs/filterPotentiallySensitiveLogs',
+  () => ({
+    filterPotentiallySensitiveLogs: (log: { description: string }) =>
+      ![
+        'Webhook returned an error.',
+        'Webhook successfully executed.',
+        'Email not sent',
+        'Email successfully sent',
+      ].includes(log.description),
+  })
+)
 vi.mock('@typebot.io/lib/logger', () => ({
   default: {
     debug: vi.fn(),
