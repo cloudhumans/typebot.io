@@ -55,6 +55,17 @@ export const mergeKeyValues = (
 export const MAX_MASK_SCAN_CHARS = 256_000
 export const tooLargeToMask = '[omitted: payload too large to mask]'
 
+// Cap on object/array nesting the masker will descend before bailing. The char
+// budget above only decrements on string leaves, so a payload that is deeply
+// nested (or, defensively, circular) but light on strings would recurse until
+// the engine throws `RangeError: Maximum call stack size exceeded`. Fired from
+// inside this logging path that becomes an unhandled rejection and spams the
+// logs (prod incident 2026-06-23). Real API payloads nest far shallower than
+// this; beyond it we fail safe. Like the char budget, this only affects the
+// persisted log — the response returned to the flow is never passed here.
+export const MAX_MASK_DEPTH = 256
+export const tooDeepToMask = '[omitted: payload too deeply nested to mask]'
+
 /**
  * Recursively replaces every occurrence of a secret value with a mask in any
  * string found within the given value (objects/arrays are walked deeply).
@@ -70,7 +81,13 @@ export const maskSecretsDeep = <T>(value: T, secretValues: Set<string>): T => {
 const maskWithinBudget = <T>(
   value: T,
   secretValues: Set<string>,
-  budget: { remaining: number }
+  budget: { remaining: number },
+  depth = 0,
+  // Objects on the current ancestor chain, used for cycle detection. Path-local
+  // (added before descending, removed after) so a value reachable via two
+  // distinct non-cyclic paths — a DAG, not a cycle — is still masked on both,
+  // rather than dropped on the second visit as a shared global set would do.
+  ancestors?: WeakSet<object>
 ): T => {
   if (typeof value === 'string') {
     // Omit (without scanning) any string that alone would exceed the remaining
@@ -89,15 +106,25 @@ const maskWithinBudget = <T>(
     }
     return masked as unknown as T
   }
-  if (Array.isArray(value))
-    return value.map((item) =>
-      maskWithinBudget(item, secretValues, budget)
-    ) as unknown as T
   if (value && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>).map(
-      ([k, v]) => [k, maskWithinBudget(v, secretValues, budget)]
-    )
-    return Object.fromEntries(entries) as T
+    // Bail before the call stack does. Fail-safe: an undescended subtree is
+    // dropped, never emitted unmasked.
+    if (depth >= MAX_MASK_DEPTH) return tooDeepToMask as unknown as T
+    const chain = ancestors ?? new WeakSet<object>()
+    if (chain.has(value as object)) return tooDeepToMask as unknown as T
+    chain.add(value as object)
+    const masked = Array.isArray(value)
+      ? (value.map((item) =>
+          maskWithinBudget(item, secretValues, budget, depth + 1, chain)
+        ) as unknown as T)
+      : (Object.fromEntries(
+          Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+            k,
+            maskWithinBudget(v, secretValues, budget, depth + 1, chain),
+          ])
+        ) as T)
+    chain.delete(value as object)
+    return masked
   }
   return value
 }
