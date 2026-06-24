@@ -6,6 +6,7 @@ import {
   SessionState,
   SetVariableHistoryItem,
   Variable,
+  VisitedBlockEntry,
 } from '@typebot.io/schemas'
 import { isNotEmpty } from '@typebot.io/lib'
 import {
@@ -49,6 +50,7 @@ type ContextProps = {
   currentLastBubbleId?: string
   firstBubbleWasStreamed?: boolean
   visitedEdges: VisitedEdge[]
+  visitedBlocks: VisitedBlockEntry[]
   setVariableHistory: SetVariableHistoryItem[]
   startTime?: number
   textBubbleContentFormat: 'richText' | 'markdown'
@@ -61,6 +63,7 @@ export const executeGroup = async (
     version,
     state,
     visitedEdges,
+    visitedBlocks,
     setVariableHistory,
     currentReply,
     currentLastBubbleId,
@@ -74,6 +77,7 @@ export const executeGroup = async (
     newSessionState: SessionState
     setVariableHistory: SetVariableHistoryItem[]
     visitedEdges: VisitedEdge[]
+    visitedBlocks: VisitedBlockEntry[]
   }
 > => {
   let newStartTime = startTime
@@ -133,6 +137,12 @@ export const executeGroup = async (
 
     if (isBubbleBlock(block)) {
       if (!block.content || (firstBubbleWasStreamed && index === 0)) {
+        visitedBlocks.push({
+          blockId: block.id,
+          groupId: group.id,
+          timestamp: new Date().toISOString(),
+          status: 'ok',
+        })
         continue
       }
       messages.push(
@@ -144,6 +154,13 @@ export const executeGroup = async (
         })
       )
       lastBubbleBlockId = block.id
+
+      visitedBlocks.push({
+        blockId: block.id,
+        groupId: group.id,
+        timestamp: new Date().toISOString(),
+        status: 'ok',
+      })
 
       const bubbleTypebot = newSessionState.typebotsQueue[0].typebot
       const bubbleWorkspaceName = bubbleTypebot.workspaceName ?? 'unknown'
@@ -192,8 +209,21 @@ export const executeGroup = async (
             newSessionState = updatedState
           }
         }
+        visitedBlocks.push({
+          blockId: block.id,
+          groupId: group.id,
+          timestamp: new Date().toISOString(),
+          status: 'ok',
+        })
         continue
       }
+
+      visitedBlocks.push({
+        blockId: block.id,
+        groupId: group.id,
+        timestamp: new Date().toISOString(),
+        status: 'ok',
+      })
 
       const inputResult = {
         messages,
@@ -205,6 +235,7 @@ export const executeGroup = async (
         clientSideActions,
         logs,
         visitedEdges,
+        visitedBlocks,
         setVariableHistory,
       }
       return inputResult
@@ -222,8 +253,23 @@ export const executeGroup = async (
     ) as ExecuteLogicResponse | ExecuteIntegrationResponse | null
 
     if (!executionResponse) {
+      visitedBlocks.push({
+        blockId: block.id,
+        groupId: group.id,
+        timestamp: new Date().toISOString(),
+        status: 'ok',
+      })
       continue
     }
+
+    visitedBlocks.push({
+      blockId: block.id,
+      groupId: group.id,
+      timestamp: new Date().toISOString(),
+      status: executionResponse.logs?.some((l) => l.status === 'error')
+        ? 'error'
+        : 'ok',
+    })
 
     const typebot = newSessionState.typebotsQueue[0].typebot
     const workspaceName = typebot.workspaceName ?? 'unknown'
@@ -294,6 +340,7 @@ export const executeGroup = async (
         clientSideActions,
         logs,
         visitedEdges,
+        visitedBlocks,
         setVariableHistory,
       }
     }
@@ -334,6 +381,7 @@ export const executeGroup = async (
           clientSideActions,
           logs,
           visitedEdges,
+          visitedBlocks,
           setVariableHistory,
         }
       }
@@ -347,15 +395,36 @@ export const executeGroup = async (
     }
   }
 
-  if (!nextEdgeId && newSessionState.typebotsQueue.length === 1)
+  if (!nextEdgeId && newSessionState.typebotsQueue.length === 1) {
+    const lastBlock = group.blocks[group.blocks.length - 1]
+    if (lastBlock) {
+      const isClaudiaBlock = lastBlock.type === 'claudia'
+      visitedBlocks.push({
+        blockId: lastBlock.id,
+        groupId: group.id,
+        timestamp: new Date().toISOString(),
+        status: isClaudiaBlock ? 'ok' : 'dead_end',
+      })
+      if (!isClaudiaBlock) {
+        logs = [
+          ...(logs ?? []),
+          {
+            status: 'error' as const,
+            description: `Dead end: block "${lastBlock.id}" in group "${group.title ?? group.id}" has no outgoing connection`,
+          },
+        ]
+      }
+    }
     return {
       messages,
       newSessionState,
       clientSideActions,
       logs,
       visitedEdges,
+      visitedBlocks,
       setVariableHistory,
     }
+  }
 
   const nextGroup = await getNextGroup({
     state: newSessionState,
@@ -368,12 +437,32 @@ export const executeGroup = async (
   if (nextGroup.visitedEdge) visitedEdges.push(nextGroup.visitedEdge)
 
   if (!nextGroup.group) {
+    const lastBlock = group.blocks[group.blocks.length - 1]
+    if (lastBlock) {
+      const isClaudiaBlock = lastBlock.type === 'claudia'
+      visitedBlocks.push({
+        blockId: lastBlock.id,
+        groupId: group.id,
+        timestamp: new Date().toISOString(),
+        status: isClaudiaBlock ? 'ok' : 'dead_end',
+      })
+      if (!isClaudiaBlock) {
+        logs = [
+          ...(logs ?? []),
+          {
+            status: 'error' as const,
+            description: `Dead end: edge from block "${lastBlock.id}" points to a non-existent group`,
+          },
+        ]
+      }
+    }
     return {
       messages,
       newSessionState,
       clientSideActions,
       logs,
       visitedEdges,
+      visitedBlocks,
       setVariableHistory,
     }
   }
@@ -382,6 +471,7 @@ export const executeGroup = async (
     version,
     state: newSessionState,
     visitedEdges,
+    visitedBlocks,
     setVariableHistory,
     currentReply: {
       messages,
