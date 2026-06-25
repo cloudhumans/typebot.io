@@ -7,6 +7,7 @@ export const errorTypeEnum = z.enum([
   'missingTextBetweenInputBlocks',
   'missingClaudiaInFlowBranches',
   'missingWorkflowEndInFlowBranches',
+  'missingCredential',
 ])
 export type ErrorType = z.infer<typeof errorTypeEnum>
 

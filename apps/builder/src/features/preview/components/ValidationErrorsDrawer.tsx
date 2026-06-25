@@ -70,6 +70,10 @@ const ERROR_CONFIGS: Record<
     descriptionKey:
       'validationErrors.missingWorkflowEndInFlowBranches.description',
   },
+  missingCredential: {
+    titleKey: 'validationErrors.missingCredential.title',
+    descriptionKey: 'validationErrors.missingCredential.description',
+  },
 }
 
 type Props = {
@@ -198,7 +202,10 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
   const allErrors = validationErrors ? validationErrors.errors : []
   const errorsWithGroup = allErrors
     .map((error) => {
-      if (!error.groupId) return null
+      // Typebot-level errors (e.g. a dangling WhatsApp credential) have no
+      // group; render them with a flow-level label instead of dropping them.
+      if (!error.groupId)
+        return { ...error, groupName: t('validationErrors.flowLevel') }
       const groupName = getGroupNameById(error.groupId)
 
       if (!groupName) return null
@@ -420,6 +427,9 @@ const ValidationErrorSection = ({
         <Stack spacing={2}>
           {allErrors.map((error, idx) => {
             const label = getLabel ? getLabel(error) : String(error)
+            // Flow-level errors (no groupId) aren't navigable, so render them
+            // non-interactive instead of a button that does nothing.
+            const isClickable = !!onGroupClick && !!error.groupId
             return (
               <Box
                 key={idx}
@@ -428,22 +438,22 @@ const ValidationErrorSection = ({
                 borderRadius="sm"
                 borderLeftWidth="3px"
                 borderLeftColor={leftBorderColor}
-                cursor={onGroupClick ? 'pointer' : 'default'}
+                cursor={isClickable ? 'pointer' : 'default'}
                 _hover={
-                  onGroupClick
+                  isClickable
                     ? { bg: hoverBgColor, transform: 'translateX(2px)' }
                     : undefined
                 }
                 transition="all 0.2s"
-                onClick={() => onGroupClick?.(error)}
-                role={onGroupClick ? 'button' : undefined}
-                tabIndex={onGroupClick ? 0 : undefined}
+                onClick={isClickable ? () => onGroupClick?.(error) : undefined}
+                role={isClickable ? 'button' : undefined}
+                tabIndex={isClickable ? 0 : undefined}
                 onKeyDown={
-                  onGroupClick
+                  isClickable
                     ? (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          onGroupClick(error)
+                          onGroupClick?.(error)
                         }
                       }
                     : undefined

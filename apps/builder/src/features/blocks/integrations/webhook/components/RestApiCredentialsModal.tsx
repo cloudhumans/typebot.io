@@ -157,27 +157,6 @@ export const RestApiCredentialsModal = ({
             <Stack>
               <FormLabel mb="0">
                 {t(
-                  'blocks.integrations.httpRequest.credentialsModal.headers.label'
-                )}{' '}
-                <Text as="span" color="gray.500" fontWeight="normal">
-                  {t(
-                    'blocks.integrations.httpRequest.credentialsModal.maskedHint'
-                  )}
-                </Text>
-              </FormLabel>
-              <TableList<KeyValue>
-                initialItems={headers}
-                onItemsChange={setHeaders}
-                addLabel={t(
-                  'blocks.integrations.httpRequest.credentialsModal.addHeader.label'
-                )}
-              >
-                {(props) => <HeadersInputs {...props} />}
-              </TableList>
-            </Stack>
-            <Stack>
-              <FormLabel mb="0">
-                {t(
                   'blocks.integrations.httpRequest.credentialsModal.queryParams.label'
                 )}{' '}
                 <Text as="span" color="gray.500" fontWeight="normal">
@@ -194,6 +173,27 @@ export const RestApiCredentialsModal = ({
                 )}
               >
                 {(props) => <QueryParamsInputs {...props} />}
+              </TableList>
+            </Stack>
+            <Stack>
+              <FormLabel mb="0">
+                {t(
+                  'blocks.integrations.httpRequest.credentialsModal.headers.label'
+                )}{' '}
+                <Text as="span" color="gray.500" fontWeight="normal">
+                  {t(
+                    'blocks.integrations.httpRequest.credentialsModal.maskedHint'
+                  )}
+                </Text>
+              </FormLabel>
+              <TableList<KeyValue>
+                initialItems={headers}
+                onItemsChange={setHeaders}
+                addLabel={t(
+                  'blocks.integrations.httpRequest.credentialsModal.addHeader.label'
+                )}
+              >
+                {(props) => <HeadersInputs {...props} />}
               </TableList>
             </Stack>
           </ModalBody>

@@ -20,6 +20,8 @@ export const useValidation = () => {
       groups: Group[]
       edges: Edge[]
       settings: Settings | undefined
+      workspaceId?: string
+      whatsAppCredentialsId?: string | null
     }): Promise<ValidationError | null> => {
       setIsValidating(true)
       try {

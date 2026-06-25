@@ -90,7 +90,6 @@ export const HttpRequestSettings = ({
           defaultCredentialLabel={t(
             'blocks.integrations.httpRequest.credentials.noCredentialLabel'
           )}
-          size="sm"
         />
       )}
       {isSecureMode ? (
