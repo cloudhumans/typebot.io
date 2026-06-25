@@ -427,6 +427,9 @@ const ValidationErrorSection = ({
         <Stack spacing={2}>
           {allErrors.map((error, idx) => {
             const label = getLabel ? getLabel(error) : String(error)
+            // Flow-level errors (no groupId) aren't navigable, so render them
+            // non-interactive instead of a button that does nothing.
+            const isClickable = !!onGroupClick && !!error.groupId
             return (
               <Box
                 key={idx}
@@ -435,22 +438,22 @@ const ValidationErrorSection = ({
                 borderRadius="sm"
                 borderLeftWidth="3px"
                 borderLeftColor={leftBorderColor}
-                cursor={onGroupClick ? 'pointer' : 'default'}
+                cursor={isClickable ? 'pointer' : 'default'}
                 _hover={
-                  onGroupClick
+                  isClickable
                     ? { bg: hoverBgColor, transform: 'translateX(2px)' }
                     : undefined
                 }
                 transition="all 0.2s"
-                onClick={() => onGroupClick?.(error)}
-                role={onGroupClick ? 'button' : undefined}
-                tabIndex={onGroupClick ? 0 : undefined}
+                onClick={isClickable ? () => onGroupClick?.(error) : undefined}
+                role={isClickable ? 'button' : undefined}
+                tabIndex={isClickable ? 0 : undefined}
                 onKeyDown={
-                  onGroupClick
+                  isClickable
                     ? (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          onGroupClick(error)
+                          onGroupClick?.(error)
                         }
                       }
                     : undefined
