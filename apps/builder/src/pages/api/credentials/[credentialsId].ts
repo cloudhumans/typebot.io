@@ -13,14 +13,14 @@ import logger from '@typebot.io/lib/logger'
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const user = await getAuthenticatedUser(req, res)
   if (!user) return notAuthenticated(res)
-  const workspaceId = req.query.workspaceId as string | undefined
+  // req.query values can be string | string[] | undefined; collapse to a single
+  // value so an array (e.g. ?workspaceId=a&workspaceId=b) can't slip past the
+  // guards or break the Prisma queries below.
+  const firstQueryValue = (v: string | string[] | undefined) =>
+    Array.isArray(v) ? v[0] : v
+  const workspaceId = firstQueryValue(req.query.workspaceId)
   if (!workspaceId) return badRequest(res)
   if (req.method === 'DELETE') {
-    // req.query values can be string | string[] | undefined; collapse to a
-    // single value so an array (e.g. ?currentTypebotId=a&currentTypebotId=b)
-    // can't silently break the comparisons below.
-    const firstQueryValue = (v: string | string[] | undefined) =>
-      Array.isArray(v) ? v[0] : v
     const credentialsId = firstQueryValue(req.query.credentialsId)
     if (!credentialsId) return badRequest(res)
     const force = firstQueryValue(req.query.force) === 'true'
