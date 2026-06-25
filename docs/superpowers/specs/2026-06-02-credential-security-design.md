@@ -1,7 +1,7 @@
 # Design Specification: Credential Security (REST Data Sources)
 
 **Date**: 2026-06-02  
-**Updated**: 2026-06-16  
+**Updated**: 2026-06-24  
 **Status**: Implemented (reflects shipped code)  
 **Author**: Antigravity AI  
 
@@ -140,7 +140,18 @@ A typebot references a credential only by `block.options.credentialsId`. The enc
 
 ---
 
-## 🧪 5. Testing Plan
+## 🗑️ 5. Deletion Semantics
+
+A credential can be referenced by many flows, so deletion is guarded.
+
+* **In-use guard:** `deleteCredentials` (tRPC) and the legacy REST route (`/api/credentials/:id`) call `findCredentialsUsages` inside the delete transaction. If the credential is still referenced, a normal delete is rejected — tRPC throws `PRECONDITION_FAILED`, REST returns `412` — and the UI opens `CredentialInUseModal` listing the referencing flows (each linked to its editor, badged draft/published). `findCredentialsUsages` covers **both** surfaces a flow can reference a credential from: `block.options.credentialsId` (JSONB) and the typebot-level `Typebot.whatsAppCredentialsId` column. REST API credentials remain admin-only to delete.
+* **Force-delete ("remove anyway"):** the modal offers a destructive red action that re-issues the delete with `force: true`, bypassing the guard. The deleted secret is gone, so **published flows that referenced it stop issuing their request at runtime** (`resolveRestApiCredentialData` → `null` → block aborts) until the block is reconfigured and the flow is **republished** — the modal warns about this. Drafts self-heal in the builder (custom-URL fallback). Every deletion of a still-referenced credential is audited (`logger.warn` `credential_deleted_in_use` with `usageCount` / `blockingCount` / `forced`), regardless of the force or current-draft path.
+* **Current-draft exclusion:** the client passes `currentTypebotId` (the flow open in the editor). The guard excludes that flow's **draft** usage (`source === 'Typebot' && typebotId === currentTypebotId`) so deleting a credential used only by the open flow just clears the block (the editor drops `credentialsId` on success). **The published version of the same flow still blocks** (its `PublicTypebot` usage is *not* excluded) — force-deleting would break it in production, so the warning/modal is intentional there. `currentTypebotId` is a client hint and usages are already workspace-scoped, so it grants no new capability (the caller can force-delete regardless); the audit log above covers the path.
+* **`missingCredential` validation:** because deletion leaves a dangling `credentialsId` (it lives in JSONB / the `whatsAppCredentialsId` column — no FK nulls it), a `missingCredential` flow-validation error flags any block, and the typebot-level `whatsAppCredentialsId`, whose credential no longer resolves in the workspace. It surfaces in the validation drawer, the group alert icon, and the header badge (typebot-level errors render under a "Flow settings" label, with no group). Validation runs workspace-scoped (`workspaceId` threaded through `validateTypebot`) and re-runs after a credential delete (`revalidate()`).
+
+---
+
+## 🧪 6. Testing Plan
 * **Prisma Validation**: Test the schema serialization and deserialization of the new Zod definition.
 * **Variables Parsing**: Test variable parsing within the base URL, headers, and query parameters of the credential.
 * **Merging Test**: Verify that block-level parameters override credential-level parameters correctly.
