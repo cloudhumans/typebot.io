@@ -264,6 +264,7 @@
   "credentialInUse.instructions": "Para eliminar esta credencial, primero quítala o reemplázala en los bloques de cada flujo listado.",
   "credentialInUse.published": "publicado",
   "credentialInUse.title": "No se puede eliminar esta credencial",
+  "credentialInUse.whatsApp": "WhatsApp",
   "dashboard.header.settingsButton.label": "Configuración y Miembros",
   "dashboard.redirectionMessage": "Estás siendo redirigido...",
   "dashboard.title": "Mis typebots",

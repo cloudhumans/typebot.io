@@ -20,6 +20,9 @@ import { ExternalLinkIcon } from '@/components/icons'
 
 export type CredentialUsage = {
   source: 'Typebot' | 'PublicTypebot'
+  // 'whatsApp' references drive the live flow, so they're badged distinctly
+  // rather than as a plain draft.
+  via?: 'block' | 'whatsApp'
   typebotId: string
   publicId: string | null
   name: string
@@ -79,10 +82,16 @@ export const CredentialInUseModal = ({
                     <HStack>
                       <Badge
                         colorScheme={
-                          u.source === 'PublicTypebot' ? 'green' : 'gray'
+                          u.via === 'whatsApp'
+                            ? 'purple'
+                            : u.source === 'PublicTypebot'
+                            ? 'green'
+                            : 'gray'
                         }
                       >
-                        {u.source === 'PublicTypebot'
+                        {u.via === 'whatsApp'
+                          ? t('credentialInUse.whatsApp')
+                          : u.source === 'PublicTypebot'
                           ? t('credentialInUse.published')
                           : t('credentialInUse.draft')}
                       </Badge>

@@ -264,6 +264,7 @@
   "credentialInUse.instructions": "To delete this credential, first remove or replace it in the blocks of every listed flow.",
   "credentialInUse.published": "published",
   "credentialInUse.title": "Cannot delete this credential",
+  "credentialInUse.whatsApp": "WhatsApp",
   "dashboard.header.settingsButton.label": "Settings & Members",
   "dashboard.redirectionMessage": "You are being redirected...",
   "dashboard.title": "My typebots",

@@ -264,6 +264,7 @@
   "credentialInUse.instructions": "Para deletar essa credencial, primeiro remova ou substitua ela nos blocos de todos os fluxos listados acima.",
   "credentialInUse.published": "publicado",
   "credentialInUse.title": "Não é possível deletar essa credencial",
+  "credentialInUse.whatsApp": "WhatsApp",
   "dashboard.header.settingsButton.label": "Configurações & Membros",
   "dashboard.redirectionMessage": "Você está sendo redirecionado...",
   "dashboard.title": "Meus typebots",
