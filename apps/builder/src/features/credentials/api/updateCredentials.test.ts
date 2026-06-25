@@ -16,7 +16,7 @@ vi.mock('@typebot.io/lib/prisma', () => ({
     workspace: { findUnique: vi.fn() },
     credentials: { findFirst: vi.fn() },
     $transaction: vi.fn(async (cb: (tx: unknown) => unknown) =>
-      cb({ credentials: { update: txUpdate } })
+      cb({ credentials: { updateMany: txUpdate } })
     ),
   },
 }))

@@ -185,8 +185,11 @@ export const updateCredentials = authenticatedProcedure
 
           const encrypted = mergedData ? await encrypt(mergedData) : undefined
 
-          await tx.credentials.update({
-            where: { id: credentialsId },
+          // updateMany (not update) so the mutation stays workspace-scoped —
+          // defense-in-depth matching deleteCredentials, even though the
+          // findFirst above already confirmed ownership.
+          await tx.credentials.updateMany({
+            where: { id: credentialsId, workspaceId },
             data: {
               ...(name !== undefined ? { name } : {}),
               ...(encrypted
