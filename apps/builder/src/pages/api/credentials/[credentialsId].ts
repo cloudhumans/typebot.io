@@ -19,6 +19,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const credentialsId = req.query.credentialsId as string | undefined
     if (!credentialsId) return badRequest(res)
     const force = req.query.force === 'true'
+    const currentTypebotId = req.query.currentTypebotId as string | undefined
 
     const membership = await prisma.memberInWorkspace.findFirst({
       where: { workspaceId, userId: user.id },
@@ -54,21 +55,29 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             tx
           )
 
-          if (usages.length > 0 && !force) {
+          // Mirror the tRPC guard: the draft open in the editor doesn't block
+          // its own deletion (the editor clears the block on success).
+          const blockingUsages = usages.filter(
+            (u) => !(u.source === 'Typebot' && u.typebotId === currentTypebotId)
+          )
+
+          if (blockingUsages.length > 0 && !force) {
             return {
               precondition: 'in_use' as const,
-              usages,
+              usages: blockingUsages,
               deletedCount: 0,
             }
           }
 
-          if (usages.length > 0 && force) {
-            logger.warn('Force-deleting credential still in use', {
-              code: 'credential_force_deleted',
+          if (usages.length > 0) {
+            logger.warn('Deleting credential still referenced by flows', {
+              code: 'credential_deleted_in_use',
               credentialsId,
               workspaceId,
               userId: user.id,
               usageCount: usages.length,
+              blockingCount: blockingUsages.length,
+              forced: force,
             })
           }
 

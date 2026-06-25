@@ -16,6 +16,7 @@ import { Credentials } from '@typebot.io/schemas'
 import { trpc } from '@/lib/trpc'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
+import { useEditor } from '@/features/editor/providers/EditorProvider'
 import { useTranslate } from '@tolgee/react'
 import {
   CredentialInUseModal,
@@ -46,6 +47,7 @@ export const CredentialsDropdown = ({
   const { showToast } = useToast()
   const { currentRole } = useWorkspace()
   const { typebot } = useTypebot()
+  const { revalidate } = useEditor()
   const { data, refetch } = trpc.credentials.listCredentials.useQuery({
     workspaceId,
     type,
@@ -85,6 +87,9 @@ export const CredentialsDropdown = ({
       if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
       setInUseModalState(null)
       refetch()
+      // Surface dangling references in flows the content-keyed validation
+      // wouldn't otherwise re-check after this deletion.
+      revalidate?.()
     },
     onSettled: () => {
       setIsDeleting(undefined)

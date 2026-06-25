@@ -15,6 +15,7 @@ import { useRouter } from 'next/router'
 import { trpc } from '@/lib/trpc'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
+import { useEditor } from '@/features/editor/providers/EditorProvider'
 import { ForgedBlockDefinition } from '@typebot.io/forge-repository/types'
 import { useToast } from '@/hooks/useToast'
 import {
@@ -40,6 +41,7 @@ export const ForgedCredentialsDropdown = ({
   const { showToast } = useToast()
   const { workspace, currentRole } = useWorkspace()
   const { typebot } = useTypebot()
+  const { revalidate } = useEditor()
   const { data, refetch, isLoading } = trpc.forge.listCredentials.useQuery(
     {
       workspaceId: workspace?.id as string,
@@ -83,6 +85,7 @@ export const ForgedCredentialsDropdown = ({
       if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
       setInUseModalState(null)
       refetch()
+      revalidate?.()
     },
     onSettled: () => {
       setIsDeleting(undefined)

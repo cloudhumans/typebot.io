@@ -52,6 +52,7 @@ const editorContext = createContext<{
   validationErrors: ValidationError | null
   setValidationErrors: Dispatch<SetStateAction<ValidationError | null>>
   validateTypebot: (typebot: MinimalTypebot) => Promise<ValidationError | null>
+  revalidate: () => void
   clearValidationErrors: () => void
   isValidating: boolean
   isSidebarExtended: boolean
@@ -181,7 +182,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
     const newEdgesValidationKey = JSON.stringify(typebot.edges)
     const newSettingsValidationKey = JSON.stringify(typebot.settings)
-    const newValidationKey = `${newGroupsValidationKey}-${newEdgesValidationKey}-${newSettingsValidationKey}`
+    const newValidationKey = `${newGroupsValidationKey}-${newEdgesValidationKey}-${newSettingsValidationKey}-${
+      typebot.whatsAppCredentialsId ?? ''
+    }`
 
     if (newValidationKey === validationKey) return
 
@@ -207,6 +210,20 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     queuedValidateTypebot,
   ])
 
+  // Re-run validation on demand for changes the content-keyed effect can't see
+  // (e.g. a credential deleted out from under blocks that still reference it).
+  const revalidate = useCallback(() => {
+    if (!typebot?.groups || !typebot?.edges || !typebot?.variables) return
+    queuedValidateTypebot({
+      variables: typebot.variables,
+      groups: typebot.groups,
+      edges: typebot.edges,
+      settings: typebot.settings,
+      workspaceId: typebot.workspaceId,
+      whatsAppCredentialsId: typebot.whatsAppCredentialsId,
+    })
+  }, [typebot, queuedValidateTypebot])
+
   return (
     <editorContext.Provider
       value={{
@@ -219,6 +236,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         validationErrors,
         setValidationErrors,
         validateTypebot: queuedValidateTypebot,
+        revalidate,
         clearValidationErrors,
         isValidating,
         isSidebarExtended,
