@@ -82,10 +82,13 @@ export const ForgedCredentialsDropdown = ({
       })
     },
     onSuccess: ({ credentialsId }) => {
-      if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
       setInUseModalState(null)
       refetch()
-      revalidate?.()
+      if (credentialsId === currentCredentialsId) {
+        onCredentialsSelect(undefined)
+      } else {
+        revalidate?.()
+      }
     },
     onSettled: () => {
       setIsDeleting(undefined)

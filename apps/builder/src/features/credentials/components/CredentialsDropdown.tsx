@@ -84,12 +84,17 @@ export const CredentialsDropdown = ({
       })
     },
     onSuccess: ({ credentialsId }) => {
-      if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
       setInUseModalState(null)
       refetch()
-      // Surface dangling references in flows the content-keyed validation
-      // wouldn't otherwise re-check after this deletion.
-      revalidate?.()
+      if (credentialsId === currentCredentialsId) {
+        // Clearing this block's credentialsId is a content change; the
+        // content-keyed validation effect re-runs with the fresh state.
+        onCredentialsSelect(undefined)
+      } else {
+        // No content change for this flow, so force a revalidation to surface
+        // dangling references in other blocks/flows.
+        revalidate?.()
+      }
     },
     onSettled: () => {
       setIsDeleting(undefined)
