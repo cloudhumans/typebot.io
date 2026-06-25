@@ -16,7 +16,7 @@ import {
   Text,
 } from '@chakra-ui/react'
 import { useTranslate } from '@tolgee/react'
-import { ExternalLinkIcon } from '@/components/icons'
+import NextLink from 'next/link'
 
 export type CredentialUsage = {
   source: 'Typebot' | 'PublicTypebot'
@@ -96,13 +96,12 @@ export const CredentialInUseModal = ({
                           : t('credentialInUse.draft')}
                       </Badge>
                       <Link
+                        as={NextLink}
                         href={`/typebots/${u.typebotId}/edit`}
-                        isExternal
                         fontWeight="medium"
                         color="blue.500"
                       >
                         {u.name}
-                        <ExternalLinkIcon ml={1} boxSize="14px" />
                       </Link>
                       {u.publicId && (
                         <Text fontSize="xs" color="gray.500">

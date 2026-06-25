@@ -79,7 +79,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             }
           }
 
-          if (usages.length > 0) {
+          const deleted = await tx.credentials.deleteMany({
+            where: { id: credentialsId, workspaceId },
+          })
+
+          // Gated on a real delete so a no-op (already gone) doesn't log a
+          // false "deleted in use" event.
+          if (deleted.count > 0 && usages.length > 0) {
             logger.warn('Deleting credential still referenced by flows', {
               code: 'credential_deleted_in_use',
               credentialsId,
@@ -91,9 +97,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             })
           }
 
-          const deleted = await tx.credentials.deleteMany({
-            where: { id: credentialsId, workspaceId },
-          })
           return { precondition: null, usages: [], deletedCount: deleted.count }
         },
         { isolationLevel: 'RepeatableRead' }

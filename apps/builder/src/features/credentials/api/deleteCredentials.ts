@@ -94,10 +94,18 @@ export const deleteCredentials = authenticatedProcedure
               cause: { _credentialInUse: true, usages: blockingUsages },
             })
 
-          // Audit every deletion of a still-referenced credential, whether it
-          // was forced or allowed because the only referencing flow is the
-          // current draft — so the draft-exclusion path can't delete silently.
-          if (usages.length > 0)
+          const deletedCount = await tx.credentials.deleteMany({
+            where: {
+              id: credentialsId,
+              workspaceId,
+            },
+          })
+
+          // Audit an actual deletion of a still-referenced credential, whether
+          // forced or allowed because the only referencing flow is the current
+          // draft — so the draft-exclusion path can't delete silently. Gated on
+          // a real delete so a no-op (already gone) doesn't log a false event.
+          if (deletedCount.count > 0 && usages.length > 0)
             logger.warn('Deleting credential still referenced by flows', {
               code: 'credential_deleted_in_use',
               credentialsId,
@@ -108,12 +116,6 @@ export const deleteCredentials = authenticatedProcedure
               forced: !!force,
             })
 
-          const deletedCount = await tx.credentials.deleteMany({
-            where: {
-              id: credentialsId,
-              workspaceId,
-            },
-          })
           return { deletedCount: deletedCount.count }
         },
         { isolationLevel: 'RepeatableRead' }
