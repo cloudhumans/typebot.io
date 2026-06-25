@@ -896,7 +896,7 @@ export const postTypebotValidation = publicProcedure
     })
   )
   .output(responseSchema)
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const {
       variables,
       groups,
@@ -906,13 +906,27 @@ export const postTypebotValidation = publicProcedure
       workspaceId,
       whatsAppCredentialsId,
     } = input.typebot
+
+    // Credential existence is workspace-scoped data. This is a public procedure,
+    // so only run that check for an authenticated member of the workspace —
+    // otherwise skip it (validateCredentials no-ops without a workspaceId) so the
+    // endpoint can't be used as a cross-workspace credential-existence oracle.
+    let scopedWorkspaceId: string | undefined
+    if (workspaceId && ctx.user?.id) {
+      const membership = await prisma.memberInWorkspace.findFirst({
+        where: { workspaceId, userId: ctx.user.id },
+        select: { workspaceId: true },
+      })
+      if (membership) scopedWorkspaceId = workspaceId
+    }
+
     return await validateTypebot({
       variables,
       groups,
       edges,
       settings,
       isSecondaryFlow,
-      workspaceId,
+      workspaceId: scopedWorkspaceId,
       whatsAppCredentialsId,
     })
   })

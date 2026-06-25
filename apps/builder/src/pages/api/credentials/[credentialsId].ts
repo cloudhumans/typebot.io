@@ -58,7 +58,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           // Mirror the tRPC guard: the draft open in the editor doesn't block
           // its own deletion (the editor clears the block on success).
           const blockingUsages = usages.filter(
-            (u) => !(u.source === 'Typebot' && u.typebotId === currentTypebotId)
+            (u) =>
+              !(
+                u.source === 'Typebot' &&
+                u.via === 'block' &&
+                u.typebotId === currentTypebotId
+              )
           )
 
           if (blockingUsages.length > 0 && !force) {

@@ -75,8 +75,16 @@ export const deleteCredentials = authenticatedProcedure
             tx
           )
 
+          // Only a draft *block* usage of the open flow is excluded — the editor
+          // clears that block on success. WhatsApp usages (via: 'whatsApp') drive
+          // the published flow, so they always block.
           const blockingUsages = usages.filter(
-            (u) => !(u.source === 'Typebot' && u.typebotId === currentTypebotId)
+            (u) =>
+              !(
+                u.source === 'Typebot' &&
+                u.via === 'block' &&
+                u.typebotId === currentTypebotId
+              )
           )
 
           if (blockingUsages.length > 0 && !force)
