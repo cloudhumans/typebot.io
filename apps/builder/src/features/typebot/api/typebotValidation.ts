@@ -835,7 +835,7 @@ export const getTypebotValidation = publicProcedure
     })
   )
   .output(responseSchema)
-  .query(async ({ input }) => {
+  .query(async ({ input, ctx }) => {
     const typebot = (await prisma.typebot.findFirst({
       where: { id: input.typebotId },
       select: {
@@ -846,6 +846,9 @@ export const getTypebotValidation = publicProcedure
         isSecondaryFlow: true,
         workspaceId: true,
         whatsAppCredentialsId: true,
+        workspace: {
+          select: { id: true, members: { select: { userId: true } } },
+        },
       },
     })) as {
       variables: Variable[]
@@ -855,15 +858,25 @@ export const getTypebotValidation = publicProcedure
       isSecondaryFlow: boolean
       workspaceId: string
       whatsAppCredentialsId: string | null
+      workspace: { id: string; members: { userId: string }[] }
     } | null
 
     if (!typebot) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
     }
 
+    // Gate the workspace-scoped credential check on read access (same as the
+    // POST path), so a known typebotId can't trigger cross-workspace credential
+    // resolution for a caller without access.
+    const scopedWorkspaceId =
+      ctx.user && !isReadWorkspaceFobidden(typebot.workspace, ctx.user)
+        ? typebot.workspaceId
+        : undefined
+
     const { isValid, errors } = await validateTypebot({
       ...typebot,
       isSecondaryFlow: typebot.isSecondaryFlow,
+      workspaceId: scopedWorkspaceId,
     })
     return { isValid, errors }
   })
