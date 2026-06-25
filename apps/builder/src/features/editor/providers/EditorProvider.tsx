@@ -182,7 +182,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
     const newEdgesValidationKey = JSON.stringify(typebot.edges)
     const newSettingsValidationKey = JSON.stringify(typebot.settings)
-    const newValidationKey = `${newGroupsValidationKey}-${newEdgesValidationKey}-${newSettingsValidationKey}-${
+    const newVariablesValidationKey = JSON.stringify(typebot.variables)
+    const newValidationKey = `${newGroupsValidationKey}-${newEdgesValidationKey}-${newSettingsValidationKey}-${newVariablesValidationKey}-${
       typebot.whatsAppCredentialsId ?? ''
     }`
 

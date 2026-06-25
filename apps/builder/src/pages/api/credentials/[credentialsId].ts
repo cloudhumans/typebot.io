@@ -16,10 +16,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const workspaceId = req.query.workspaceId as string | undefined
   if (!workspaceId) return badRequest(res)
   if (req.method === 'DELETE') {
-    const credentialsId = req.query.credentialsId as string | undefined
+    // req.query values can be string | string[] | undefined; collapse to a
+    // single value so an array (e.g. ?currentTypebotId=a&currentTypebotId=b)
+    // can't silently break the comparisons below.
+    const firstQueryValue = (v: string | string[] | undefined) =>
+      Array.isArray(v) ? v[0] : v
+    const credentialsId = firstQueryValue(req.query.credentialsId)
     if (!credentialsId) return badRequest(res)
-    const force = req.query.force === 'true'
-    const currentTypebotId = req.query.currentTypebotId as string | undefined
+    const force = firstQueryValue(req.query.force) === 'true'
+    const currentTypebotId = firstQueryValue(req.query.currentTypebotId)
 
     const membership = await prisma.memberInWorkspace.findFirst({
       where: { workspaceId, userId: user.id },

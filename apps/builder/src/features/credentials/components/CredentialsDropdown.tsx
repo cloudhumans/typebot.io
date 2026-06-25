@@ -92,7 +92,7 @@ export const CredentialsDropdown = ({
         onCredentialsSelect(undefined)
       } else {
         // No content change for this flow, so force a revalidation to surface
-        // dangling references in other blocks/flows.
+        // other blocks of this flow that still reference the deleted credential.
         revalidate?.()
       }
     },
