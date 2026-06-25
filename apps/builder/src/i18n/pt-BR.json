@@ -530,7 +530,7 @@
   "validationErrors.flowLevel": "Configurações do fluxo",
   "validationErrors.missingClaudiaInFlowBranches.description": "Todas as ramificações do fluxo devem passar por pelo menos um bloco ClaudIA antes de terminar.",
   "validationErrors.missingClaudiaInFlowBranches.title": "Bloco ClaudIA ausente nas ramificações",
-  "validationErrors.missingCredential.description": "Estes grupos têm um bloco que referencia uma credencial que não existe mais. Reconfigure o bloco com uma credencial válida (ou uma URL própria) — caso contrário a requisição vai falhar em produção.",
+  "validationErrors.missingCredential.description": "Uma credencial referenciada aqui não existe mais. Selecione uma credencial válida (blocos de Requisição HTTP também podem usar uma URL própria) — caso contrário a requisição vai falhar em produção.",
   "validationErrors.missingCredential.title": "Credencial ausente",
   "validationErrors.missingTextBeforeClaudia.description": "É necessário adicionar algum texto junto do bloco ClaudIA. ",
   "validationErrors.missingTextBeforeClaudia.title": "Texto faltando junto ao bloco ClaudIA",
