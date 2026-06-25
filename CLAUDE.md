@@ -36,6 +36,7 @@ When typebot is embedded inside CloudChat, the `UserProvider` has a full early-r
 ## Conventions
 
 - **Comments are rare.** Only when *why* is non-obvious. Don't narrate what the code already says.
+- **No `Co-Authored-By` trailer.** Do not append a `Co-Authored-By` line to commit messages.
 
 ## Running
 
