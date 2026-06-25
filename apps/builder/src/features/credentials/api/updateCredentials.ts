@@ -14,8 +14,10 @@ import { RestApiCredentials } from '@typebot.io/schemas'
 
 type KeyValue = { key: string; value: string }
 
-const normalizeEntries = (entries?: KeyValue[]): KeyValue[] =>
-  (entries ?? []).map((e) => ({ key: e.key, value: e.value }))
+// Order-sensitive key/value comparison; ignores any extra fields on the entries.
+const entriesEqual = (a: KeyValue[], b: KeyValue[]): boolean =>
+  a.length === b.length &&
+  a.every((e, i) => e.key === b[i].key && e.value === b[i].value)
 
 // Incoming secret values arrive masked (`••••••••`) for any row the user did not
 // retype. For those, restore the prior value matched by key so saving without
@@ -65,7 +67,6 @@ export const updateCredentials = authenticatedProcedure
       // Acknowledge that request-affecting changes (baseUrl/headers/queryParams)
       // take effect immediately in published flows. Mirrors delete's `force`.
       confirmed: z.boolean().optional(),
-      currentTypebotId: z.string().optional(),
     })
   )
   .output(z.object({ credentialsId: z.string() }))
@@ -131,16 +132,9 @@ export const updateCredentials = authenticatedProcedure
           ),
         }
         dataChanged =
-          JSON.stringify({
-            baseUrl: mergedData.baseUrl,
-            headers: normalizeEntries(mergedData.headers),
-            queryParams: normalizeEntries(mergedData.queryParams),
-          }) !==
-          JSON.stringify({
-            baseUrl: existingData.baseUrl,
-            headers: normalizeEntries(existingData.headers),
-            queryParams: normalizeEntries(existingData.queryParams),
-          })
+          mergedData.baseUrl !== existingData.baseUrl ||
+          !entriesEqual(mergedData.headers, existingData.headers ?? []) ||
+          !entriesEqual(mergedData.queryParams, existingData.queryParams ?? [])
       }
 
       // Deprecation is non-destructive: preserve the original timestamp when an

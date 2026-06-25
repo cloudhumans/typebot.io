@@ -206,7 +206,6 @@ export const RestApiCredentialsModal = ({
         name,
         data,
         deprecated,
-        currentTypebotId: typebot?.id,
       })
       return
     }
@@ -237,7 +236,6 @@ export const RestApiCredentialsModal = ({
       },
       deprecated,
       confirmed: true,
-      currentTypebotId: typebot?.id,
     })
   }
 
