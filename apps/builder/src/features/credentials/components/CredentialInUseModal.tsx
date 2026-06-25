@@ -9,12 +9,14 @@ import {
   Badge,
   Button,
   HStack,
+  Link,
   List,
   ListItem,
   Stack,
   Text,
 } from '@chakra-ui/react'
 import { useTranslate } from '@tolgee/react'
+import { ExternalLinkIcon } from '@/components/icons'
 
 export type CredentialUsage = {
   source: 'Typebot' | 'PublicTypebot'
@@ -28,6 +30,8 @@ type Props = {
   onClose: () => void
   usages: CredentialUsage[]
   credentialName?: string
+  onForceDelete?: () => void
+  isForceDeleting?: boolean
 }
 
 // Informs the user that a credential cannot be deleted because it is still
@@ -38,6 +42,8 @@ export const CredentialInUseModal = ({
   onClose,
   usages,
   credentialName,
+  onForceDelete,
+  isForceDeleting,
 }: Props) => {
   const { t } = useTranslate()
   const closeRef = useRef(null)
@@ -80,7 +86,15 @@ export const CredentialInUseModal = ({
                           ? t('credentialInUse.published')
                           : t('credentialInUse.draft')}
                       </Badge>
-                      <Text fontWeight="medium">{u.name}</Text>
+                      <Link
+                        href={`/typebots/${u.typebotId}/edit`}
+                        isExternal
+                        fontWeight="medium"
+                        color="blue.500"
+                      >
+                        {u.name}
+                        <ExternalLinkIcon ml={1} boxSize="14px" />
+                      </Link>
                       {u.publicId && (
                         <Text fontSize="xs" color="gray.500">
                           /{u.publicId}
@@ -94,13 +108,28 @@ export const CredentialInUseModal = ({
               <Text fontSize="sm" color="gray.600">
                 {t('credentialInUse.instructions')}
               </Text>
+
+              {onForceDelete && (
+                <Text fontSize="sm" color="red.500" fontWeight="medium">
+                  {t('credentialInUse.forceWarning')}
+                </Text>
+              )}
             </Stack>
           </AlertDialogBody>
 
-          <AlertDialogFooter>
+          <AlertDialogFooter gap={3}>
             <Button ref={closeRef} colorScheme="blue" onClick={onClose}>
               {t('credentialInUse.acknowledge')}
             </Button>
+            {onForceDelete && (
+              <Button
+                colorScheme="red"
+                onClick={onForceDelete}
+                isLoading={isForceDeleting}
+              >
+                {t('credentialInUse.forceDelete')}
+              </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialogOverlay>

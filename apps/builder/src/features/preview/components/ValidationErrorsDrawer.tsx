@@ -70,6 +70,10 @@ const ERROR_CONFIGS: Record<
     descriptionKey:
       'validationErrors.missingWorkflowEndInFlowBranches.description',
   },
+  missingCredential: {
+    titleKey: 'validationErrors.missingCredential.title',
+    descriptionKey: 'validationErrors.missingCredential.description',
+  },
 }
 
 type Props = {
@@ -198,7 +202,10 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
   const allErrors = validationErrors ? validationErrors.errors : []
   const errorsWithGroup = allErrors
     .map((error) => {
-      if (!error.groupId) return null
+      // Typebot-level errors (e.g. a dangling WhatsApp credential) have no
+      // group; render them with a flow-level label instead of dropping them.
+      if (!error.groupId)
+        return { ...error, groupName: t('validationErrors.flowLevel') }
       const groupName = getGroupNameById(error.groupId)
 
       if (!groupName) return null

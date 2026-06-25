@@ -33,6 +33,10 @@ When typebot is embedded inside CloudChat, the `UserProvider` has a full early-r
 - Monorepo: `apps/` (builder, viewer, docs) + `packages/` (shared libs)
 - Dev: `pnpm turbo dev` for both builder and viewer
 
+## Conventions
+
+- **Comments are rare.** Only when *why* is non-obvious. Don't narrate what the code already says.
+
 ## Running
 
 All docker compose commands from the composezao root (`/home/fabio/workspace/composezao-da-massa`):

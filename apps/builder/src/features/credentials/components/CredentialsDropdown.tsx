@@ -15,6 +15,7 @@ import { useToast } from '../../../hooks/useToast'
 import { Credentials } from '@typebot.io/schemas'
 import { trpc } from '@/lib/trpc'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
+import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { useTranslate } from '@tolgee/react'
 import {
   CredentialInUseModal,
@@ -44,19 +45,23 @@ export const CredentialsDropdown = ({
   const { t } = useTranslate()
   const { showToast } = useToast()
   const { currentRole } = useWorkspace()
+  const { typebot } = useTypebot()
   const { data, refetch } = trpc.credentials.listCredentials.useQuery({
     workspaceId,
     type,
   })
   const [isDeleting, setIsDeleting] = useState<string>()
+  const [isForceDeleting, setIsForceDeleting] = useState(false)
   const [inUseModalState, setInUseModalState] = useState<{
+    credentialsId: string
     credentialName?: string
     usages: CredentialUsage[]
   } | null>(null)
 
   const { mutate } = trpc.credentials.deleteCredentials.useMutation({
-    onMutate: ({ credentialsId }) => {
+    onMutate: ({ credentialsId, force }) => {
       setIsDeleting(credentialsId)
+      if (force) setIsForceDeleting(true)
     },
     onError: (error, variables) => {
       const usages = (error.data as { usages?: CredentialUsage[] } | null)
@@ -66,6 +71,7 @@ export const CredentialsDropdown = ({
           (c) => c.id === variables.credentialsId
         )?.name
         setInUseModalState({
+          credentialsId: variables.credentialsId,
           credentialName,
           usages,
         })
@@ -77,10 +83,12 @@ export const CredentialsDropdown = ({
     },
     onSuccess: ({ credentialsId }) => {
       if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
+      setInUseModalState(null)
       refetch()
     },
     onSettled: () => {
       setIsDeleting(undefined)
+      setIsForceDeleting(false)
     },
   })
 
@@ -101,7 +109,7 @@ export const CredentialsDropdown = ({
   const deleteCredentials =
     (credentialsId: string) => async (e: React.MouseEvent) => {
       e.stopPropagation()
-      mutate({ workspaceId, credentialsId })
+      mutate({ workspaceId, credentialsId, currentTypebotId: typebot?.id })
     }
 
   if (data?.credentials.length === 0 && !defaultCredentialLabel) {
@@ -197,6 +205,18 @@ export const CredentialsDropdown = ({
         onClose={() => setInUseModalState(null)}
         usages={inUseModalState?.usages ?? []}
         credentialName={inUseModalState?.credentialName}
+        onForceDelete={
+          inUseModalState
+            ? () =>
+                mutate({
+                  workspaceId,
+                  credentialsId: inUseModalState.credentialsId,
+                  force: true,
+                  currentTypebotId: typebot?.id,
+                })
+            : undefined
+        }
+        isForceDeleting={isForceDeleting}
       />
     </>
   )

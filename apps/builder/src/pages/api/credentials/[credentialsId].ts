@@ -18,6 +18,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'DELETE') {
     const credentialsId = req.query.credentialsId as string | undefined
     if (!credentialsId) return badRequest(res)
+    const force = req.query.force === 'true'
 
     const membership = await prisma.memberInWorkspace.findFirst({
       where: { workspaceId, userId: user.id },
@@ -53,12 +54,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             tx
           )
 
-          if (usages.length > 0) {
+          if (usages.length > 0 && !force) {
             return {
               precondition: 'in_use' as const,
               usages,
               deletedCount: 0,
             }
+          }
+
+          if (usages.length > 0 && force) {
+            logger.warn('Force-deleting credential still in use', {
+              code: 'credential_force_deleted',
+              credentialsId,
+              workspaceId,
+              userId: user.id,
+              usageCount: usages.length,
+            })
           }
 
           const deleted = await tx.credentials.deleteMany({

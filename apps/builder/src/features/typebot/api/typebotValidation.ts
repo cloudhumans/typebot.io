@@ -26,6 +26,7 @@ import {
   isConditionBlock,
   isTextBubbleBlock,
 } from '@typebot.io/schemas/helpers'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 import { z } from 'zod'
 import {
   ValidationErrorItem,
@@ -260,6 +261,57 @@ const validateTypebotLinks = async (groups: Group[]) => {
     }
   }
   return brokenLinks
+}
+
+// Flags references to a credentialsId that no longer resolves in the workspace,
+// covering the same surfaces as findCredentialsUsages: block.options.credentialsId
+// (per group) and the typebot-level whatsAppCredentialsId. No-ops without
+// workspaceId (avoids false positives). `whatsAppMissing` has no group, so it is
+// reported as a typebot-level error.
+const validateCredentials = async (
+  groups: Group[],
+  workspaceId: string | undefined,
+  whatsAppCredentialsId?: string | null
+): Promise<{ invalidGroupIds: string[]; whatsAppMissing: boolean }> => {
+  if (!workspaceId) return { invalidGroupIds: [], whatsAppMissing: false }
+
+  const refs: { groupId: string; credentialsId: string }[] = []
+  for (const group of groups) {
+    if (!hasBlocks(group)) continue
+    for (const block of group.blocks) {
+      const rawCredentialsId =
+        'options' in block && block.options && typeof block.options === 'object'
+          ? (block.options as { credentialsId?: unknown }).credentialsId
+          : undefined
+      const credentialsId = normalizeCredentialsId(
+        typeof rawCredentialsId === 'string' ? rawCredentialsId : undefined
+      )
+      if (credentialsId) refs.push({ groupId: group.id, credentialsId })
+    }
+  }
+
+  const idsToCheck = new Set(refs.map((r) => r.credentialsId))
+  if (whatsAppCredentialsId) idsToCheck.add(whatsAppCredentialsId)
+
+  if (idsToCheck.size === 0)
+    return { invalidGroupIds: [], whatsAppMissing: false }
+
+  const existing = await prisma.credentials.findMany({
+    where: { id: { in: Array.from(idsToCheck) }, workspaceId },
+    select: { id: true },
+  })
+  const existingIds = new Set(existing.map((c) => c.id))
+
+  const invalidGroupIds = new Set<string>()
+  for (const ref of refs) {
+    if (!existingIds.has(ref.credentialsId)) invalidGroupIds.add(ref.groupId)
+  }
+
+  return {
+    invalidGroupIds: Array.from(invalidGroupIds),
+    whatsAppMissing:
+      !!whatsAppCredentialsId && !existingIds.has(whatsAppCredentialsId),
+  }
 }
 
 const validateTextBeforeClaudia = (groups: Group[], edges: Edge[]) => {
@@ -641,6 +693,7 @@ const getErrorMessage = (type: string, groupTitle?: string): string => {
     missingClaudiaInFlowBranches: 'Missing ClaudIA block in flow branches',
     missingWorkflowEndInFlowBranches:
       'Missing Tool Output block in flow branches',
+    missingCredential: 'Missing credential',
   }
   const baseMessage =
     errorMessages[type as keyof typeof errorMessages] || 'Validation Error'
@@ -657,12 +710,16 @@ const validateTypebot = async ({
   edges,
   settings,
   isSecondaryFlow = false,
+  workspaceId,
+  whatsAppCredentialsId,
 }: {
   variables: Variable[]
   groups: Group[]
   edges: Edge[]
   settings?: Settings
   isSecondaryFlow?: boolean
+  workspaceId?: string
+  whatsAppCredentialsId?: string | null
 }) => {
   const safeEdges = (edges as Edge[]) || []
   const groupTitleMap = createGroupTitleMap(groups)
@@ -680,6 +737,24 @@ const validateTypebot = async ({
     groupId: b.groupId,
     message: getErrorMessage('brokenLinks', groupTitleMap.get(b.groupId)),
   }))
+
+  const { invalidGroupIds, whatsAppMissing } = await validateCredentials(
+    groups,
+    workspaceId,
+    whatsAppCredentialsId
+  )
+  const missingCredentialErrors: ValidationErrorItem[] = invalidGroupIds.map(
+    (groupId) => ({
+      type: 'missingCredential',
+      groupId,
+      message: getErrorMessage('missingCredential', groupTitleMap.get(groupId)),
+    })
+  )
+  if (whatsAppMissing)
+    missingCredentialErrors.push({
+      type: 'missingCredential',
+      message: getErrorMessage('missingCredential'),
+    })
 
   let missingTextBeforeClaudiaErrors: ValidationErrorItem[] = []
   let missingClaudiaInFlowBranchesErrors: ValidationErrorItem[] = []
@@ -734,6 +809,7 @@ const validateTypebot = async ({
   const errors = [
     ...invalidGroupsErrors,
     ...brokenLinksErrors,
+    ...missingCredentialErrors,
     ...missingTextBeforeClaudiaErrors,
     ...missingClaudiaInFlowBranchesErrors,
     ...missingTextBetweenInputBlocksErrors,
@@ -767,6 +843,8 @@ export const getTypebotValidation = publicProcedure
         edges: true,
         settings: true,
         isSecondaryFlow: true,
+        workspaceId: true,
+        whatsAppCredentialsId: true,
       },
     })) as {
       variables: Variable[]
@@ -774,6 +852,8 @@ export const getTypebotValidation = publicProcedure
       edges: Edge[]
       settings: Settings
       isSecondaryFlow: boolean
+      workspaceId: string
+      whatsAppCredentialsId: string | null
     } | null
 
     if (!typebot) {
@@ -807,6 +887,8 @@ export const postTypebotValidation = publicProcedure
           groups: z.array(groupV6Schema.or(groupV5Schema)),
           settings: settingsSchema.optional(),
           isSecondaryFlow: z.boolean().optional().default(false),
+          workspaceId: z.string().optional(),
+          whatsAppCredentialsId: z.string().nullish(),
         })
         .describe(
           'Typebot object to be validated directly (optional override)'
@@ -815,13 +897,22 @@ export const postTypebotValidation = publicProcedure
   )
   .output(responseSchema)
   .mutation(async ({ input }) => {
-    const { variables, groups, edges, settings, isSecondaryFlow } =
-      input.typebot
+    const {
+      variables,
+      groups,
+      edges,
+      settings,
+      isSecondaryFlow,
+      workspaceId,
+      whatsAppCredentialsId,
+    } = input.typebot
     return await validateTypebot({
       variables,
       groups,
       edges,
       settings,
       isSecondaryFlow,
+      workspaceId,
+      whatsAppCredentialsId,
     })
   })

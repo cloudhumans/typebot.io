@@ -21,7 +21,12 @@ import { useTranslate } from '@tolgee/react'
 
 type MinimalTypebot = Pick<
   Typebot,
-  'variables' | 'groups' | 'edges' | 'settings'
+  | 'variables'
+  | 'groups'
+  | 'edges'
+  | 'settings'
+  | 'workspaceId'
+  | 'whatsAppCredentialsId'
 >
 
 export enum RightPanel {
@@ -187,6 +192,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       groups: typebot.groups,
       edges: typebot.edges,
       settings: typebot.settings,
+      workspaceId: typebot.workspaceId,
+      whatsAppCredentialsId: typebot.whatsAppCredentialsId,
     }
     queuedValidateTypebot(minimalTypebot)
   }, [
@@ -195,6 +202,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     typebot?.groups,
     typebot?.variables,
     typebot?.settings,
+    typebot?.workspaceId,
+    typebot?.whatsAppCredentialsId,
     queuedValidateTypebot,
   ])
 
