@@ -46,6 +46,7 @@ const REMAP = {
   workspaceId: 'ws',     // -> id do workspace destino
   userId: 'user',        // -> userMap[srcUserId]
   ownerId: 'user',       // ApiToken.ownerId também é um userId
+  createdById: 'userOrNull', // Credentials.createdById: membro deduplicado tem id diferente
   typebotId: 'bot',      // -> botMap[srcBotId]
 };
 
@@ -181,6 +182,8 @@ async function insertRow(dst, table, row, ctx, jcols) {
     if (!(col in data) || data[col] == null) continue;
     if (kind === 'ws')   data[col] = ctx.dstWsId;
     if (kind === 'user') data[col] = ctx.userMap[data[col]] ?? data[col];
+    // criador não-membro não é migrado -> null (FK é ON DELETE SET NULL)
+    if (kind === 'userOrNull') data[col] = ctx.userMap[data[col]] ?? null;
     if (kind === 'bot')  data[col] = ctx.botMap[data[col]] ?? data[col];
   }
   const cols = Object.keys(data);
@@ -203,6 +206,18 @@ async function copyByFk(src, dst, table, fkCol, fkVal, ctx) {
   const jcols = await jsonbCols(dst, table);
   const rows = (await src.query(`SELECT * FROM "${table}" WHERE "${fkCol}" = $1`, [fkVal])).rows;
   for (const r of rows) await insertRow(dst, table, r, ctx, jcols);
+}
+
+// Copia as pastas (DashboardFolder) do workspace. Necessário ANTES dos Typebot:
+// Typebot.folderId referencia DashboardFolder.id. O self-ref parentFolderId não é
+// deferível -> 2 passes (insere sem pai, depois seta). Preserva o id da pasta;
+// workspaceId é remapeado p/ o destino via insertRow.
+async function copyFolders(src, dst, srcWsId, ctx) {
+  const jcols = await jsonbCols(dst, 'DashboardFolder');
+  const rows = (await src.query(`SELECT * FROM "DashboardFolder" WHERE "workspaceId"=$1`, [srcWsId])).rows;
+  for (const r of rows) await insertRow(dst, 'DashboardFolder', { ...r, parentFolderId: null }, ctx, jcols);
+  for (const r of rows) if (r.parentFolderId != null)
+    await dst.query(`UPDATE "DashboardFolder" SET "parentFolderId"=$1 WHERE id=$2`, [r.parentFolderId, r.id]);
 }
 
 // Sobrescreve o conteúdo de um bot do destino com o do src (inst2 vence),
@@ -241,6 +256,9 @@ async function applyWorkspace(src, dst, p) {
 
     // 3) MemberInWorkspace (userId remapeado, workspaceId -> destino)
     await copyByFk(src, dst, 'MemberInWorkspace', 'workspaceId', p.srcWs.id, ctx);
+
+    // 3.5) DashboardFolder (antes dos Typebot — Typebot.folderId -> DashboardFolder.id)
+    await copyFolders(src, dst, p.srcWs.id, ctx);
 
     // 4) Bots limpos: Typebot + PublicTypebot (preserva cuid, workspaceId -> destino)
     await copyByIds(src, dst, 'Typebot', 'id', p.botsClean, ctx);
