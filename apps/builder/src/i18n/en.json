@@ -530,7 +530,7 @@
   "validationErrors.flowLevel": "Flow settings",
   "validationErrors.missingClaudiaInFlowBranches.description": "All flow branches must pass through at least one ClaudIA block before ending.",
   "validationErrors.missingClaudiaInFlowBranches.title": "Missing ClaudIA block in flow branches",
-  "validationErrors.missingCredential.description": "A credential referenced here no longer exists. Select a valid credential (HTTP Request blocks can also use a custom URL) — otherwise the request will fail at runtime.",
+  "validationErrors.missingCredential.description": "A credential referenced here no longer exists. Open the flagged block (or flow settings) and select a valid credential — otherwise it will fail at runtime.",
   "validationErrors.missingCredential.title": "Missing credential",
   "validationErrors.missingWorkflowEndInFlowBranches.description": "All flow branches must pass through at least one Tool Output block before ending.",
   "validationErrors.missingWorkflowEndInFlowBranches.title": "Missing Tool Output block in flow branches",
