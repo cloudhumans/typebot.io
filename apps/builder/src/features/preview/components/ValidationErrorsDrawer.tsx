@@ -74,7 +74,14 @@ const ERROR_CONFIGS: Record<
     titleKey: 'validationErrors.missingCredential.title',
     descriptionKey: 'validationErrors.missingCredential.description',
   },
+  deprecatedCredential: {
+    titleKey: 'validationErrors.deprecatedCredential.title',
+    descriptionKey: 'validationErrors.deprecatedCredential.description',
+  },
 }
+
+// Warning-type errors render in amber and don't block publishing.
+const WARNING_ERROR_TYPES = new Set<ErrorType>(['deprecatedCredential'])
 
 type Props = {
   onClose: () => void
@@ -309,7 +316,7 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
                 {t('validationErrors.noValidationYet')}
               </Text>
             </VStack>
-          ) : validationErrors.isValid ? (
+          ) : validationErrors.errors.length === 0 ? (
             <VStack spacing={4} py={8}>
               <Icon as={AlertIcon} color={validIconColor} boxSize={12} />
               <Text
@@ -345,6 +352,11 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
                   <ValidationErrorSection
                     key={errorType}
                     errorType={errorType as ErrorType}
+                    color={
+                      WARNING_ERROR_TYPES.has(errorType as ErrorType)
+                        ? 'yellow'
+                        : 'orange'
+                    }
                     title={t(config.titleKey)}
                     allErrors={filteredErrors}
                     description={t(config.descriptionKey)}

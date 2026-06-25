@@ -33,6 +33,9 @@ type Props = {
   onClose: () => void
   usages: CredentialUsage[]
   credentialName?: string
+  // 'delete' (default): the credential can't be deleted while referenced.
+  // 'save': edits to a credential used by published flows apply in production.
+  variant?: 'delete' | 'save'
   onForceDelete?: () => void
   isForceDeleting?: boolean
 }
@@ -45,11 +48,13 @@ export const CredentialInUseModal = ({
   onClose,
   usages,
   credentialName,
+  variant = 'delete',
   onForceDelete,
   isForceDeleting,
 }: Props) => {
   const { t } = useTranslate()
   const closeRef = useRef(null)
+  const isSave = variant === 'save'
 
   return (
     <AlertDialog
@@ -61,7 +66,7 @@ export const CredentialInUseModal = ({
       <AlertDialogOverlay>
         <AlertDialogContent>
           <AlertDialogHeader fontSize="lg" fontWeight="bold">
-            {t('credentialInUse.title')}
+            {t(isSave ? 'credentialInUse.saveTitle' : 'credentialInUse.title')}
           </AlertDialogHeader>
 
           <AlertDialogBody>
@@ -74,7 +79,14 @@ export const CredentialInUseModal = ({
                 </Text>
               )}
 
-              <Text>{t('credentialInUse.body', { count: usages.length })}</Text>
+              <Text>
+                {t(
+                  isSave ? 'credentialInUse.saveBody' : 'credentialInUse.body',
+                  {
+                    count: usages.length,
+                  }
+                )}
+              </Text>
 
               <List spacing={2} maxH="40vh" overflowY="auto">
                 {usages.map((u) => (
@@ -113,13 +125,19 @@ export const CredentialInUseModal = ({
                 ))}
               </List>
 
-              <Text fontSize="sm" color="gray.600">
-                {t('credentialInUse.instructions')}
-              </Text>
+              {!isSave && (
+                <Text fontSize="sm" color="gray.600">
+                  {t('credentialInUse.instructions')}
+                </Text>
+              )}
 
               {onForceDelete && (
                 <Text fontSize="sm" color="red.500" fontWeight="medium">
-                  {t('credentialInUse.forceWarning')}
+                  {t(
+                    isSave
+                      ? 'credentialInUse.saveWarning'
+                      : 'credentialInUse.forceWarning'
+                  )}
                 </Text>
               )}
             </Stack>
@@ -131,11 +149,15 @@ export const CredentialInUseModal = ({
             </Button>
             {onForceDelete && (
               <Button
-                colorScheme="red"
+                colorScheme={isSave ? 'orange' : 'red'}
                 onClick={onForceDelete}
                 isLoading={isForceDeleting}
               >
-                {t('credentialInUse.forceDelete')}
+                {t(
+                  isSave
+                    ? 'credentialInUse.saveAnyway'
+                    : 'credentialInUse.forceDelete'
+                )}
               </Button>
             )}
           </AlertDialogFooter>
