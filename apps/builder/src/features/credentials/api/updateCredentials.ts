@@ -22,12 +22,17 @@ const normalizeEntries = (entries?: KeyValue[]): KeyValue[] =>
 // editing a secret never overwrites it with the mask. A masked row whose key has
 // no prior match (e.g. a key renamed while leaving the value untouched) cannot be
 // resolved — reject it so we never persist the literal sentinel.
+//
+// An omitted field (incoming === undefined) preserves the existing entries — a
+// partial PATCH that doesn't mention headers/queryParams must not wipe them. An
+// explicit empty array still clears them (e.g. the user removed every row).
 export const mergeMaskedSecrets = (
   incoming: KeyValue[] | undefined,
   existing: KeyValue[] | undefined
 ): KeyValue[] => {
+  if (incoming === undefined) return existing ?? []
   const priorByKey = new Map((existing ?? []).map((e) => [e.key, e.value]))
-  return (incoming ?? []).map((item) => {
+  return incoming.map((item) => {
     if (item.value !== maskedValue) return item
     const prior = priorByKey.get(item.key)
     if (prior === undefined)

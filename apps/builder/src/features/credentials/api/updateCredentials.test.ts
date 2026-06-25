@@ -68,6 +68,17 @@ describe('mergeMaskedSecrets', () => {
       mergeMaskedSecrets([{ key: 'X-New', value: maskedValue }], [])
     ).toThrow()
   })
+
+  it('preserves existing entries when the field is omitted (undefined)', () => {
+    const existing = [{ key: 'Authorization', value: 'Bearer real-token' }]
+    expect(mergeMaskedSecrets(undefined, existing)).toEqual(existing)
+  })
+
+  it('clears entries on an explicit empty array', () => {
+    expect(
+      mergeMaskedSecrets([], [{ key: 'Authorization', value: 'x' }])
+    ).toEqual([])
+  })
 })
 
 describe('updateCredentials', () => {
