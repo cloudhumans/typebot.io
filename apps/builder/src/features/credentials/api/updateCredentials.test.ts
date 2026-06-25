@@ -9,7 +9,7 @@ import { findCredentialsUsages } from '@typebot.io/lib/credentials/findCredentia
 import { isWriteWorkspaceForbidden } from '@/features/workspace/helpers/isWriteWorkspaceForbidden'
 import { isAdminWriteWorkspaceForbidden } from '@/features/workspace/helpers/isAdminWriteWorkspaceForbidden'
 
-const txUpdate = vi.fn()
+const txUpdate = vi.fn(() => ({ count: 1 }))
 
 vi.mock('@typebot.io/lib/prisma', () => ({
   default: {
@@ -171,6 +171,13 @@ describe('updateCredentials', () => {
         headers: [{ key: 'Authorization', value: 'Bearer real-token' }],
       })
     )
+  })
+
+  it('throws NOT_FOUND when the row is gone by the time it updates', async () => {
+    txUpdate.mockReturnValueOnce({ count: 0 })
+    await expect(call({ name: 'New name' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    })
   })
 
   it('does not consult published-flow guard for a deprecation-only edit', async () => {

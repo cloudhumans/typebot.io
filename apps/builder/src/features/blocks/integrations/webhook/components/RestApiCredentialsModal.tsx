@@ -182,6 +182,12 @@ export const RestApiCredentialsModal = ({
 
   const isBaseUrlInvalid = baseUrl.trim() !== '' && !isSafeBaseUrl(baseUrl)
 
+  const buildData = () => ({
+    baseUrl: baseUrl.trim(),
+    headers: toDataEntries(headers),
+    queryParams: toDataEntries(queryParams),
+  })
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!workspace) return
@@ -194,11 +200,7 @@ export const RestApiCredentialsModal = ({
       })
       return
     }
-    const data = {
-      baseUrl: baseUrl.trim(),
-      headers: toDataEntries(headers),
-      queryParams: toDataEntries(queryParams),
-    }
+    const data = buildData()
     if (isEditing) {
       updateMutation.mutate({
         credentialsId: editingCredentialsId as string,
@@ -229,11 +231,7 @@ export const RestApiCredentialsModal = ({
       credentialsId: editingCredentialsId,
       workspaceId: workspace.id,
       name,
-      data: {
-        baseUrl: baseUrl.trim(),
-        headers: toDataEntries(headers),
-        queryParams: toDataEntries(queryParams),
-      },
+      data: buildData(),
       deprecated,
       confirmed: true,
     })

@@ -187,7 +187,7 @@ export const updateCredentials = authenticatedProcedure
           // updateMany (not update) so the mutation stays workspace-scoped —
           // defense-in-depth matching deleteCredentials, even though the
           // findFirst above already confirmed ownership.
-          await tx.credentials.updateMany({
+          const updated = await tx.credentials.updateMany({
             where: { id: credentialsId, workspaceId },
             data: {
               ...(name !== undefined ? { name } : {}),
@@ -197,6 +197,13 @@ export const updateCredentials = authenticatedProcedure
               ...(deprecatedAt !== undefined ? { deprecatedAt } : {}),
             },
           })
+          // Concurrent delete between the ownership check and here updates no
+          // row; surface it rather than reporting a phantom success.
+          if (updated.count === 0)
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Credentials not found',
+            })
 
           if (deprecationChanged)
             logger.warn(
