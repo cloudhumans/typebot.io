@@ -13,19 +13,19 @@
 
 ---
 
-## Status (updated 2026-06-10)
+## Status (updated 2026-06-25 — ✅ COMPLETE)
 
 | Task | Status |
 |------|--------|
 | 1. Validate `DISABLE_SIGNUP` gate | ✅ Done — script + real Google-login E2E |
-| 2. Set `DISABLE_SIGNUP=true` in prod env | ✅ Merged — [typebot.io-manifests#80](https://github.com/cloudhumans/typebot.io-manifests/pull/80) · confirm ArgoCD deploy before External |
-| 3. Prep assets in parallel (Block A — can start now) | ⏳ Pending — domain verify · public homepage + privacy policy · consent-screen branding |
-| 4. GCP → External + In Production | ⏳ Pending (manual console) — after PR #80 lands |
-| 5. Demo video + submit verification | ⏳ Pending — Sheets read/write already validated locally |
+| 2. Set `DISABLE_SIGNUP=true` in prod env | ✅ Done — [typebot.io-manifests#80](https://github.com/cloudhumans/typebot.io-manifests/pull/80) merged + deployed (ArgoCD synced, pod restarted, `DISABLE_SIGNUP=true` live) |
+| 3. Prep assets (domain · homepage/privacy · branding) | ✅ Done — domain verified · public homepage + privacy policy live · consent-screen branding set |
+| 4. GCP → External + In Production | ✅ Done — consent screen set to External and published (In Production) |
+| 5. Demo video + submit verification | ✅ Done — demo video recorded and verification submitted with scope justifications |
 
-Branch: `feat/gcp-oauth-external-migration`.
+Branch: `feat/gcp-oauth-external-migration` (merged via PR [#222](https://github.com/cloudhumans/typebot.io/pull/222), squash, 2026-06-25).
 
-**Sequencing:** Block A (Task 3 — domain, homepage/privacy, branding) is independent of publishing status and can be done **now, in parallel**, with zero impact on the running Internal app. It's the slow part (Google review), so start early. Flipping to External (Task 4) is gated only on PR #80 being deployed.
+**Outcome:** `DISABLE_SIGNUP=true` was confirmed live in prod before flipping to External, so public Google OAuth signup is locked while the consent screen is open. App is now External + In Production; verification submitted for the sensitive `spreadsheets` scope.
 
 ---
 
@@ -108,23 +108,23 @@ These were established while validating locally and drive the task details below
 
 ### Task 2: GCP OAuth Consent Screen Transition (Console Steps)
 
-- [ ] **Step 1: Set production environment variable (the "DISABLE_SIGNUP PR")** — 🔄 merged, deploy pending
+- [x] **Step 1: Set production environment variable (the "DISABLE_SIGNUP PR")** — ✅ done
   Env/config change, **not code** (see Key findings). PR [typebot.io-manifests#80](https://github.com/cloudhumans/typebot.io-manifests/pull/80) adds `DISABLE_SIGNUP: 'true'` to `deploy-k8s/base/typebot-builder-configmap.yaml`, inherited by both instances (`eddie` + `eddie2`). `ADMIN_EMAIL` intentionally left unset (most restrictive; all need invite).
   - [x] Merge PR #80. ✅ (2026-06-11)
-  - [ ] Confirm deploy: ArgoCD sync + builder pod restart (env is read at boot, not hot-reloaded), then verify `DISABLE_SIGNUP=true` is live in the running pod.
-  - ⚠️ Must be deployed **before** publishing the app as External, so external signup is locked the instant the consent screen opens up.
+  - [x] Confirm deploy: ArgoCD sync + builder pod restart (env is read at boot, not hot-reloaded), then verify `DISABLE_SIGNUP=true` is live in the running pod. ✅
+  - ⚠️ Deployed **before** publishing the app as External, so external signup was locked the instant the consent screen opened up.
 
 - [x] **Step 2: OAuth redirect URIs — no action needed**
   Redirect URIs belong to the OAuth client and are independent of publishing status. The app runs in Internal today, so the prod URIs (`${NEXTAUTH_URL}/api/auth/callback/google` and `${NEXTAUTH_URL}/api/credentials/google-sheets/callback`) are already registered. Going External does not change them.
 
-- [ ] **Step 3: Transition GCP User Type to External**
+- [x] **Step 3: Transition GCP User Type to External** ✅
   1. Open the [Google Cloud Console](https://console.cloud.google.com/).
   2. **APIs & Services** > **OAuth Consent Screen** > **Edit App**.
   3. Set User Type to **External**.
   4. Fill in App Name, User Support Email, Developer Contact Information.
   5. Save and Continue.
 
-- [ ] **Step 4: Push OAuth Consent Screen to In Production**
+- [x] **Step 4: Push OAuth Consent Screen to In Production** ✅
   1. Under the OAuth Consent Screen dashboard, locate **Publishing status**.
   2. Click **Publish App**.
   3. Accept the warning that the app becomes available to any Google user (shows "Unverified App" until verified). Existing users/tokens are not disconnected.
@@ -133,15 +133,15 @@ These were established while validating locally and drive the task details below
 
 ### Task 3: Setup Verification Assets
 
-- [ ] **Step 1: Verify Domain Ownership**
+- [x] **Step 1: Verify Domain Ownership** ✅
   Ensure the domain used for authorization (e.g. `cloudhumans.com` or `cloudhumans.io`) is verified in the Google Search Console of the GCP account owner. Note: the builder runs on `eddie.us-east-1.prd.cloudhumans.io` (`.io`) while the brand domain is likely `cloudhumans.com` — both (or a standardized homepage + privacy + redirect on one domain) must be verified. This is usually the highest-friction step.
 
-- [ ] **Step 2: Host Privacy Policy and Public Homepage**
+- [x] **Step 2: Host Privacy Policy and Public Homepage** ✅
   On the verified domain, publicly accessible (no login):
   - Homepage: describes the integration/app purpose.
   - Privacy Policy: compliant with the Google API Services User Data Policy (incl. Limited Use), explaining how `spreadsheets` and `drive.file` scope data is accessed/stored/processed.
 
-- [ ] **Step 3: Record Demo Video**
+- [x] **Step 3: Record Demo Video** ✅
   Unlisted YouTube video showing the authorization flow. Must show:
   1. The user initiating the OAuth flow from Typebot.
   2. The Google OAuth Consent Screen with the **Client ID** clearly visible in the browser URL bar.
@@ -153,10 +153,10 @@ These were established while validating locally and drive the task details below
 
 ### Task 4: Submit Verification Request on GCP Console
 
-- [ ] **Step 1: Justification for Scopes**
+- [x] **Step 1: Justification for Scopes** ✅
   In the GCP Consent Screen "Data access" workflow, add justifications. Note: only `spreadsheets` is **sensitive** and drives verification; `drive.file` is non-sensitive. Justifications match the actual UX — selection is done via the **Google Drive Picker** (`GoogleSpreadsheetPicker.tsx`, loads `gapi`/`picker`), so the app only touches files the user explicitly picks.
   - `https://www.googleapis.com/auth/spreadsheets` *(sensitive)*: "The Google Sheets block reads and writes cell/row data in the spreadsheet the user connects. The Sheets API has no per-file scope, so this broad scope is required to operate on the user-selected sheet."
   - `https://www.googleapis.com/auth/drive.file` *(non-sensitive)*: "Used with the Google Drive Picker so the user explicitly selects which spreadsheet to connect, and to create new spreadsheets on the user's behalf. Grants per-file access only — never the user's full Drive."
 
-- [ ] **Step 2: Submit to Verification Center**
+- [x] **Step 2: Submit to Verification Center** ✅
   Provide links to the demo video, privacy policy, and homepage, and submit for verification. After approval, the unverified-app warning disappears and sensitive-scope refresh tokens stop expiring at 7 days.
