@@ -1,6 +1,7 @@
 import { publicProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import prisma from '@typebot.io/lib/prisma'
+import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
 import {
   Block,
   Edge,
@@ -908,16 +909,19 @@ export const postTypebotValidation = publicProcedure
     } = input.typebot
 
     // Credential existence is workspace-scoped data. This is a public procedure,
-    // so only run that check for an authenticated member of the workspace —
+    // so only run that check for a user with read access to the workspace —
     // otherwise skip it (validateCredentials no-ops without a workspaceId) so the
     // endpoint can't be used as a cross-workspace credential-existence oracle.
+    // Uses the shared access helper so Cognito/admin users (who may lack a
+    // memberInWorkspace row) aren't wrongly excluded.
     let scopedWorkspaceId: string | undefined
-    if (workspaceId && ctx.user?.id) {
-      const membership = await prisma.memberInWorkspace.findFirst({
-        where: { workspaceId, userId: ctx.user.id },
-        select: { workspaceId: true },
+    if (workspaceId && ctx.user) {
+      const workspace = await prisma.workspace.findFirst({
+        where: { id: workspaceId },
+        select: { id: true, members: { select: { userId: true } } },
       })
-      if (membership) scopedWorkspaceId = workspaceId
+      if (workspace && !isReadWorkspaceFobidden(workspace, ctx.user))
+        scopedWorkspaceId = workspaceId
     }
 
     return await validateTypebot({
