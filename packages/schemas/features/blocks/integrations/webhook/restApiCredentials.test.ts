@@ -8,6 +8,7 @@ const baseFields = {
   name: 'My API',
   iv: 'iv',
   createdById: 'user-1',
+  deprecatedAt: null,
   type: 'rest-api' as const,
 }
 

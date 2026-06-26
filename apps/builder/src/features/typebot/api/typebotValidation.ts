@@ -273,8 +273,19 @@ const validateCredentials = async (
   groups: Group[],
   workspaceId: string | undefined,
   whatsAppCredentialsId?: string | null
-): Promise<{ invalidGroupIds: string[]; whatsAppMissing: boolean }> => {
-  if (!workspaceId) return { invalidGroupIds: [], whatsAppMissing: false }
+): Promise<{
+  invalidGroupIds: string[]
+  whatsAppMissing: boolean
+  deprecatedGroupIds: string[]
+  whatsAppDeprecated: boolean
+}> => {
+  if (!workspaceId)
+    return {
+      invalidGroupIds: [],
+      whatsAppMissing: false,
+      deprecatedGroupIds: [],
+      whatsAppDeprecated: false,
+    }
 
   const refs: { groupId: string; credentialsId: string }[] = []
   for (const group of groups) {
@@ -295,23 +306,39 @@ const validateCredentials = async (
   if (whatsAppCredentialsId) idsToCheck.add(whatsAppCredentialsId)
 
   if (idsToCheck.size === 0)
-    return { invalidGroupIds: [], whatsAppMissing: false }
+    return {
+      invalidGroupIds: [],
+      whatsAppMissing: false,
+      deprecatedGroupIds: [],
+      whatsAppDeprecated: false,
+    }
 
   const existing = await prisma.credentials.findMany({
     where: { id: { in: Array.from(idsToCheck) }, workspaceId },
-    select: { id: true },
+    select: { id: true, deprecatedAt: true },
   })
   const existingIds = new Set(existing.map((c) => c.id))
+  const deprecatedIds = new Set(
+    existing.filter((c) => c.deprecatedAt !== null).map((c) => c.id)
+  )
 
   const invalidGroupIds = new Set<string>()
+  const deprecatedGroupIds = new Set<string>()
   for (const ref of refs) {
     if (!existingIds.has(ref.credentialsId)) invalidGroupIds.add(ref.groupId)
+    // A deprecated credential still resolves; flag it as a non-blocking warning
+    // (missing takes precedence, so don't double-warn an unresolved ref).
+    else if (deprecatedIds.has(ref.credentialsId))
+      deprecatedGroupIds.add(ref.groupId)
   }
 
   return {
     invalidGroupIds: Array.from(invalidGroupIds),
     whatsAppMissing:
       !!whatsAppCredentialsId && !existingIds.has(whatsAppCredentialsId),
+    deprecatedGroupIds: Array.from(deprecatedGroupIds),
+    whatsAppDeprecated:
+      !!whatsAppCredentialsId && deprecatedIds.has(whatsAppCredentialsId),
   }
 }
 
@@ -695,6 +722,7 @@ const getErrorMessage = (type: string, groupTitle?: string): string => {
     missingWorkflowEndInFlowBranches:
       'Missing Tool Output block in flow branches',
     missingCredential: 'Missing credential',
+    deprecatedCredential: 'Deprecated credential',
   }
   const baseMessage =
     errorMessages[type as keyof typeof errorMessages] || 'Validation Error'
@@ -739,11 +767,12 @@ const validateTypebot = async ({
     message: getErrorMessage('brokenLinks', groupTitleMap.get(b.groupId)),
   }))
 
-  const { invalidGroupIds, whatsAppMissing } = await validateCredentials(
-    groups,
-    workspaceId,
-    whatsAppCredentialsId
-  )
+  const {
+    invalidGroupIds,
+    whatsAppMissing,
+    deprecatedGroupIds,
+    whatsAppDeprecated,
+  } = await validateCredentials(groups, workspaceId, whatsAppCredentialsId)
   const missingCredentialErrors: ValidationErrorItem[] = invalidGroupIds.map(
     (groupId) => ({
       type: 'missingCredential',
@@ -755,6 +784,25 @@ const validateTypebot = async ({
     missingCredentialErrors.push({
       type: 'missingCredential',
       message: getErrorMessage('missingCredential'),
+    })
+
+  // Deprecated credentials still resolve at runtime, so they are warnings, not
+  // blocking errors — they surface in the UI but never flip `isValid`.
+  const deprecatedCredentialErrors: ValidationErrorItem[] =
+    deprecatedGroupIds.map((groupId) => ({
+      type: 'deprecatedCredential',
+      severity: 'warning',
+      groupId,
+      message: getErrorMessage(
+        'deprecatedCredential',
+        groupTitleMap.get(groupId)
+      ),
+    }))
+  if (whatsAppDeprecated)
+    deprecatedCredentialErrors.push({
+      type: 'deprecatedCredential',
+      severity: 'warning',
+      message: getErrorMessage('deprecatedCredential'),
     })
 
   let missingTextBeforeClaudiaErrors: ValidationErrorItem[] = []
@@ -811,11 +859,15 @@ const validateTypebot = async ({
     ...invalidGroupsErrors,
     ...brokenLinksErrors,
     ...missingCredentialErrors,
+    ...deprecatedCredentialErrors,
     ...missingTextBeforeClaudiaErrors,
     ...missingClaudiaInFlowBranchesErrors,
     ...missingTextBetweenInputBlocksErrors,
   ]
-  return { isValid: errors.length === 0, errors }
+  // Only blocking 'error' severity flips validity — 'warning' items (e.g.
+  // deprecated credentials) surface in the UI but never block publishing.
+  const isValid = !errors.some((e) => (e.severity ?? 'error') === 'error')
+  return { isValid, errors }
 }
 
 export const getTypebotValidation = publicProcedure

@@ -21,6 +21,7 @@ export const getRestApiCredential = authenticatedProcedure
       baseUrl: z.string(),
       headers: z.array(z.object({ key: z.string(), value: z.string() })),
       queryParams: z.array(z.object({ key: z.string(), value: z.string() })),
+      deprecatedAt: z.date().nullable(),
     })
   )
   .query(async ({ input: { workspaceId, credentialsId }, ctx: { user } }) => {
@@ -70,5 +71,6 @@ export const getRestApiCredential = authenticatedProcedure
         key: q.key,
         value: maskedValue,
       })),
+      deprecatedAt: credential.deprecatedAt,
     }
   })

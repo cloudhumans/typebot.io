@@ -17,4 +17,5 @@ export const credentialsBaseSchema = z.object({
   name: z.string(),
   iv: z.string(),
   createdById: z.string().nullable(),
+  deprecatedAt: z.date().nullable(),
 }) satisfies z.ZodType<Omit<CredentialsFromPrisma, 'data' | 'type'>>

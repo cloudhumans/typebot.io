@@ -133,15 +133,21 @@ const ValidationErrorsButton = () => {
 
     const isSecondaryFlow = typebot?.isSecondaryFlow ?? false
 
+    // The red badge reflects blocking errors only; 'warning' items (e.g.
+    // deprecated credentials) are surfaced in the drawer / group icon instead.
+    const blockingErrors = validationErrors.errors.filter(
+      (error) => (error.severity ?? 'error') === 'error'
+    )
+
     if (isSecondaryFlow) {
-      return validationErrors.errors.filter(
+      return blockingErrors.filter(
         (error) =>
           error.type !== 'missingTextBeforeClaudia' &&
           error.type !== 'missingClaudiaInFlowBranches'
       ).length
     }
 
-    return validationErrors.errors.length
+    return blockingErrors.length
   }
 
   const totalErrors = getTotalErrorCount()
