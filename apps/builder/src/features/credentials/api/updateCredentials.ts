@@ -184,26 +184,32 @@ export const updateCredentials = authenticatedProcedure
 
           const encrypted = mergedData ? await encrypt(mergedData) : undefined
 
-          // updateMany (not update) so the mutation stays workspace-scoped —
-          // defense-in-depth matching deleteCredentials, even though the
-          // findFirst above already confirmed ownership.
-          const updated = await tx.credentials.updateMany({
-            where: { id: credentialsId, workspaceId },
-            data: {
-              ...(name !== undefined ? { name } : {}),
-              ...(encrypted
-                ? { data: encrypted.encryptedData, iv: encrypted.iv }
-                : {}),
-              ...(deprecatedAt !== undefined ? { deprecatedAt } : {}),
-            },
-          })
-          // Concurrent delete between the ownership check and here updates no
-          // row; surface it rather than reporting a phantom success.
-          if (updated.count === 0)
-            throw new TRPCError({
-              code: 'NOT_FOUND',
-              message: 'Credentials not found',
+          const updateData = {
+            ...(name !== undefined ? { name } : {}),
+            ...(encrypted
+              ? { data: encrypted.encryptedData, iv: encrypted.iv }
+              : {}),
+            ...(deprecatedAt !== undefined ? { deprecatedAt } : {}),
+          }
+
+          // A no-op PATCH (only ids, nothing to change) would make Prisma reject
+          // an empty `data`; skip the write — ownership was already confirmed.
+          if (Object.keys(updateData).length > 0) {
+            // updateMany (not update) so the mutation stays workspace-scoped —
+            // defense-in-depth matching deleteCredentials, even though the
+            // findFirst above already confirmed ownership.
+            const updated = await tx.credentials.updateMany({
+              where: { id: credentialsId, workspaceId },
+              data: updateData,
             })
+            // Concurrent delete between the ownership check and here updates no
+            // row; surface it rather than reporting a phantom success.
+            if (updated.count === 0)
+              throw new TRPCError({
+                code: 'NOT_FOUND',
+                message: 'Credentials not found',
+              })
+          }
 
           if (deprecationChanged)
             logger.warn(

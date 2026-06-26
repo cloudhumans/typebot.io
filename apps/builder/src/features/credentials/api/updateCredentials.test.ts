@@ -180,6 +180,11 @@ describe('updateCredentials', () => {
     })
   })
 
+  it('treats a no-op PATCH (no fields) as a success without touching the row', async () => {
+    await expect(call({})).resolves.toEqual({ credentialsId: 'cred-1' })
+    expect(txUpdate).not.toHaveBeenCalled()
+  })
+
   it('does not consult published-flow guard for a deprecation-only edit', async () => {
     vi.mocked(findCredentialsUsages).mockResolvedValue([
       {
