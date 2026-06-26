@@ -30,9 +30,15 @@ const APPLY = process.argv.includes('--apply');
 const SURE = process.argv.includes('--i-am-sure');
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').split('=')[1]; // ex: --only=getrak
 
-// ---- Workspaces a migrar e override de destino (quando canon é ambíguo) ----
+// ---- Workspaces a migrar ----
+// dstOverride: força um workspace destino existente (merge) quando canon é ambíguo.
+// createAs:    traz a origem AS-IS num workspace NOVO com esse nome (preserva o cuid
+//              da origem). Evita colisão de nome no destino e dá rollback trivial
+//              (apaga o workspace + reverte eddieInstance/eddieProjectName). Os bots
+//              do destino que colidem em publicId são despublicados (publicId é unique
+//              global) — a origem vence as-is.
 const TARGETS = [
-  { src: 'shopee',          dstOverride: 'cm6pjhh1d00ixmc8qv2c69w9b' }, // Shopee (maiúsculo, conversa)
+  { src: 'shopee',          createAs: 'shopee-prod' }, // as-is; inst1 tem Shopee+shopee (colisão de nome)
   { src: 'getrak',          dstOverride: null },
   { src: 'getrakteste',     dstOverride: null },
   { src: 'claudia_project', dstOverride: null },
@@ -101,7 +107,9 @@ async function buildPlan(src, dst, target, srcWss, dstWss) {
 
   // destino
   let dest;
-  if (target.dstOverride) {
+  if (target.createAs) {
+    dest = { mode: 'create', id: srcWs.id, name: target.createAs, note: 'as-is, workspace novo' };
+  } else if (target.dstOverride) {
     const w = dstWss.find(w => w.id === target.dstOverride);
     if (!w) throw new Error(`dstOverride ${target.dstOverride} não existe na inst1`);
     dest = { mode: 'merge', id: w.id, name: w.name, note: 'override (canon ambíguo)' };
@@ -139,34 +147,56 @@ async function buildPlan(src, dst, target, srcWss, dstWss) {
 
   const botMap = {};
   const botsClean = [], botsOverwrite = [], botsSkip = [], conflictLog = [];
-  for (const b of srcBots) {
-    const d = dstByPid[b.pid];
-    if (!d) { botsClean.push(b.id); botMap[b.id] = b.id; continue; }   // sem colisão: copia preservando cuid
-    if (b.h === d.h) { botsSkip.push({ srcId: b.id, dstId: d.id }); botMap[b.id] = d.id; conflictLog.push({ pid: b.pid, action: 'no-op (idêntico)' }); continue; }
-    const tSrc = await traffic(src, b.id);
-    const tDst = await traffic(dst, d.id);
-    let winner;
-    if (tSrc > 0 && tDst === 0) winner = 'inst2';
-    else if (tDst > 0 && tSrc === 0) winner = 'inst1';
-    else winner = new Date(b.upd) >= new Date(d.upd) ? 'inst2' : 'inst1';
-    if (winner === 'inst2') { botsOverwrite.push({ srcId: b.id, dstId: d.id }); botMap[b.id] = d.id; }
-    else { botsSkip.push({ srcId: b.id, dstId: d.id }); botMap[b.id] = d.id; }   // inst1 vence: usa o do destino
-    conflictLog.push({ pid: b.pid, winner, trafficSrc: tSrc, trafficDst: tDst,
-      action: winner === 'inst2' ? 'SOBRESCREVE destino' : 'mantém destino (inst1)' });
+  const freePublicIds = [];   // (createAs) bots do destino cujo publicId será liberado (despublicado)
+
+  if (target.createAs) {
+    // AS-IS: copia TODOS os bots da origem (inclui rascunhos), preservando cuid.
+    const allIds = (await src.query(`SELECT id FROM "Typebot" WHERE "workspaceId"=$1`, [srcWs.id])).rows.map(r => r.id);
+    for (const id of allIds) { botsClean.push(id); botMap[id] = id; }
+    // bots publicados do destino que colidem em publicId -> despublicar (origem vence as-is)
+    for (const b of srcBots) {
+      const d = dstByPid[b.pid];
+      if (d) freePublicIds.push({ id: d.id, pid: b.pid, trafficDst: await traffic(dst, d.id) });
+    }
+  } else {
+    for (const b of srcBots) {
+      const d = dstByPid[b.pid];
+      if (!d) { botsClean.push(b.id); botMap[b.id] = b.id; continue; }   // sem colisão: copia preservando cuid
+      if (b.h === d.h) { botsSkip.push({ srcId: b.id, dstId: d.id }); botMap[b.id] = d.id; conflictLog.push({ pid: b.pid, action: 'no-op (idêntico)' }); continue; }
+      const tSrc = await traffic(src, b.id);
+      const tDst = await traffic(dst, d.id);
+      let winner;
+      if (tSrc > 0 && tDst === 0) winner = 'inst2';
+      else if (tDst > 0 && tSrc === 0) winner = 'inst1';
+      else winner = new Date(b.upd) >= new Date(d.upd) ? 'inst2' : 'inst1';
+      if (winner === 'inst2') { botsOverwrite.push({ srcId: b.id, dstId: d.id }); botMap[b.id] = d.id; }
+      else { botsSkip.push({ srcId: b.id, dstId: d.id }); botMap[b.id] = d.id; }   // inst1 vence: usa o do destino
+      conflictLog.push({ pid: b.pid, winner, trafficSrc: tSrc, trafficDst: tDst,
+        action: winner === 'inst2' ? 'SOBRESCREVE destino' : 'mantém destino (inst1)' });
+    }
   }
 
   return { target, srcWs, dest, members, usersReuse, usersCreate, userMap,
-           srcBots, botsClean, botsOverwrite, botsSkip, botMap, conflictLog };
+           srcBots, botsClean, botsOverwrite, botsSkip, botMap, conflictLog, freePublicIds };
 }
 
 function printPlan(p) {
   console.log(`\n========== ${p.target.src}  (origem ws ${p.srcWs.id}) ==========`);
   console.log(`  DESTINO: ${p.dest.mode.toUpperCase()} -> "${p.dest.name}" (${p.dest.id})${p.dest.note ? '  [' + p.dest.note + ']' : ''}`);
   console.log(`  USERS:   ${p.members.length} members  ->  reusa ${p.usersReuse.length} existentes, cria ${p.usersCreate.length} novos (+ Account/Session)`);
-  console.log(`  BOTS:    ${p.srcBots.length} com publicId  ->  ${p.botsClean.length} limpos, ${p.botsOverwrite.length} sobrescreve, ${p.botsSkip.length} skip`);
-  for (const c of p.conflictLog) {
-    const extra = c.winner ? `  [tráfego src=${c.trafficSrc} dst=${c.trafficDst} (res/30d) -> vence ${c.winner}]` : '';
-    console.log(`     - ${c.pid.padEnd(46)} ${c.action}${extra}`);
+  if (p.target.createAs) {
+    console.log(`  BOTS:    ${p.botsClean.length} copiados as-is (todos), ${p.srcBots.length} publicados`);
+    if (p.freePublicIds.length) {
+      console.log(`  LIBERA:  despublica ${p.freePublicIds.length} bot(s) do destino que colidem em publicId:`);
+      for (const f of p.freePublicIds)
+        console.log(`     - ${f.pid.padEnd(46)} despublica dst ${f.id}  [tráfego dst=${f.trafficDst} res/30d]`);
+    }
+  } else {
+    console.log(`  BOTS:    ${p.srcBots.length} com publicId  ->  ${p.botsClean.length} limpos, ${p.botsOverwrite.length} sobrescreve, ${p.botsSkip.length} skip`);
+    for (const c of p.conflictLog) {
+      const extra = c.winner ? `  [tráfego src=${c.trafficSrc} dst=${c.trafficDst} (res/30d) -> vence ${c.winner}]` : '';
+      console.log(`     - ${c.pid.padEnd(46)} ${c.action}${extra}`);
+    }
   }
 }
 
@@ -242,9 +272,21 @@ async function applyWorkspace(src, dst, p) {
   const ctx = { dstWsId: p.dest.id, userMap: p.userMap, botMap: p.botMap };
   await dst.query('BEGIN');
   try {
-    // 1) Workspace (só no create — preserva cuid)
-    if (p.dest.mode === 'create')
+    // 0) (createAs) libera os publicId colididos: despublica os bots do destino
+    //    (publicId -> NULL + remove PublicTypebot). Roda ANTES de copiar os bots limpos,
+    //    que reusam esses publicId. publicId é unique global.
+    if (p.freePublicIds && p.freePublicIds.length) {
+      const ids = p.freePublicIds.map(f => f.id);
+      await dst.query(`DELETE FROM "PublicTypebot" WHERE "typebotId" = ANY($1)`, [ids]);
+      await dst.query(`UPDATE "Typebot" SET "publicId" = NULL WHERE id = ANY($1)`, [ids]);
+    }
+
+    // 1) Workspace (só no create — preserva cuid; renomeia se createAs)
+    if (p.dest.mode === 'create') {
       await copyByIds(src, dst, 'Workspace', 'id', [p.srcWs.id], ctx);
+      if (p.target.createAs)
+        await dst.query(`UPDATE "Workspace" SET name=$1 WHERE id=$2`, [p.target.createAs, p.dest.id]);
+    }
 
     // 2) Users novos + Account + Session (reusados já existem; não tocar)
     const newUserIds = p.usersCreate.map(u => u.id);
@@ -273,7 +315,8 @@ async function applyWorkspace(src, dst, p) {
     await copyByFk(src, dst, 'Credentials', 'workspaceId', p.srcWs.id, ctx);
 
     // 7) Collaborators dos bots (userId + typebotId remapeados)
-    const allBotSrcIds = p.srcBots.map(b => b.id);
+    //    createAs copia todos os bots (botsClean); merge usa os publicados (srcBots).
+    const allBotSrcIds = p.target.createAs ? p.botsClean : p.srcBots.map(b => b.id);
     if (allBotSrcIds.length)
       await copyByIds(src, dst, 'CollaboratorsOnTypebots', 'typebotId', allBotSrcIds, ctx);
 
