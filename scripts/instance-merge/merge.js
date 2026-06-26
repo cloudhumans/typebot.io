@@ -39,7 +39,8 @@ const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').split('=')[
 //              global) — a origem vence as-is.
 const TARGETS = [
   { src: 'shopee',          createAs: 'shopee-prod' }, // as-is; inst1 tem Shopee+shopee (colisão de nome)
-  { src: 'getrak',          dstOverride: null },
+  { src: 'getrak',          createAs: 'getrak-prod' }, // as-is; uniformidade + mata a pendência dos zumbis
+
   { src: 'getrakteste',     dstOverride: null },
   { src: 'claudia_project', dstOverride: null },
 ];
