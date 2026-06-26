@@ -177,8 +177,16 @@ async function buildPlan(src, dst, target, srcWss, dstWss) {
     }
   }
 
+  // Rascunhos (publicId NULL) entram sempre limpos — sem publicId não colidem.
+  // No createAs já vieram (allIds inclui tudo); aqui cobre merge/create.
+  let draftsCopied = 0;
+  if (!target.createAs) {
+    const draftIds = (await src.query(`SELECT id FROM "Typebot" WHERE "workspaceId"=$1 AND "publicId" IS NULL`, [srcWs.id])).rows.map(r => r.id);
+    for (const id of draftIds) { botsClean.push(id); botMap[id] = id; draftsCopied++; }
+  }
+
   return { target, srcWs, dest, members, usersReuse, usersCreate, userMap,
-           srcBots, botsClean, botsOverwrite, botsSkip, botMap, conflictLog, freePublicIds };
+           srcBots, botsClean, botsOverwrite, botsSkip, botMap, conflictLog, freePublicIds, draftsCopied };
 }
 
 function printPlan(p) {
@@ -193,7 +201,7 @@ function printPlan(p) {
         console.log(`     - ${f.pid.padEnd(46)} despublica dst ${f.id}  [tráfego dst=${f.trafficDst} res/30d]`);
     }
   } else {
-    console.log(`  BOTS:    ${p.srcBots.length} com publicId  ->  ${p.botsClean.length} limpos, ${p.botsOverwrite.length} sobrescreve, ${p.botsSkip.length} skip`);
+    console.log(`  BOTS:    ${p.srcBots.length} com publicId  ->  ${p.botsClean.length - p.draftsCopied} limpos + ${p.draftsCopied} rascunhos, ${p.botsOverwrite.length} sobrescreve, ${p.botsSkip.length} skip`);
     for (const c of p.conflictLog) {
       const extra = c.winner ? `  [tráfego src=${c.trafficSrc} dst=${c.trafficDst} (res/30d) -> vence ${c.winner}]` : '';
       console.log(`     - ${c.pid.padEnd(46)} ${c.action}${extra}`);
@@ -315,9 +323,9 @@ async function applyWorkspace(src, dst, p) {
     // 6) Credentials do workspace (descriptografam — mesmo ENCRYPTION_SECRET)
     await copyByFk(src, dst, 'Credentials', 'workspaceId', p.srcWs.id, ctx);
 
-    // 7) Collaborators dos bots (userId + typebotId remapeados)
-    //    createAs copia todos os bots (botsClean); merge usa os publicados (srcBots).
-    const allBotSrcIds = p.target.createAs ? p.botsClean : p.srcBots.map(b => b.id);
+    // 7) Collaborators dos bots (userId + typebotId remapeados) — cobre todos os
+    //    bots copiados (limpos + rascunhos + overwrite/skip), em qualquer modo.
+    const allBotSrcIds = [...new Set([...p.botsClean, ...p.botsOverwrite.map(x => x.srcId), ...p.botsSkip.map(x => x.srcId)])];
     if (allBotSrcIds.length)
       await copyByIds(src, dst, 'CollaboratorsOnTypebots', 'typebotId', allBotSrcIds, ctx);
 
