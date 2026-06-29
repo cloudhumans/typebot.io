@@ -74,7 +74,14 @@ const ERROR_CONFIGS: Record<
     titleKey: 'validationErrors.missingCredential.title',
     descriptionKey: 'validationErrors.missingCredential.description',
   },
+  deprecatedCredential: {
+    titleKey: 'validationErrors.deprecatedCredential.title',
+    descriptionKey: 'validationErrors.deprecatedCredential.description',
+  },
 }
+
+// Warning-type errors render in amber and don't block publishing.
+const WARNING_ERROR_TYPES = new Set<ErrorType>(['deprecatedCredential'])
 
 type Props = {
   onClose: () => void
@@ -150,15 +157,21 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
   ): number => {
     if (!validationErrors) return 0
 
+    // Count blocking errors only; non-blocking warnings (e.g. deprecated
+    // credentials) render in their own section but don't inflate the red count.
+    const blockingErrors = validationErrors.errors.filter(
+      (error) => (error.severity ?? 'error') === 'error'
+    )
+
     if (isSecondaryFlow) {
-      return validationErrors.errors.filter(
+      return blockingErrors.filter(
         (error) =>
           error.type !== 'missingTextBeforeClaudia' &&
           error.type !== 'missingClaudiaInFlowBranches'
       ).length
     }
 
-    return validationErrors.errors.length
+    return blockingErrors.length
   }
 
   const navigateToGroup = (groupId: string) => {
@@ -309,7 +322,7 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
                 {t('validationErrors.noValidationYet')}
               </Text>
             </VStack>
-          ) : validationErrors.isValid ? (
+          ) : validationErrors.errors.length === 0 ? (
             <VStack spacing={4} py={8}>
               <Icon as={AlertIcon} color={validIconColor} boxSize={12} />
               <Text
@@ -345,6 +358,11 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
                   <ValidationErrorSection
                     key={errorType}
                     errorType={errorType as ErrorType}
+                    color={
+                      WARNING_ERROR_TYPES.has(errorType as ErrorType)
+                        ? 'yellow'
+                        : 'orange'
+                    }
                     title={t(config.titleKey)}
                     allErrors={filteredErrors}
                     description={t(config.descriptionKey)}
