@@ -23,6 +23,7 @@ import {
 } from '@chakra-ui/react'
 import { KeyValue } from '@typebot.io/schemas'
 import { isSafeBaseUrl } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
+import { createId } from '@paralleldrive/cuid2'
 import React, { useEffect, useState } from 'react'
 import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
 import { useTranslate } from '@tolgee/react'
@@ -105,8 +106,11 @@ export const RestApiCredentialsModal = ({
     if (!editingData) return
     setName(editingData.name)
     setBaseUrl(editingData.baseUrl)
-    setHeaders(editingData.headers)
-    setQueryParams(editingData.queryParams)
+    // TableList rows need a stable id; the masked credential arrives without one.
+    setHeaders(editingData.headers.map((h) => ({ id: createId(), ...h })))
+    setQueryParams(
+      editingData.queryParams.map((q) => ({ id: createId(), ...q }))
+    )
     setDeprecated(editingData.deprecatedAt !== null)
   }, [isOpen, isEditing, editingData])
 
