@@ -20,6 +20,7 @@ import {
   Spinner,
   HStack,
   Switch,
+  useColorModeValue,
 } from '@chakra-ui/react'
 import { KeyValue } from '@typebot.io/schemas'
 import { isSafeBaseUrl } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
@@ -183,6 +184,13 @@ export const RestApiCredentialsModal = ({
       handleClose()
     },
   })
+
+  // Warning-box palette, dark-mode-aware to match the validation drawer's
+  // amber sections (a fixed orange.50 bg is unreadable in dark mode).
+  const deprecateBoxBg = useColorModeValue('orange.50', 'orange.900')
+  const deprecateBoxBorder = useColorModeValue('orange.200', 'orange.700')
+  const deprecateTitleColor = useColorModeValue('orange.700', 'orange.200')
+  const deprecateSubColor = useColorModeValue('gray.600', 'gray.300')
 
   const isBaseUrlInvalid = baseUrl.trim() !== '' && !isSafeBaseUrl(baseUrl)
 
@@ -371,17 +379,21 @@ export const RestApiCredentialsModal = ({
                     justify="space-between"
                     p="3"
                     borderWidth="1px"
-                    borderColor="orange.200"
-                    bg="orange.50"
+                    borderColor={deprecateBoxBorder}
+                    bg={deprecateBoxBg}
                     rounded="md"
                   >
                     <Stack spacing="0">
-                      <Text fontWeight="medium" fontSize="sm">
+                      <Text
+                        fontWeight="medium"
+                        fontSize="sm"
+                        color={deprecateTitleColor}
+                      >
                         {t(
                           'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.label'
                         )}
                       </Text>
-                      <Text fontSize="xs" color="gray.600">
+                      <Text fontSize="xs" color={deprecateSubColor}>
                         {t(
                           'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.sub'
                         )}
