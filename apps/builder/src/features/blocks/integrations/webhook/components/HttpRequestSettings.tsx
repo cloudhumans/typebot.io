@@ -104,7 +104,13 @@ export const HttpRequestSettings = ({
       )}
       {isSecureMode ? (
         isCredentialError ? (
-          <Tag size="lg" colorScheme="red" alignSelf="flex-start">
+          <Tag
+            size="lg"
+            colorScheme="red"
+            alignSelf="flex-start"
+            py="2"
+            whiteSpace="normal"
+          >
             <Text>{credentialErrorMessage}</Text>
           </Tag>
         ) : (
