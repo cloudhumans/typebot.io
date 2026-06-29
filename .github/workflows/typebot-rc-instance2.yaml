@@ -76,6 +76,12 @@ jobs:
       - name: Point instance2 overlay at RC images & open PR
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          # Pass the PR title through the environment instead of interpolating
+          # `${{ github.event.pull_request.title }}` straight into the script.
+          # The heredoc below is unquoted, so a title like `$(curl … | bash)`
+          # would otherwise run as a command substitution on the runner — with
+          # prod AWS creds and the GitHub App token in scope.
+          PR_TITLE_SAFE: ${{ github.event.pull_request.title }}
         run: |
           set -euo pipefail
           cd manifests
@@ -101,7 +107,7 @@ jobs:
           PR_BODY=$(cat <<EOF
           Automated RC deploy to typebot-instance2.
 
-          Source PR: ${{ github.repository }}#${{ github.event.pull_request.number }} (${{ github.event.pull_request.title }})
+          Source PR: ${{ github.repository }}#${{ github.event.pull_request.number }} ($PR_TITLE_SAFE)
           Image tag: $RC_TAG
 
           Builder: https://eddie-instance-2.us-east-1.prd.cloudhumans.io
