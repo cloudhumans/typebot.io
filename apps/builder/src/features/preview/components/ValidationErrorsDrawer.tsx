@@ -159,19 +159,10 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
 
     // Count blocking errors only; non-blocking warnings (e.g. deprecated
     // credentials) render in their own section but don't inflate the red count.
-    const blockingErrors = validationErrors.errors.filter(
+    // Secondary-flow-only errors are already suppressed at validation time.
+    return validationErrors.errors.filter(
       (error) => (error.severity ?? 'error') === 'error'
-    )
-
-    if (isSecondaryFlow) {
-      return blockingErrors.filter(
-        (error) =>
-          error.type !== 'missingTextBeforeClaudia' &&
-          error.type !== 'missingClaudiaInFlowBranches'
-      ).length
-    }
-
-    return blockingErrors.length
+    ).length
   }
 
   const navigateToGroup = (groupId: string) => {
@@ -339,15 +330,6 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
           ) : (
             <>
               {Object.entries(ERROR_CONFIGS).map(([errorType, config]) => {
-                if (
-                  isSecondaryFlow &&
-                  (errorType === 'missingTextBeforeClaudia' ||
-                    errorType === 'missingClaudiaInFlowBranches' ||
-                    errorType === 'missingWorkflowEndInFlowBranches')
-                ) {
-                  return null
-                }
-
                 const filteredErrors = errorsWithGroup.filter(
                   (error) => error.type === errorType
                 )

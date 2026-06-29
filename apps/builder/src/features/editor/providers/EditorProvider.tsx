@@ -27,6 +27,7 @@ type MinimalTypebot = Pick<
   | 'settings'
   | 'workspaceId'
   | 'whatsAppCredentialsId'
+  | 'isSecondaryFlow'
 >
 
 export enum RightPanel {
@@ -185,7 +186,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const newVariablesValidationKey = JSON.stringify(typebot.variables)
     const newValidationKey = `${newGroupsValidationKey}-${newEdgesValidationKey}-${newSettingsValidationKey}-${newVariablesValidationKey}-${
       typebot.whatsAppCredentialsId ?? ''
-    }`
+    }-${typebot.isSecondaryFlow ?? false}`
 
     if (newValidationKey === validationKey) return
 
@@ -198,6 +199,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       settings: typebot.settings,
       workspaceId: typebot.workspaceId,
       whatsAppCredentialsId: typebot.whatsAppCredentialsId,
+      isSecondaryFlow: typebot.isSecondaryFlow,
     }
     queuedValidateTypebot(minimalTypebot)
   }, [
@@ -208,6 +210,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     typebot?.settings,
     typebot?.workspaceId,
     typebot?.whatsAppCredentialsId,
+    typebot?.isSecondaryFlow,
     queuedValidateTypebot,
   ])
 
@@ -222,6 +225,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       settings: typebot.settings,
       workspaceId: typebot.workspaceId,
       whatsAppCredentialsId: typebot.whatsAppCredentialsId,
+      isSecondaryFlow: typebot.isSecondaryFlow,
     })
   }, [typebot, queuedValidateTypebot])
 

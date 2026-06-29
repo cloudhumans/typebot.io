@@ -22,6 +22,7 @@ export const useValidation = () => {
       settings: Settings | undefined
       workspaceId?: string
       whatsAppCredentialsId?: string | null
+      isSecondaryFlow?: boolean
     }): Promise<ValidationError | null> => {
       setIsValidating(true)
       try {
