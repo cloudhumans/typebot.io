@@ -1,0 +1,145 @@
+name: Typebot RC — Instance2
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  AWS_REGION: us-east-1
+  ECR_BUILDER_REPOSITORY: typebot-builder
+  ECR_VIEWER_REPOSITORY: typebot-viewer
+  ECR_REGISTRY: 585814034319.dkr.ecr.us-east-1.amazonaws.com
+  MANIFESTS_REPO: cloudhumans/typebot.io-manifests
+  INSTANCE2_OVERLAY: deploy-k8s/overlays/typebot-instance2
+
+jobs:
+  rc-instance2:
+    if: ${{ github.event.label.name == 'release-candidate' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App installation token
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ vars.CLOUDHUMANS_VERSION_BOT_APP_ID }}
+          private_key: ${{ secrets.CLOUDHUMANS_VERSION_BOT_PRIVATE_KEY }}
+
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Export RC tag (PR head SHA)
+        run: echo "RC_TAG=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CI_EKS_PRODUCTION_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_CI_EKS_PRODUCTION_SECRET }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push BUILDER image
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_BUILDER_REPOSITORY:$RC_TAG --build-arg SCOPE=builder .
+          docker push $ECR_REGISTRY/$ECR_BUILDER_REPOSITORY:$RC_TAG
+
+      - name: Build, tag, and push VIEWER image
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_VIEWER_REPOSITORY:$RC_TAG --build-arg SCOPE=viewer .
+          docker push $ECR_REGISTRY/$ECR_VIEWER_REPOSITORY:$RC_TAG
+
+      - name: Install kustomize
+        run: |
+          curl -sfLo kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.1/kustomize_v4.1.1_linux_amd64.tar.gz \
+            && tar -xvf kustomize.tar.gz && chmod u+x kustomize
+          echo "KUSTOMIZE_CMD=$PWD/kustomize" >> $GITHUB_ENV
+
+      - name: Checkout manifests repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MANIFESTS_REPO }}
+          path: manifests
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Point instance2 overlay at RC images & open PR
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          cd manifests
+          git config user.name "CloudHumans Version Bot"
+          git config user.email "cloudhumans-bot@users.noreply.github.com"
+
+          # Override images ONLY in the instance2 overlay (overlay > base).
+          # Prod overlay (deploy-k8s/overlays/typebot) keeps the base tag, untouched.
+          #
+          # The match key MUST be the resolved ECR repo name, NOT the
+          # `typebot-builder-image` placeholder: base/kustomization.yaml already
+          # rewrites the placeholder to the ECR name, so by the time this overlay's
+          # transformer runs the image is `<registry>/typebot-builder` — matching the
+          # placeholder here would be a silent no-op.
+          pushd "$INSTANCE2_OVERLAY"
+          "$KUSTOMIZE_CMD" edit set image \
+            "$ECR_REGISTRY/$ECR_BUILDER_REPOSITORY=$ECR_REGISTRY/$ECR_BUILDER_REPOSITORY:$RC_TAG" \
+            "$ECR_REGISTRY/$ECR_VIEWER_REPOSITORY=$ECR_REGISTRY/$ECR_VIEWER_REPOSITORY:$RC_TAG"
+          popd
+
+          BRANCH_NAME="rc/typebot-instance2/$RC_TAG"
+          PR_TITLE="chore: deploy RC $RC_TAG to typebot-instance2"
+          PR_BODY=$(cat <<EOF
+          Automated RC deploy to typebot-instance2.
+
+          Source PR: ${{ github.repository }}#${{ github.event.pull_request.number }} (${{ github.event.pull_request.title }})
+          Image tag: $RC_TAG
+
+          Builder: https://eddie-instance-2.us-east-1.prd.cloudhumans.io
+          Viewer:  https://eddieeyes-instance-2.us-east-1.prd.cloudhumans.io
+
+          After merge, Sync the 'typebot-instance2' app in ArgoCD (manual sync by design).
+          EOF
+          )
+
+          git checkout -B "$BRANCH_NAME"
+          git add -A
+          git commit -m "$PR_TITLE [skip ci]" --allow-empty
+          git push origin "$BRANCH_NAME" --force
+
+          export GH_TOKEN="$GITHUB_TOKEN"
+          gh pr create --repo "$MANIFESTS_REPO" --title "$PR_TITLE" --body "$PR_BODY" --base main --head "$BRANCH_NAME"
+
+          PR_NUMBER=""
+          for i in {1..5}; do
+            PR_NUMBER=$(gh pr view --repo "$MANIFESTS_REPO" "$BRANCH_NAME" --json number --jq '.number' 2>/dev/null || true)
+            [ -n "$PR_NUMBER" ] && break
+            sleep 2
+          done
+          [ -z "$PR_NUMBER" ] && { echo "PR number not found" >&2; exit 1; }
+
+          if gh pr merge --repo "$MANIFESTS_REPO" "$PR_NUMBER" --squash --delete-branch --admin --subject "$PR_TITLE"; then
+            echo "Manifests PR #$PR_NUMBER merged."
+          else
+            echo "Auto-merge blocked; PR #$PR_NUMBER left open." >&2
+          fi
+
+      - name: Comment test URLs on the source PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body \
+          "RC \`$RC_TAG\` pushed to **typebot-instance2**.
+          - Builder: https://eddie-instance-2.us-east-1.prd.cloudhumans.io
+          - Viewer:  https://eddieeyes-instance-2.us-east-1.prd.cloudhumans.io
+
+          Sync the \`typebot-instance2\` app in ArgoCD to roll it out (manual sync by design)."
