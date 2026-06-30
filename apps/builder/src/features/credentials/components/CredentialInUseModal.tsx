@@ -22,6 +22,8 @@ import {
 } from '@chakra-ui/react'
 import { T, useTranslate } from '@tolgee/react'
 import NextLink from 'next/link'
+import { useRouter } from 'next/router'
+import { getAllowedOrigins } from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
   CloseIcon,
@@ -64,7 +66,26 @@ export const CredentialInUseModal = ({
   isForceDeleting,
 }: Props) => {
   const { t } = useTranslate()
+  const router = useRouter()
+  const isEmbedded = router.query.embedded === 'true'
   const isSave = variant === 'save'
+
+  // Inside CloudChat the builder runs in an iframe. A plain in-iframe route
+  // change would drop the embedded auth params (?embedded&jwt) and leave the
+  // host URL stale, so we ask the CloudChat parent to navigate via its own
+  // router instead. The parent matches `typebot:navigate-to-flow` and routes
+  // to /controlled-flows/<typebotId>.
+  const handleUsageClick = (typebotId: string) => (e: React.MouseEvent) => {
+    if (!isEmbedded) return
+    e.preventDefault()
+    getAllowedOrigins().forEach((origin) =>
+      window.parent.postMessage(
+        { type: 'typebot:navigate-to-flow', typebotId },
+        origin
+      )
+    )
+    onClose()
+  }
 
   const iconBg = useColorModeValue('orange.100', 'orange.900')
   const iconColor = useColorModeValue('orange.500', 'orange.300')
@@ -174,6 +195,7 @@ export const CredentialInUseModal = ({
                   key={`${u.source}:${u.typebotId}:${u.via ?? ''}`}
                   as={NextLink}
                   href={`/typebots/${u.typebotId}/edit`}
+                  onClick={handleUsageClick(u.typebotId)}
                   display="block"
                   px={4}
                   py={3}
