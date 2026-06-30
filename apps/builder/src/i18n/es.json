@@ -170,7 +170,6 @@
   "blocks.integrations.httpRequest.credentialsModal.editTitle": "Editar credenciales REST API",
   "blocks.integrations.httpRequest.credentialsModal.saveButton.label": "Guardar cambios",
   "blocks.integrations.httpRequest.credentialsModal.deleteButton.label": "Eliminar credencial",
-  "blocks.integrations.httpRequest.credentialsModal.deleteConfirmation.message": "¿Seguro que quieres eliminar la credencial {strong}? Esta acción no se puede deshacer.",
   "blocks.integrations.httpRequest.credentialsModal.deprecateToggle.label": "Marcar como obsoleta",
   "blocks.integrations.httpRequest.credentialsModal.deprecateToggle.sub": "Sigue funcionando en los flujos existentes, pero se marca para que migres a otra.",
   "blocks.integrations.httpRequest.credentialsModal.editSecretHint": "Los valores actuales están ocultos. Para cambiar un secreto, borra el campo y escribe el nuevo valor — renombrar una clave también requiere volver a ingresar su valor.",

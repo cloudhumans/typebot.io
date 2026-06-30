@@ -27,12 +27,11 @@ import { isSafeBaseUrl } from '@typebot.io/schemas/features/blocks/integrations/
 import { createId } from '@paralleldrive/cuid2'
 import React, { useEffect, useState } from 'react'
 import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
-import { T, useTranslate } from '@tolgee/react'
+import { useTranslate } from '@tolgee/react'
 import {
   CredentialInUseModal,
   type CredentialUsage,
 } from '@/features/credentials/components/CredentialInUseModal'
-import { ConfirmModal } from '@/components/ConfirmModal'
 
 type Props = {
   isOpen: boolean
@@ -76,7 +75,6 @@ export const RestApiCredentialsModal = ({
     variant: 'delete' | 'save'
     usages: CredentialUsage[]
   } | null>(null)
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
 
   const trpcContext = trpc.useContext()
   const refetchCredentials = () =>
@@ -124,7 +122,6 @@ export const RestApiCredentialsModal = ({
     setQueryParams([])
     setDeprecated(false)
     setInUseModalState(null)
-    setIsConfirmingDelete(false)
   }
 
   // Reset on close so reopening the modal (X / overlay click / Esc) doesn't show
@@ -421,7 +418,7 @@ export const RestApiCredentialsModal = ({
                 colorScheme="red"
                 isLoading={isDeleting}
                 isDisabled={showLoader}
-                onClick={() => setIsConfirmingDelete(true)}
+                onClick={handleDelete}
               >
                 {t(
                   'blocks.integrations.httpRequest.credentialsModal.deleteButton.label'
@@ -453,22 +450,6 @@ export const RestApiCredentialsModal = ({
         variant={inUseModalState?.variant}
         onForceDelete={confirmInUseAction}
         isForceDeleting={isDeleting || isSaving}
-      />
-      <ConfirmModal
-        isOpen={isConfirmingDelete}
-        onClose={() => setIsConfirmingDelete(false)}
-        onConfirm={handleDelete}
-        message={
-          <Text>
-            <T
-              keyName="blocks.integrations.httpRequest.credentialsModal.deleteConfirmation.message"
-              params={{ strong: <strong>{name}</strong> }}
-            />
-          </Text>
-        }
-        confirmButtonLabel={t(
-          'blocks.integrations.httpRequest.credentialsModal.deleteButton.label'
-        )}
       />
     </Modal>
   )
