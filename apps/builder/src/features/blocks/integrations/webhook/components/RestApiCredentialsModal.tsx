@@ -27,7 +27,7 @@ import {
 import { KeyValue } from '@typebot.io/schemas'
 import { isSafeBaseUrl } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
 import { createId } from '@paralleldrive/cuid2'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
 import { useTranslate } from '@tolgee/react'
 import { MoreInfoTooltip } from '@/components/MoreInfoTooltip'
@@ -65,6 +65,13 @@ export const RestApiCredentialsModal = ({
   const { typebot } = useTypebot()
   const { showToast } = useToast()
   const isEditing = !!editingCredentialsId
+
+  // Tracks the latest open state so async work (the pre-delete usages check)
+  // can bail if the user closes the modal while it's in flight.
+  const isOpenRef = useRef(isOpen)
+  useEffect(() => {
+    isOpenRef.current = isOpen
+  }, [isOpen])
   const [name, setName] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [headers, setHeaders] = useState<KeyValue[]>([])
@@ -261,6 +268,12 @@ export const RestApiCredentialsModal = ({
           workspaceId: workspace.id,
           credentialsId: editingCredentialsId,
         })
+      // The user may have closed the modal while the check was in flight —
+      // don't reopen it or fire the delete against a dismissed modal.
+      if (!isOpenRef.current) {
+        setIsDeleting(false)
+        return
+      }
       const blockingUsages = usages.filter(
         (u) =>
           !(
@@ -284,7 +297,10 @@ export const RestApiCredentialsModal = ({
       })
     } catch (error) {
       setIsDeleting(false)
-      showToast({ description: (error as Error).message, status: 'error' })
+      showToast({
+        description: error instanceof Error ? error.message : String(error),
+        status: 'error',
+      })
     }
   }
 
