@@ -18,6 +18,9 @@ import {
   Text,
   Center,
   Spinner,
+  Flex,
+  HStack,
+  useColorModeValue,
 } from '@chakra-ui/react'
 import { KeyValue } from '@typebot.io/schemas'
 import { isSafeBaseUrl } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
@@ -27,6 +30,7 @@ import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
 import { useTranslate } from '@tolgee/react'
 import { SwitchWithLabel } from '@/components/inputs/SwitchWithLabel'
 import { MoreInfoTooltip } from '@/components/MoreInfoTooltip'
+import { ShieldAlertIcon } from '@/components/icons'
 import {
   CredentialInUseModal,
   type CredentialUsage,
@@ -184,6 +188,9 @@ export const RestApiCredentialsModal = ({
     },
   })
 
+  const iconBg = useColorModeValue('orange.100', 'orange.900')
+  const iconColor = useColorModeValue('orange.500', 'orange.300')
+
   const isBaseUrlInvalid = baseUrl.trim() !== '' && !isSafeBaseUrl(baseUrl)
 
   const buildData = () => ({
@@ -260,11 +267,26 @@ export const RestApiCredentialsModal = ({
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>
-          {t(
-            isEditing
-              ? 'blocks.integrations.httpRequest.credentialsModal.editTitle'
-              : 'blocks.integrations.httpRequest.credentialsModal.title'
-          )}
+          <HStack spacing={3}>
+            <Flex
+              flexShrink={0}
+              boxSize="40px"
+              borderRadius="lg"
+              bg={iconBg}
+              color={iconColor}
+              align="center"
+              justify="center"
+            >
+              <ShieldAlertIcon boxSize="20px" />
+            </Flex>
+            <Text>
+              {t(
+                isEditing
+                  ? 'blocks.integrations.httpRequest.credentialsModal.editTitle'
+                  : 'blocks.integrations.httpRequest.credentialsModal.title'
+              )}
+            </Text>
+          </HStack>
         </ModalHeader>
         <ModalCloseButton />
         <form onSubmit={submit}>
