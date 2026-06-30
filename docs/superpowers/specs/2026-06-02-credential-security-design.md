@@ -1,7 +1,7 @@
 # Design Specification: Credential Security (REST Data Sources)
 
 **Date**: 2026-06-02  
-**Updated**: 2026-06-29  
+**Updated**: 2026-06-30  
 **Status**: Implemented (reflects shipped code)  
 **Author**: Antigravity AI  
 
@@ -89,6 +89,7 @@ A new modal is opened when the builder clicks "Connect New" in the HTTP block's 
   - Headers Table: Dynamic key-value row insertion. Header values are masked (using input `type="password"`) for security, displaying `••••••••` upon reload.
   - Query Params Table: Dynamic key-value row insertion with masked values.
 * **Auditing**: Automatically captures `ctx.user.id` on submit and stores it in the dedicated `createdById` column (not in the encrypted JSON payload), enabling creator lookups without decryption.
+* **Presentation (shipped design):** built on Chakra `Modal`. The header carries a shield-alert icon badge (`ShieldAlertIcon`, orange-tinted, dark-mode-aware via `useColorModeValue`) next to the title. The masked-value note and the edit-secret guidance (*existing values are hidden; to change a secret, clear the field and re-type — renaming a key also requires re-entering its value*) live behind a `(?)` help tooltip (`MoreInfoTooltip`) on the **Headers** and **Query params** labels, not as inline body text. On edit, the **deprecate** control is a single clickable switch line (`SwitchWithLabel`, like "Advanced configuration"), its explanation behind the same `(?)` hint — replacing the earlier boxed callout. The footer's destructive action reads **"Remove credential"** (see §5 terminology).
 
 ### 2.2 Block UI State Transitions
 The HTTP Request Block settings panel dynamically adjusts based on the active `CredentialsDropdown` state:
@@ -144,6 +145,8 @@ A typebot references a credential only by `block.options.credentialsId`. The enc
 
 A credential can be referenced by many flows, so deletion is guarded.
 
+* **Terminology (shipped):** user-facing copy standardizes on **"remove"** for destroying a credential, per locale: **en** → *remove / removal* ("Cannot remove this credential", "Remove credential", "Remove anyway"); **pt-BR** → *remover / remoção*; **es** → *eliminar* (already its dominant verb — the stray "quitar" usages were normalized to "eliminar"/"desvincular"). The verb is consistent within each language across the edit modal (§2.1) and the in-use modal.
+* **Presentation (`CredentialInUseModal`, shipped):** built on Chakra `Modal` (not `AlertDialog` — its overlay-nested content breaks `scrollBehavior`). Header has the same shield-alert icon badge as the edit modal plus a `Credential: <name>` subtitle and a close button. The referencing flows render in a bordered card — one row per usage with a fixed-width status pill (published/draft/whatsApp), flow name, monospace slug, and an external-link affordance — **sorted by `typebotId`** so a flow's published and draft rows sit together. Below: the instruction line, a red warning callout, and (for force-delete) the type-the-name confirm input.
 * **In-use guard:** `deleteCredentials` (tRPC) and the legacy REST route (`/api/credentials/:id`) call `findCredentialsUsages` inside the delete transaction. If the credential is still referenced, a normal delete is rejected — tRPC throws `PRECONDITION_FAILED`, REST returns `412` — and the UI opens `CredentialInUseModal` listing the referencing flows (each linked to its editor, badged draft/published). `findCredentialsUsages` covers **both** surfaces a flow can reference a credential from: `block.options.credentialsId` (JSONB) and the typebot-level `Typebot.whatsAppCredentialsId` column. REST API credentials remain admin-only to delete.
 * **Force-delete ("remove anyway"):** the modal offers a destructive red action that re-issues the delete with `force: true`, bypassing the guard. The deleted secret is gone, so **published flows that referenced it stop issuing their request at runtime** (`resolveRestApiCredentialData` → `null` → block aborts) until the block is reconfigured and the flow is **republished** — the modal warns about this. Drafts self-heal in the builder (custom-URL fallback). Every deletion of a still-referenced credential is audited (`logger.warn` `credential_deleted_in_use` with `usageCount` / `blockingCount` / `forced`), regardless of the force or current-draft path.
   * **Type-the-name confirmation:** because force-delete is the one credential action that breaks live flows, `CredentialInUseModal` gates it behind typing the exact credential name — the "remove anyway" button stays disabled until the typed value matches (trimmed). The name comparison is the guard, so the modal's `RestApiCredentialsModal` footer "Delete" button is disabled while edit data is still loading (`showLoader`), otherwise the in-use modal could open with an empty name and the match would pass vacuously. Deleting an **unreferenced** credential is not gated this way (it breaks nothing) and the deprecate/save-while-in-use variant keeps no guard (it's reversible).
