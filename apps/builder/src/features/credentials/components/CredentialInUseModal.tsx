@@ -105,7 +105,9 @@ export const CredentialInUseModal = ({
       isCentered
     >
       <ModalOverlay />
-      <ModalContent borderRadius="xl">
+      {/* Stop wheel from reaching the flow-editor canvas, which preventDefaults
+          it for zoom/pan and would otherwise block scrolling inside the modal. */}
+      <ModalContent borderRadius="xl" onWheel={(e) => e.stopPropagation()}>
         <ModalHeader pb={2}>
           <HStack spacing={4} align="flex-start">
             <Flex
