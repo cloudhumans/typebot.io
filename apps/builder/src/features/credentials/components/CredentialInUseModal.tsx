@@ -156,8 +156,7 @@ export const CredentialInUseModal = ({
           </Text>
 
           <Box
-            flex={1}
-            minH={0}
+            maxH="280px"
             overflowY="auto"
             bg={cardBg}
             border="1px solid"
