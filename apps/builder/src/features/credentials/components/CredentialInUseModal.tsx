@@ -70,9 +70,9 @@ export const CredentialInUseModal = ({
   const rowHoverBg = useColorModeValue('gray.100', 'gray.700')
   const slugColor = useColorModeValue('gray.500', 'gray.400')
   const mutedColor = useColorModeValue('gray.400', 'gray.500')
-  const warningBg = useColorModeValue('red.50', 'rgba(229,62,62,0.12)')
+  const warningBg = useColorModeValue('red.50', 'red.900')
   const warningBorder = useColorModeValue('red.200', 'red.700')
-  const warningColor = useColorModeValue('red.600', 'red.300')
+  const warningColor = useColorModeValue('red.700', 'red.200')
 
   // Force-deleting an in-use credential breaks live flows, so gate it behind
   // typing the credential name (deprecate/save is reversible — no guard there).
@@ -125,8 +125,7 @@ export const CredentialInUseModal = ({
                 )}
               </Stack>
               <IconButton
-                ref={closeRef}
-                aria-label={t('credentialInUse.acknowledge')}
+                aria-label={t('credentialInUse.close')}
                 icon={<CloseIcon />}
                 size="sm"
                 variant="ghost"
@@ -262,7 +261,7 @@ export const CredentialInUseModal = ({
           </AlertDialogBody>
 
           <AlertDialogFooter gap={3}>
-            <Button colorScheme="orange" onClick={onClose}>
+            <Button ref={closeRef} colorScheme="orange" onClick={onClose}>
               {t('credentialInUse.acknowledge')}
             </Button>
             {onForceDelete && (

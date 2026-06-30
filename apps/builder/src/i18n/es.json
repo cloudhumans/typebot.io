@@ -262,6 +262,7 @@
   "copy": "Copiar",
   "create": "Crear",
   "credentialInUse.acknowledge": "Entendido",
+  "credentialInUse.close": "Cerrar",
   "credentialInUse.body": "Esta credencial está siendo usada por {count} flujo(s):",
   "credentialInUse.credentialName": "Credencial: {name}",
   "credentialInUse.draft": "borrador",
