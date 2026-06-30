@@ -24,7 +24,10 @@ import { T, useTranslate } from '@tolgee/react'
 import NextLink from 'next/link'
 import { useRouter } from 'next/router'
 import { useUser } from '@/features/account/hooks/useUser'
-import { getAllowedOrigins } from '@/features/embedded-auth/utils'
+import {
+  getAllowedOrigins,
+  isOriginAllowed,
+} from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
   CloseIcon,
@@ -83,22 +86,25 @@ export const CredentialInUseModal = ({
   // to /controlled-flows/<typebotId>.
   const handleUsageClick = (typebotId: string) => (e: React.MouseEvent) => {
     if (!isEmbedded || window.parent === window) return
-    const allowedOrigins = getAllowedOrigins()
-    let referrerOrigin: string | undefined
+    // postMessage needs a concrete target origin. Derive it from the embedding
+    // page (document.referrer) and accept it only if the allow-list matches —
+    // the list may hold wildcard patterns, which aren't valid postMessage
+    // targets, so we never post to a pattern directly.
+    let targetOrigin: string | undefined
     try {
-      referrerOrigin = document.referrer
+      const referrerOrigin = document.referrer
         ? new URL(document.referrer).origin
         : undefined
+      if (referrerOrigin && isOriginAllowed(referrerOrigin))
+        targetOrigin = referrerOrigin
     } catch {
-      referrerOrigin = undefined
+      targetOrigin = undefined
     }
-    // Post only to the actual embedding origin, falling back to the first
-    // allow-listed one, so the message isn't delivered to every allow-listed
-    // origin.
-    const targetOrigin =
-      referrerOrigin && allowedOrigins.includes(referrerOrigin)
-        ? referrerOrigin
-        : allowedOrigins[0]
+    if (!targetOrigin) {
+      const [firstAllowed] = getAllowedOrigins()
+      if (firstAllowed && !firstAllowed.includes('*'))
+        targetOrigin = firstAllowed
+    }
     if (!targetOrigin) return
     e.preventDefault()
     window.parent.postMessage(
