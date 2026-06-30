@@ -147,7 +147,7 @@ export const CredentialInUseModal = ({
           display="flex"
           flexDirection="column"
           gap={4}
-          overflowY="hidden"
+          overflowY="auto"
         >
           <Text fontSize="sm">
             {t(isSave ? 'credentialInUse.saveBody' : 'credentialInUse.body', {
@@ -170,7 +170,7 @@ export const CredentialInUseModal = ({
             >
               {sortedUsages.map((u) => (
                 <Link
-                  key={`${u.source}:${u.typebotId}`}
+                  key={`${u.source}:${u.typebotId}:${u.via ?? ''}`}
                   as={NextLink}
                   href={`/typebots/${u.typebotId}/edit`}
                   display="block"
@@ -258,7 +258,8 @@ export const CredentialInUseModal = ({
                 <T
                   keyName="credentialInUse.typeNameToConfirm"
                   params={{
-                    name: <Code fontSize="sm">{trimmedCredentialName}</Code>,
+                    name: trimmedCredentialName,
+                    chip: <Code fontSize="sm" />,
                   }}
                 />
               </Text>
