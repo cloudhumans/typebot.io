@@ -197,6 +197,7 @@ export const CredentialsDropdown = ({
             )}
             {sortedCredentials.map((credentials) => (
               <MenuItem
+                as="div"
                 role="menuitem"
                 minH="40px"
                 key={credentials.id}
