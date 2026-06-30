@@ -268,6 +268,7 @@
   "credentialInUse.forceDelete": "Eliminar de todos modos",
   "credentialInUse.forceWarning": "Eliminarla de todos modos borrará el secreto de inmediato. Los flujos publicados que usan esta credencial dejarán de enviar sus solicitudes hasta que el bloque se reconfigure y el flujo se vuelva a publicar.",
   "credentialInUse.instructions": "Para eliminar esta credencial, primero quítala o reemplázala en los bloques de cada flujo listado.",
+  "credentialInUse.typeNameToConfirm": "Escribe el nombre de la credencial {name} para confirmar la eliminación.",
   "credentialInUse.published": "publicado",
   "credentialInUse.saveAnyway": "Guardar de todos modos",
   "credentialInUse.saveBody": "Guardar aplica tus cambios a {count} flujo(s) publicado(s) de inmediato:",

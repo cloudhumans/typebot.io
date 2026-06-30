@@ -268,6 +268,7 @@
   "credentialInUse.forceDelete": "Remover mesmo assim",
   "credentialInUse.forceWarning": "Remover mesmo assim apaga o segredo imediatamente. Os fluxos publicados que usam essa credencial vão parar de enviar suas requisições até que o bloco seja reconfigurado e o fluxo republicado.",
   "credentialInUse.instructions": "Para deletar essa credencial, primeiro remova ou substitua ela nos blocos de todos os fluxos listados acima.",
+  "credentialInUse.typeNameToConfirm": "Digite o nome da credencial {name} para confirmar a exclusão.",
   "credentialInUse.published": "publicado",
   "credentialInUse.saveAnyway": "Salvar mesmo assim",
   "credentialInUse.saveBody": "Salvar aplica suas alterações a {count} fluxo(s) publicado(s) imediatamente:",

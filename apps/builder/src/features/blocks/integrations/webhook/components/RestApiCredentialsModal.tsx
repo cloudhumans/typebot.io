@@ -417,6 +417,7 @@ export const RestApiCredentialsModal = ({
                 variant="outline"
                 colorScheme="red"
                 isLoading={isDeleting}
+                isDisabled={showLoader}
                 onClick={handleDelete}
               >
                 {t(
