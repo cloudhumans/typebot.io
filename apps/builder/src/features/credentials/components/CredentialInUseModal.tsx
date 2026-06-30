@@ -1,11 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogOverlay,
   Badge,
   Box,
   Button,
@@ -15,6 +9,12 @@ import {
   IconButton,
   Input,
   Link,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Stack,
   StackDivider,
   Text,
@@ -64,7 +64,6 @@ export const CredentialInUseModal = ({
   isForceDeleting,
 }: Props) => {
   const { t } = useTranslate()
-  const closeRef = useRef(null)
   const isSave = variant === 'save'
 
   const iconBg = useColorModeValue('orange.100', 'orange.900')
@@ -98,204 +97,196 @@ export const CredentialInUseModal = ({
   )
 
   return (
-    <AlertDialog
+    <Modal
       isOpen={isOpen}
-      leastDestructiveRef={closeRef}
       onClose={onClose}
       size="xl"
       scrollBehavior="inside"
+      isCentered
     >
-      <AlertDialogOverlay>
-        <AlertDialogContent borderRadius="xl">
-          <AlertDialogHeader pb={2}>
-            <HStack spacing={4} align="flex-start">
-              <Flex
-                flexShrink={0}
-                boxSize="44px"
-                borderRadius="lg"
-                bg={iconBg}
-                color={iconColor}
-                align="center"
-                justify="center"
-              >
-                <ShieldAlertIcon boxSize="22px" />
-              </Flex>
-              <Stack spacing={1} flex={1} minW={0}>
-                <Text fontSize="lg" fontWeight="bold" lineHeight="short">
-                  {t(
-                    isSave
-                      ? 'credentialInUse.saveTitle'
-                      : 'credentialInUse.title'
-                  )}
-                </Text>
-                {credentialName && (
-                  <Text fontSize="sm" fontWeight="normal" color={subtitleColor}>
-                    {t('credentialInUse.credentialName', {
-                      name: credentialName,
-                    })}
-                  </Text>
-                )}
-              </Stack>
-              <IconButton
-                aria-label={t('credentialInUse.close')}
-                icon={<CloseIcon />}
-                size="sm"
-                variant="ghost"
-                onClick={onClose}
-              />
-            </HStack>
-          </AlertDialogHeader>
-
-          <AlertDialogBody>
-            <Stack spacing={4}>
-              <Text fontSize="sm">
+      <ModalOverlay />
+      <ModalContent borderRadius="xl">
+        <ModalHeader pb={2}>
+          <HStack spacing={4} align="flex-start">
+            <Flex
+              flexShrink={0}
+              boxSize="44px"
+              borderRadius="lg"
+              bg={iconBg}
+              color={iconColor}
+              align="center"
+              justify="center"
+            >
+              <ShieldAlertIcon boxSize="22px" />
+            </Flex>
+            <Stack spacing={1} flex={1} minW={0}>
+              <Text fontSize="lg" fontWeight="bold" lineHeight="short">
                 {t(
-                  isSave ? 'credentialInUse.saveBody' : 'credentialInUse.body',
-                  {
-                    count: usages.length,
-                  }
+                  isSave ? 'credentialInUse.saveTitle' : 'credentialInUse.title'
                 )}
               </Text>
-
-              <Box
-                bg={cardBg}
-                border="1px solid"
-                borderColor={cardBorderColor}
-                borderRadius="md"
-              >
-                <Stack
-                  spacing={0}
-                  divider={<StackDivider borderColor={cardBorderColor} />}
-                >
-                  {sortedUsages.map((u) => (
-                    <Link
-                      key={`${u.source}:${u.typebotId}`}
-                      as={NextLink}
-                      href={`/typebots/${u.typebotId}/edit`}
-                      display="block"
-                      px={4}
-                      py={3}
-                      _hover={{ bg: rowHoverBg, textDecoration: 'none' }}
-                    >
-                      <HStack spacing={3} align="center">
-                        <Box flexShrink={0} w="90px">
-                          <Badge
-                            w="full"
-                            textAlign="center"
-                            borderRadius="full"
-                            textTransform="uppercase"
-                            fontSize="2xs"
-                            letterSpacing="wide"
-                            px={2}
-                            py={0.5}
-                            colorScheme={
-                              u.via === 'whatsApp'
-                                ? 'purple'
-                                : u.source === 'PublicTypebot'
-                                ? 'green'
-                                : 'gray'
-                            }
-                          >
-                            {u.via === 'whatsApp'
-                              ? t('credentialInUse.whatsApp')
-                              : u.source === 'PublicTypebot'
-                              ? t('credentialInUse.published')
-                              : t('credentialInUse.draft')}
-                          </Badge>
-                        </Box>
-                        <Box flex={1} minW={0}>
-                          <Text fontWeight="medium" noOfLines={1}>
-                            {u.name}
-                          </Text>
-                          {u.publicId && (
-                            <Text
-                              fontFamily="mono"
-                              fontSize="xs"
-                              color={slugColor}
-                              noOfLines={1}
-                            >
-                              /{u.publicId}
-                            </Text>
-                          )}
-                        </Box>
-                        <ExternalLinkIcon flexShrink={0} color={mutedColor} />
-                      </HStack>
-                    </Link>
-                  ))}
-                </Stack>
-              </Box>
-
-              {!isSave && (
-                <Text fontSize="sm" color={subtitleColor}>
-                  {t('credentialInUse.instructions')}
+              {credentialName && (
+                <Text fontSize="sm" fontWeight="normal" color={subtitleColor}>
+                  {t('credentialInUse.credentialName', {
+                    name: credentialName,
+                  })}
                 </Text>
               )}
-
-              {onForceDelete && (
-                <HStack
-                  align="flex-start"
-                  spacing={2.5}
-                  bg={warningBg}
-                  borderRadius="md"
-                  px={3.5}
-                  py={3}
-                >
-                  <AlertIcon color={warningColor} mt="2px" flexShrink={0} />
-                  <Text fontSize="sm" color={warningColor}>
-                    {t(
-                      isSave
-                        ? 'credentialInUse.saveWarning'
-                        : 'credentialInUse.forceWarning'
-                    )}
-                  </Text>
-                </HStack>
-              )}
-
-              {onForceDelete && requiresNameConfirmation && (
-                <Stack spacing={1.5}>
-                  <Text fontSize="sm" color={subtitleColor}>
-                    <T
-                      keyName="credentialInUse.typeNameToConfirm"
-                      params={{
-                        name: (
-                          <Code fontSize="sm">{trimmedCredentialName}</Code>
-                        ),
-                      }}
-                    />
-                  </Text>
-                  <Input
-                    value={typedName}
-                    onChange={(e) => setTypedName(e.target.value)}
-                    placeholder={credentialName}
-                    autoComplete="off"
-                  />
-                </Stack>
-              )}
             </Stack>
-          </AlertDialogBody>
+            <IconButton
+              aria-label={t('credentialInUse.close')}
+              icon={<CloseIcon />}
+              size="sm"
+              variant="ghost"
+              onClick={onClose}
+            />
+          </HStack>
+        </ModalHeader>
 
-          <AlertDialogFooter gap={3}>
-            <Button ref={closeRef} colorScheme="orange" onClick={onClose}>
-              {t('credentialInUse.acknowledge')}
-            </Button>
-            {onForceDelete && (
-              <Button
-                colorScheme={isSave ? 'orange' : 'red'}
-                variant={isSave || isNameConfirmed ? 'solid' : 'outline'}
-                onClick={onForceDelete}
-                isLoading={isForceDeleting}
-                isDisabled={!isNameConfirmed}
+        <ModalBody>
+          <Stack spacing={4}>
+            <Text fontSize="sm">
+              {t(isSave ? 'credentialInUse.saveBody' : 'credentialInUse.body', {
+                count: usages.length,
+              })}
+            </Text>
+
+            <Box
+              bg={cardBg}
+              border="1px solid"
+              borderColor={cardBorderColor}
+              borderRadius="md"
+            >
+              <Stack
+                spacing={0}
+                divider={<StackDivider borderColor={cardBorderColor} />}
               >
-                {t(
-                  isSave
-                    ? 'credentialInUse.saveAnyway'
-                    : 'credentialInUse.forceDelete'
-                )}
-              </Button>
+                {sortedUsages.map((u) => (
+                  <Link
+                    key={`${u.source}:${u.typebotId}`}
+                    as={NextLink}
+                    href={`/typebots/${u.typebotId}/edit`}
+                    display="block"
+                    px={4}
+                    py={3}
+                    _hover={{ bg: rowHoverBg, textDecoration: 'none' }}
+                  >
+                    <HStack spacing={3} align="center">
+                      <Box flexShrink={0} w="90px">
+                        <Badge
+                          w="full"
+                          textAlign="center"
+                          borderRadius="full"
+                          textTransform="uppercase"
+                          fontSize="2xs"
+                          letterSpacing="wide"
+                          px={2}
+                          py={0.5}
+                          colorScheme={
+                            u.via === 'whatsApp'
+                              ? 'purple'
+                              : u.source === 'PublicTypebot'
+                              ? 'green'
+                              : 'gray'
+                          }
+                        >
+                          {u.via === 'whatsApp'
+                            ? t('credentialInUse.whatsApp')
+                            : u.source === 'PublicTypebot'
+                            ? t('credentialInUse.published')
+                            : t('credentialInUse.draft')}
+                        </Badge>
+                      </Box>
+                      <Box flex={1} minW={0}>
+                        <Text fontWeight="medium" noOfLines={1}>
+                          {u.name}
+                        </Text>
+                        {u.publicId && (
+                          <Text
+                            fontFamily="mono"
+                            fontSize="xs"
+                            color={slugColor}
+                            noOfLines={1}
+                          >
+                            /{u.publicId}
+                          </Text>
+                        )}
+                      </Box>
+                      <ExternalLinkIcon flexShrink={0} color={mutedColor} />
+                    </HStack>
+                  </Link>
+                ))}
+              </Stack>
+            </Box>
+
+            {!isSave && (
+              <Text fontSize="sm" color={subtitleColor}>
+                {t('credentialInUse.instructions')}
+              </Text>
             )}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialogOverlay>
-    </AlertDialog>
+
+            {onForceDelete && (
+              <HStack
+                align="flex-start"
+                spacing={2.5}
+                bg={warningBg}
+                borderRadius="md"
+                px={3.5}
+                py={3}
+              >
+                <AlertIcon color={warningColor} mt="2px" flexShrink={0} />
+                <Text fontSize="sm" color={warningColor}>
+                  {t(
+                    isSave
+                      ? 'credentialInUse.saveWarning'
+                      : 'credentialInUse.forceWarning'
+                  )}
+                </Text>
+              </HStack>
+            )}
+
+            {onForceDelete && requiresNameConfirmation && (
+              <Stack spacing={1.5}>
+                <Text fontSize="sm" color={subtitleColor}>
+                  <T
+                    keyName="credentialInUse.typeNameToConfirm"
+                    params={{
+                      name: <Code fontSize="sm">{trimmedCredentialName}</Code>,
+                    }}
+                  />
+                </Text>
+                <Input
+                  value={typedName}
+                  onChange={(e) => setTypedName(e.target.value)}
+                  placeholder={credentialName}
+                  autoComplete="off"
+                />
+              </Stack>
+            )}
+          </Stack>
+        </ModalBody>
+
+        <ModalFooter gap={3}>
+          <Button colorScheme="orange" onClick={onClose}>
+            {t('credentialInUse.acknowledge')}
+          </Button>
+          {onForceDelete && (
+            <Button
+              colorScheme={isSave ? 'orange' : 'red'}
+              variant={isSave || isNameConfirmed ? 'solid' : 'outline'}
+              onClick={onForceDelete}
+              isLoading={isForceDeleting}
+              isDisabled={!isNameConfirmed}
+            >
+              {t(
+                isSave
+                  ? 'credentialInUse.saveAnyway'
+                  : 'credentialInUse.forceDelete'
+              )}
+            </Button>
+          )}
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   )
 }
