@@ -14,6 +14,8 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { trpc } from '@/lib/trpc'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
+import { useTypebot } from '@/features/editor/providers/TypebotProvider'
+import { useEditor } from '@/features/editor/providers/EditorProvider'
 import { ForgedBlockDefinition } from '@typebot.io/forge-repository/types'
 import { useToast } from '@/hooks/useToast'
 import {
@@ -38,6 +40,8 @@ export const ForgedCredentialsDropdown = ({
   const router = useRouter()
   const { showToast } = useToast()
   const { workspace, currentRole } = useWorkspace()
+  const { typebot } = useTypebot()
+  const { revalidate } = useEditor()
   const { data, refetch, isLoading } = trpc.forge.listCredentials.useQuery(
     {
       workspaceId: workspace?.id as string,
@@ -46,15 +50,18 @@ export const ForgedCredentialsDropdown = ({
     { enabled: !!workspace?.id }
   )
   const [isDeleting, setIsDeleting] = useState<string>()
+  const [isForceDeleting, setIsForceDeleting] = useState(false)
 
   const [inUseModalState, setInUseModalState] = useState<{
+    credentialsId: string
     credentialName?: string
     usages: CredentialUsage[]
   } | null>(null)
 
   const { mutate } = trpc.credentials.deleteCredentials.useMutation({
-    onMutate: ({ credentialsId }) => {
+    onMutate: ({ credentialsId, force }) => {
       setIsDeleting(credentialsId)
+      if (force) setIsForceDeleting(true)
     },
     onError: (error, variables) => {
       const usages = (error.data as { usages?: CredentialUsage[] } | null)
@@ -64,6 +71,7 @@ export const ForgedCredentialsDropdown = ({
           (c) => c.id === variables.credentialsId
         )?.name
         setInUseModalState({
+          credentialsId: variables.credentialsId,
           credentialName,
           usages,
         })
@@ -74,11 +82,17 @@ export const ForgedCredentialsDropdown = ({
       })
     },
     onSuccess: ({ credentialsId }) => {
-      if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
+      setInUseModalState(null)
       refetch()
+      if (credentialsId === currentCredentialsId) {
+        onCredentialsSelect(undefined)
+      } else {
+        revalidate?.()
+      }
     },
     onSettled: () => {
       setIsDeleting(undefined)
+      setIsForceDeleting(false)
     },
   })
 
@@ -116,7 +130,11 @@ export const ForgedCredentialsDropdown = ({
     (credentialsId: string) => async (e: React.MouseEvent) => {
       if (!workspace) return
       e.stopPropagation()
-      mutate({ workspaceId: workspace.id, credentialsId })
+      mutate({
+        workspaceId: workspace.id,
+        credentialsId,
+        currentTypebotId: typebot?.id,
+      })
     }
 
   if (!data || data?.credentials.length === 0) {
@@ -198,6 +216,18 @@ export const ForgedCredentialsDropdown = ({
         onClose={() => setInUseModalState(null)}
         usages={inUseModalState?.usages ?? []}
         credentialName={inUseModalState?.credentialName}
+        onForceDelete={
+          inUseModalState && workspace
+            ? () =>
+                mutate({
+                  workspaceId: workspace.id,
+                  credentialsId: inUseModalState.credentialsId,
+                  force: true,
+                  currentTypebotId: typebot?.id,
+                })
+            : undefined
+        }
+        isForceDeleting={isForceDeleting}
       />
     </>
   )

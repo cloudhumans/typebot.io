@@ -11,6 +11,8 @@ import {
   isWithinBaseUrl,
   MAX_MASK_SCAN_CHARS,
   tooLargeToMask,
+  MAX_MASK_DEPTH,
+  tooDeepToMask,
 } from './restApiCredential'
 
 describe('cleanUrlConcat', () => {
@@ -234,6 +236,69 @@ describe('maskSecretsDeep', () => {
     )
     expect(masked.secretField).toBe(tooLargeToMask)
     expect(masked.secretField).not.toContain(secret)
+  })
+
+  it('does not overflow the stack on a deeply nested payload (prod incident 2026-06-23)', () => {
+    const secret = 'SUPER-SECRET-TOKEN-VALUE'
+    // Deep enough to overflow the call stack without the depth guard (well past
+    // V8's frame limit), but no deeper than needed: the guard stops the masker
+    // at MAX_MASK_DEPTH, so this whole chain is never traversed at runtime.
+    // Light on strings, so the char budget never trips — only the depth guard
+    // can stop this.
+    let nested: unknown = `token=${secret}`
+    for (let i = 0; i < 20_000; i++) nested = { next: nested }
+    expect(() =>
+      maskSecretsDeep({ root: nested }, new Set([secret]))
+    ).not.toThrow()
+  })
+
+  it('masks down to the depth cap, then fails safe to tooDeepToMask', () => {
+    const secret = 'SUPER-SECRET-TOKEN-VALUE'
+    let nested: { next: unknown; leak: string } | string = `token=${secret}`
+    for (let i = 0; i < MAX_MASK_DEPTH + 10; i++)
+      nested = { next: nested, leak: `header ${secret}` }
+    const masked = maskSecretsDeep(nested, new Set([secret])) as Record<
+      string,
+      unknown
+    >
+    // Walk to the cutoff; the subtree at/after MAX_MASK_DEPTH is dropped whole,
+    // and crucially never emitted unmasked.
+    let cursor: unknown = masked
+    let sawCutoff = false
+    while (cursor && typeof cursor === 'object') {
+      const node = cursor as Record<string, unknown>
+      if (typeof node.leak === 'string')
+        expect(node.leak).not.toContain(secret)
+      if (node.next === tooDeepToMask) {
+        sawCutoff = true
+        break
+      }
+      cursor = node.next
+    }
+    expect(sawCutoff).toBe(true)
+  })
+
+  it('does not overflow or hang on a circular reference, and masks reachable secrets', () => {
+    const secret = 'SUPER-SECRET-TOKEN-VALUE'
+    const node: Record<string, unknown> = { auth: `Bearer ${secret}` }
+    node.self = node // cycle
+    const masked = maskSecretsDeep(node, new Set([secret])) as Record<
+      string,
+      unknown
+    >
+    expect(masked.auth).toBe(`Bearer ${maskedValue}`)
+    // The back-edge to an ancestor is dropped rather than followed forever.
+    expect(masked.self).toBe(tooDeepToMask)
+  })
+
+  it('still masks a DAG (same object via two non-cyclic paths) on both paths', () => {
+    const secret = 'SUPER-SECRET-TOKEN-VALUE'
+    const shared = { auth: `Bearer ${secret}` }
+    const masked = maskSecretsDeep({ a: shared, b: shared }, new Set([secret]))
+    // Path-local cycle detection must not mistake a shared (non-ancestor)
+    // reference for a cycle: both occurrences get masked.
+    expect((masked.a as { auth: string }).auth).toBe(`Bearer ${maskedValue}`)
+    expect((masked.b as { auth: string }).auth).toBe(`Bearer ${maskedValue}`)
   })
 })
 

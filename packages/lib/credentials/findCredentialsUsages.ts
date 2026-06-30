@@ -3,6 +3,11 @@ import prisma from '../prisma'
 
 export type CredentialUsage = {
   source: 'Typebot' | 'PublicTypebot'
+  // How the flow references the credential: a block's options.credentialsId
+  // ('block') or the typebot-level whatsAppCredentialsId column ('whatsApp').
+  // WhatsApp references drive the published flow and are never safe to treat as
+  // a disposable draft-only usage.
+  via: 'block' | 'whatsApp'
   typebotId: string
   publicId: string | null
   name: string
@@ -27,6 +32,7 @@ export const findCredentialsUsages = async (
 
   const jsonbUsages = await client.$queryRaw<CredentialUsage[]>(Prisma.sql`
     SELECT 'Typebot'::text AS source,
+           'block'::text   AS via,
            t.id            AS "typebotId",
            t."publicId"    AS "publicId",
            t.name          AS name
@@ -40,6 +46,7 @@ export const findCredentialsUsages = async (
     UNION
 
     SELECT 'PublicTypebot'::text AS source,
+           'block'::text         AS via,
            pt."typebotId"        AS "typebotId",
            t."publicId"          AS "publicId",
            t.name                AS name
@@ -62,11 +69,15 @@ export const findCredentialsUsages = async (
 
   const whatsappMapped: CredentialUsage[] = whatsappUsages.map((t) => ({
     source: 'Typebot',
+    via: 'whatsApp',
     typebotId: t.id,
     publicId: t.publicId,
     name: t.name,
   }))
 
+  // whatsappMapped is merged last so a flow that references the credential both
+  // from a block and via whatsAppCredentialsId resolves to via: 'whatsApp' (the
+  // non-excludable, published-affecting reference).
   const dedup = new Map<string, CredentialUsage>()
   for (const u of [...jsonbUsages, ...whatsappMapped]) {
     dedup.set(`${u.source}:${u.typebotId}`, u)

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { isWriteWorkspaceForbidden } from '@/features/workspace/helpers/isWriteWorkspaceForbidden'
 import { isAdminWriteWorkspaceForbidden } from '@/features/workspace/helpers/isAdminWriteWorkspaceForbidden'
 import { findCredentialsUsages } from '@typebot.io/lib/credentials/findCredentialsUsages'
+import logger from '@typebot.io/lib/logger'
 
 export const deleteCredentials = authenticatedProcedure
   .meta({
@@ -20,6 +21,12 @@ export const deleteCredentials = authenticatedProcedure
     z.object({
       credentialsId: z.string(),
       workspaceId: z.string(),
+      // Delete even if still referenced by flows; published flows then break
+      // until reconfigured and republished.
+      force: z.boolean().optional(),
+      // Draft of the flow open in the editor — excluded from the in-use guard
+      // since the editor clears the block on delete success.
+      currentTypebotId: z.string().optional(),
     })
   )
   .output(
@@ -28,7 +35,10 @@ export const deleteCredentials = authenticatedProcedure
     })
   )
   .mutation(
-    async ({ input: { credentialsId, workspaceId }, ctx: { user } }) => {
+    async ({
+      input: { credentialsId, workspaceId, force, currentTypebotId },
+      ctx: { user },
+    }) => {
       const workspace = await prisma.workspace.findUnique({
         where: {
           id: workspaceId,
@@ -65,13 +75,24 @@ export const deleteCredentials = authenticatedProcedure
             tx
           )
 
-          if (usages.length > 0) {
+          // Only a draft *block* usage of the open flow is excluded — the editor
+          // clears that block on success. WhatsApp usages (via: 'whatsApp') drive
+          // the published flow, so they always block.
+          const blockingUsages = usages.filter(
+            (u) =>
+              !(
+                u.source === 'Typebot' &&
+                u.via === 'block' &&
+                u.typebotId === currentTypebotId
+              )
+          )
+
+          if (blockingUsages.length > 0 && !force)
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
-              message: `Credential in use by ${usages.length} flow(s). Detach it from every flow before deleting.`,
-              cause: { _credentialInUse: true, usages },
+              message: `Credential in use by ${blockingUsages.length} flow(s). Detach it from every flow before deleting.`,
+              cause: { _credentialInUse: true, usages: blockingUsages },
             })
-          }
 
           const deletedCount = await tx.credentials.deleteMany({
             where: {
@@ -79,6 +100,22 @@ export const deleteCredentials = authenticatedProcedure
               workspaceId,
             },
           })
+
+          // Audit an actual deletion of a still-referenced credential, whether
+          // forced or allowed because the only referencing flow is the current
+          // draft — so the draft-exclusion path can't delete silently. Gated on
+          // a real delete so a no-op (already gone) doesn't log a false event.
+          if (deletedCount.count > 0 && usages.length > 0)
+            logger.warn('Deleting credential still referenced by flows', {
+              code: 'credential_deleted_in_use',
+              credentialsId,
+              workspaceId,
+              userId: user.id,
+              usageCount: usages.length,
+              blockingCount: blockingUsages.length,
+              forced: !!force,
+            })
+
           return { deletedCount: deletedCount.count }
         },
         { isolationLevel: 'RepeatableRead' }

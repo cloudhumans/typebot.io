@@ -70,7 +70,18 @@ const ERROR_CONFIGS: Record<
     descriptionKey:
       'validationErrors.missingWorkflowEndInFlowBranches.description',
   },
+  missingCredential: {
+    titleKey: 'validationErrors.missingCredential.title',
+    descriptionKey: 'validationErrors.missingCredential.description',
+  },
+  deprecatedCredential: {
+    titleKey: 'validationErrors.deprecatedCredential.title',
+    descriptionKey: 'validationErrors.deprecatedCredential.description',
+  },
 }
+
+// Warning-type errors render in amber and don't block publishing.
+const WARNING_ERROR_TYPES = new Set<ErrorType>(['deprecatedCredential'])
 
 type Props = {
   onClose: () => void
@@ -146,15 +157,12 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
   ): number => {
     if (!validationErrors) return 0
 
-    if (isSecondaryFlow) {
-      return validationErrors.errors.filter(
-        (error) =>
-          error.type !== 'missingTextBeforeClaudia' &&
-          error.type !== 'missingClaudiaInFlowBranches'
-      ).length
-    }
-
-    return validationErrors.errors.length
+    // Count blocking errors only; non-blocking warnings (e.g. deprecated
+    // credentials) render in their own section but don't inflate the red count.
+    // Secondary-flow-only errors are already suppressed at validation time.
+    return validationErrors.errors.filter(
+      (error) => (error.severity ?? 'error') === 'error'
+    ).length
   }
 
   const navigateToGroup = (groupId: string) => {
@@ -198,7 +206,10 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
   const allErrors = validationErrors ? validationErrors.errors : []
   const errorsWithGroup = allErrors
     .map((error) => {
-      if (!error.groupId) return null
+      // Typebot-level errors (e.g. a dangling WhatsApp credential) have no
+      // group; render them with a flow-level label instead of dropping them.
+      if (!error.groupId)
+        return { ...error, groupName: t('validationErrors.flowLevel') }
       const groupName = getGroupNameById(error.groupId)
 
       if (!groupName) return null
@@ -302,7 +313,7 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
                 {t('validationErrors.noValidationYet')}
               </Text>
             </VStack>
-          ) : validationErrors.isValid ? (
+          ) : validationErrors.errors.length === 0 ? (
             <VStack spacing={4} py={8}>
               <Icon as={AlertIcon} color={validIconColor} boxSize={12} />
               <Text
@@ -319,15 +330,6 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
           ) : (
             <>
               {Object.entries(ERROR_CONFIGS).map(([errorType, config]) => {
-                if (
-                  isSecondaryFlow &&
-                  (errorType === 'missingTextBeforeClaudia' ||
-                    errorType === 'missingClaudiaInFlowBranches' ||
-                    errorType === 'missingWorkflowEndInFlowBranches')
-                ) {
-                  return null
-                }
-
                 const filteredErrors = errorsWithGroup.filter(
                   (error) => error.type === errorType
                 )
@@ -338,6 +340,11 @@ export const ValidationErrorsDrawer = ({ onClose }: Props) => {
                   <ValidationErrorSection
                     key={errorType}
                     errorType={errorType as ErrorType}
+                    color={
+                      WARNING_ERROR_TYPES.has(errorType as ErrorType)
+                        ? 'yellow'
+                        : 'orange'
+                    }
                     title={t(config.titleKey)}
                     allErrors={filteredErrors}
                     description={t(config.descriptionKey)}
@@ -420,6 +427,9 @@ const ValidationErrorSection = ({
         <Stack spacing={2}>
           {allErrors.map((error, idx) => {
             const label = getLabel ? getLabel(error) : String(error)
+            // Flow-level errors (no groupId) aren't navigable, so render them
+            // non-interactive instead of a button that does nothing.
+            const isClickable = !!onGroupClick && !!error.groupId
             return (
               <Box
                 key={idx}
@@ -428,22 +438,22 @@ const ValidationErrorSection = ({
                 borderRadius="sm"
                 borderLeftWidth="3px"
                 borderLeftColor={leftBorderColor}
-                cursor={onGroupClick ? 'pointer' : 'default'}
+                cursor={isClickable ? 'pointer' : 'default'}
                 _hover={
-                  onGroupClick
+                  isClickable
                     ? { bg: hoverBgColor, transform: 'translateX(2px)' }
                     : undefined
                 }
                 transition="all 0.2s"
-                onClick={() => onGroupClick?.(error)}
-                role={onGroupClick ? 'button' : undefined}
-                tabIndex={onGroupClick ? 0 : undefined}
+                onClick={isClickable ? () => onGroupClick?.(error) : undefined}
+                role={isClickable ? 'button' : undefined}
+                tabIndex={isClickable ? 0 : undefined}
                 onKeyDown={
-                  onGroupClick
+                  isClickable
                     ? (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          onGroupClick(error)
+                          onGroupClick?.(error)
                         }
                       }
                     : undefined

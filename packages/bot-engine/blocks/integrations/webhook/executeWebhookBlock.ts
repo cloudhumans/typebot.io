@@ -39,6 +39,7 @@ import {
   mergeKeyValues,
 } from './restApiCredential'
 import { resolveRestApiCredentialData } from './resolveRestApiCredential'
+import { workspaceLogLabel } from '../../../workspaceLogLabel'
 import { parseResponseBody, safeJsonParse } from './parseResponseBody'
 import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
@@ -56,8 +57,11 @@ export const longReqTimeoutWhitelist = [
   'https://api.anthropic.com',
 ]
 
-export const webhookSuccessDescription = `Webhook successfuly executed.`
+export const webhookSuccessDescription = `Webhook successfully executed.`
 export const webhookErrorDescription = `Webhook returned an error.`
+// Substituted for any value whose masking threw. Fail-safe: a value that
+// couldn't be masked is dropped, never emitted unmasked.
+export const maskingFailed = '[omitted: secret masking failed]'
 
 type Params = {
   disableRequestTimeout?: boolean
@@ -277,8 +281,10 @@ export const parseWebhookAttributes = async ({
       // Mask even short user/pass: they're credential-derived secrets, and the
       // API could echo a short value in an error/response body. Accepts some log
       // noise as the safer trade-off (the full Basic header is masked too).
-      if (username) addMaskableSecret(secretValues, username, { allowShort: true })
-      if (password) addMaskableSecret(secretValues, password, { allowShort: true })
+      if (username)
+        addMaskableSecret(secretValues, username, { allowShort: true })
+      if (password)
+        addMaskableSecret(secretValues, password, { allowShort: true })
     }
     webhook.headers?.splice(basicAuthHeaderIdx, 1)
   }
@@ -336,12 +342,36 @@ export const executeWebhook = async (
   const { headers, url, method, basicAuth, isJson } = webhook
   const secretValues = webhook.secretValues ?? new Set<string>()
   // Mask credential-derived secrets in anything that gets persisted/logged.
-  const mask = <T>(value: T): T => maskSecretsDeep(value, secretValues)
-  // `secretValues` is defined (even if empty) only for credential-backed
-  // requests. Those must not follow redirects: the SSRF guard only validates
-  // the initial URL, and `ky` would otherwise replay the secret headers to a
-  // 302 Location (e.g. the cloud metadata IP). 'manual' makes `ky` throw on a
-  // 3xx instead of following it, so the secret never leaves the validated host.
+  // Total by construction: a masking failure must never throw out of this
+  // logging path. #214 placed mask() on the critical path of both the ChatLog
+  // detail and the structured logger calls, so a throw here (e.g. an over-deep
+  // payload) would lose BOTH and escape as an unhandled rejection that crashes
+  // the request. On failure we emit a structured error (with workspace context,
+  // so the offending flow is findable) and fall back to a marker — never the
+  // unmasked value.
+  const mask = <T>(value: T): T => {
+    try {
+      return maskSecretsDeep(value, secretValues)
+    } catch (maskError) {
+      logger.error(
+        `${workspaceLogLabel(logContext?.workspace)} - Secret masking failed`,
+        {
+          ...logContext,
+          error:
+            maskError instanceof Error ? maskError.message : String(maskError),
+        }
+      )
+      return maskingFailed as unknown as T
+    }
+  }
+  // `webhook.secretValues` is defined (even if an empty Set) only for
+  // credential-backed requests — the local `secretValues` above always
+  // defaults to a Set, so `webhook.secretValues !== undefined` is what actually
+  // distinguishes them. Credentialed requests must not follow redirects: the
+  // SSRF guard only validates the initial URL, and `ky` would otherwise replay
+  // the secret headers to a 302 Location (e.g. the cloud metadata IP). 'manual'
+  // makes `ky` throw on a 3xx instead of following it, so the secret never
+  // leaves the validated host.
   const isCredentialed = webhook.secretValues !== undefined
   const contentType = headers ? headers['Content-Type'] : undefined
 
@@ -393,6 +423,22 @@ export const executeWebhook = async (
   try {
     const response = await ky(request.url, omit(request, 'url'))
     const body = await parseResponseBody(response)
+    const httpDuration = Date.now() - requestStartTime
+    // Emit the lightweight structured log first, before the heavier ChatLog
+    // detail masking below — observability must not depend on serializing the
+    // full request/response.
+    logger.info(
+      `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Executed`,
+      {
+        ...logContext,
+        http: {
+          url: mask(request.url),
+          method: request.method,
+          status_code: response.status,
+          duration: httpDuration,
+        },
+      }
+    )
     logs.push({
       status: 'success',
       description: webhookSuccessDescription,
@@ -405,19 +451,6 @@ export const executeWebhook = async (
         request: mask(request),
       },
     })
-    const httpDuration = Date.now() - requestStartTime
-    logger.info(
-      `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Executed`,
-      {
-        ...logContext,
-        http: {
-          url: mask(request.url),
-          method: request.method,
-          status_code: response.status,
-          duration: httpDuration,
-        },
-      }
-    )
     return {
       response: {
         statusCode: response.status,
@@ -441,6 +474,18 @@ export const executeWebhook = async (
         (error.response.status === 0 ||
           error.response.type === 'opaqueredirect' ||
           (error.response.status >= 300 && error.response.status < 400))
+      logger.warn(
+        `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Error`,
+        {
+          ...logContext,
+          http: {
+            url: mask(request.url),
+            method: request.method,
+            status_code: error.response.status,
+            duration: Date.now() - requestStartTime,
+          },
+        }
+      )
       logs.push({
         status: 'error',
         description: isBlockedRedirect
@@ -452,18 +497,6 @@ export const executeWebhook = async (
           response: mask(response),
         },
       })
-      logger.warn(
-        `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Error`,
-        {
-          ...logContext,
-          http: {
-            url: mask(request.url),
-            method: request.method,
-            status_code: error.response.status,
-            duration: Date.now() - requestStartTime,
-          },
-        }
-      )
       return { response, logs, startTimeShouldBeUpdated: true }
     }
     if (error instanceof TimeoutError) {
@@ -475,18 +508,8 @@ export const executeWebhook = async (
           }s)`,
         },
       }
-      logs.push({
-        status: 'error',
-        description: `Webhook request timed out. (${
-          (request.timeout ? request.timeout : 0) / 1000
-        }s)`,
-        details: {
-          response: mask(response),
-          request: mask(request),
-        },
-      })
       logger.error(
-        `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Timeout`,
+        `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Timeout`,
         {
           ...logContext,
           http: {
@@ -497,6 +520,16 @@ export const executeWebhook = async (
           },
         }
       )
+      logs.push({
+        status: 'error',
+        description: `Webhook request timed out. (${
+          (request.timeout ? request.timeout : 0) / 1000
+        }s)`,
+        details: {
+          response: mask(response),
+          request: mask(request),
+        },
+      })
       return { response, logs, startTimeShouldBeUpdated: true }
     }
     const response = {
@@ -506,7 +539,7 @@ export const executeWebhook = async (
       data: { message: mask(`Error from Typebot server: ${error}`) },
     }
     logger.error(
-      `${logContext?.workspace.name ?? 'unknown'} - HTTP Request Failed`,
+      `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Failed`,
       {
         ...logContext,
         http: {

@@ -14,6 +14,20 @@ type Props = {
   prefilledVariables?: Record<string, unknown>
   resultId?: string
   textBubbleContentFormat: 'richText' | 'markdown'
+  /**
+   * When true, the returned `logs` are NOT run through
+   * `filterPotentiallySensitiveLogs`. This is opt-in for trusted, server-to-server
+   * callers (the bearer-authed MCP route) that need to observe error-status logs
+   * which the public filter strips by description (e.g. `webhookErrorDescription`
+   * on HTTP 4xx/5xx).
+   *
+   * WARNING: these raw logs may contain sensitive details — not every log is
+   * secret-masked at push time (e.g. the sendEmail `!emailBody` branch logs
+   * `transportConfig.auth.pass` unmasked). Callers must not forward these logs to
+   * untrusted clients; re-filter them (see `executeWorkflow`) before returning.
+   * The default (false) keeps the public chat API response byte-identical.
+   */
+  skipSensitiveLogFiltering?: boolean
 }
 
 export const startChat = async ({
@@ -25,6 +39,7 @@ export const startChat = async ({
   prefilledVariables,
   resultId: startResultId,
   textBubbleContentFormat,
+  skipSensitiveLogFiltering = false,
 }: Props) => {
   logger.info('startChat called', {
     publicId,
@@ -147,7 +162,9 @@ export const startChat = async ({
     input,
     resultId,
     dynamicTheme,
-    logs: logs?.filter(filterPotentiallySensitiveLogs),
+    logs: skipSensitiveLogFiltering
+      ? logs
+      : logs?.filter(filterPotentiallySensitiveLogs),
     clientSideActions,
     corsOrigin,
     progress: newSessionState.progressMetadata

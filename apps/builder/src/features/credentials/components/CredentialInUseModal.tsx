@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogBody,
@@ -9,15 +9,21 @@ import {
   Badge,
   Button,
   HStack,
+  Input,
+  Link,
   List,
   ListItem,
   Stack,
   Text,
 } from '@chakra-ui/react'
 import { useTranslate } from '@tolgee/react'
+import NextLink from 'next/link'
 
 export type CredentialUsage = {
   source: 'Typebot' | 'PublicTypebot'
+  // 'whatsApp' references drive the live flow, so they're badged distinctly
+  // rather than as a plain draft.
+  via?: 'block' | 'whatsApp'
   typebotId: string
   publicId: string | null
   name: string
@@ -28,6 +34,11 @@ type Props = {
   onClose: () => void
   usages: CredentialUsage[]
   credentialName?: string
+  // 'delete' (default): the credential can't be deleted while referenced.
+  // 'save': edits to a credential used by published flows apply in production.
+  variant?: 'delete' | 'save'
+  onForceDelete?: () => void
+  isForceDeleting?: boolean
 }
 
 // Informs the user that a credential cannot be deleted because it is still
@@ -38,9 +49,25 @@ export const CredentialInUseModal = ({
   onClose,
   usages,
   credentialName,
+  variant = 'delete',
+  onForceDelete,
+  isForceDeleting,
 }: Props) => {
   const { t } = useTranslate()
   const closeRef = useRef(null)
+  const isSave = variant === 'save'
+
+  // Force-deleting an in-use credential breaks live flows, so gate it behind
+  // typing the credential name (deprecate/save is reversible — no guard there).
+  const [typedName, setTypedName] = useState('')
+  const trimmedCredentialName = credentialName?.trim() ?? ''
+  const requiresNameConfirmation = !isSave && trimmedCredentialName.length > 0
+  const isNameConfirmed =
+    !requiresNameConfirmation || typedName.trim() === trimmedCredentialName
+
+  useEffect(() => {
+    if (!isOpen) setTypedName('')
+  }, [isOpen])
 
   return (
     <AlertDialog
@@ -52,7 +79,7 @@ export const CredentialInUseModal = ({
       <AlertDialogOverlay>
         <AlertDialogContent>
           <AlertDialogHeader fontSize="lg" fontWeight="bold">
-            {t('credentialInUse.title')}
+            {t(isSave ? 'credentialInUse.saveTitle' : 'credentialInUse.title')}
           </AlertDialogHeader>
 
           <AlertDialogBody>
@@ -65,7 +92,14 @@ export const CredentialInUseModal = ({
                 </Text>
               )}
 
-              <Text>{t('credentialInUse.body', { count: usages.length })}</Text>
+              <Text>
+                {t(
+                  isSave ? 'credentialInUse.saveBody' : 'credentialInUse.body',
+                  {
+                    count: usages.length,
+                  }
+                )}
+              </Text>
 
               <List spacing={2} maxH="40vh" overflowY="auto">
                 {usages.map((u) => (
@@ -73,14 +107,27 @@ export const CredentialInUseModal = ({
                     <HStack>
                       <Badge
                         colorScheme={
-                          u.source === 'PublicTypebot' ? 'green' : 'gray'
+                          u.via === 'whatsApp'
+                            ? 'purple'
+                            : u.source === 'PublicTypebot'
+                            ? 'green'
+                            : 'gray'
                         }
                       >
-                        {u.source === 'PublicTypebot'
+                        {u.via === 'whatsApp'
+                          ? t('credentialInUse.whatsApp')
+                          : u.source === 'PublicTypebot'
                           ? t('credentialInUse.published')
                           : t('credentialInUse.draft')}
                       </Badge>
-                      <Text fontWeight="medium">{u.name}</Text>
+                      <Link
+                        as={NextLink}
+                        href={`/typebots/${u.typebotId}/edit`}
+                        fontWeight="medium"
+                        color="blue.500"
+                      >
+                        {u.name}
+                      </Link>
                       {u.publicId && (
                         <Text fontSize="xs" color="gray.500">
                           /{u.publicId}
@@ -91,16 +138,58 @@ export const CredentialInUseModal = ({
                 ))}
               </List>
 
-              <Text fontSize="sm" color="gray.600">
-                {t('credentialInUse.instructions')}
-              </Text>
+              {!isSave && (
+                <Text fontSize="sm" color="gray.600">
+                  {t('credentialInUse.instructions')}
+                </Text>
+              )}
+
+              {onForceDelete && (
+                <Text fontSize="sm" color="red.500" fontWeight="medium">
+                  {t(
+                    isSave
+                      ? 'credentialInUse.saveWarning'
+                      : 'credentialInUse.forceWarning'
+                  )}
+                </Text>
+              )}
+
+              {onForceDelete && requiresNameConfirmation && (
+                <Stack spacing={1}>
+                  <Text fontSize="sm" color="gray.600">
+                    {t('credentialInUse.typeNameToConfirm', {
+                      name: credentialName,
+                    })}
+                  </Text>
+                  <Input
+                    value={typedName}
+                    onChange={(e) => setTypedName(e.target.value)}
+                    placeholder={credentialName}
+                    autoComplete="off"
+                  />
+                </Stack>
+              )}
             </Stack>
           </AlertDialogBody>
 
-          <AlertDialogFooter>
+          <AlertDialogFooter gap={3}>
             <Button ref={closeRef} colorScheme="blue" onClick={onClose}>
               {t('credentialInUse.acknowledge')}
             </Button>
+            {onForceDelete && (
+              <Button
+                colorScheme={isSave ? 'orange' : 'red'}
+                onClick={onForceDelete}
+                isLoading={isForceDeleting}
+                isDisabled={!isNameConfirmed}
+              >
+                {t(
+                  isSave
+                    ? 'credentialInUse.saveAnyway'
+                    : 'credentialInUse.forceDelete'
+                )}
+              </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialogOverlay>

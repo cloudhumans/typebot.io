@@ -141,6 +141,7 @@ model Credentials {
   type        String
   iv          String
   createdById String?
+  deprecatedAt DateTime?
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
 

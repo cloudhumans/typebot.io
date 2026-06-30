@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Stack,
   HStack,
@@ -13,6 +13,7 @@ import { HttpRequest, HttpRequestBlock } from '@typebot.io/schemas'
 import { TextInput } from '@/components/inputs'
 import { HttpRequestAdvancedConfigForm } from './HttpRequestAdvancedConfigForm'
 import { CredentialsDropdown } from '@/features/credentials/components/CredentialsDropdown'
+import { useEditor } from '@/features/editor/providers/EditorProvider'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { trpc } from '@/lib/trpc'
 import { LockedIcon } from '@/components/icons'
@@ -31,7 +32,9 @@ export const HttpRequestSettings = ({
 }: Props) => {
   const { t } = useTranslate()
   const { workspace } = useWorkspace()
+  const { revalidate } = useEditor()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const [editingCredentialsId, setEditingCredentialsId] = useState<string>()
   const credentialsId = normalizeCredentialsId(options?.credentialsId)
   const isSecureMode = !!credentialsId
 
@@ -83,19 +86,31 @@ export const HttpRequestSettings = ({
           workspaceId={workspace.id}
           currentCredentialsId={credentialsId}
           onCredentialsSelect={updateCredentialsId}
-          onCreateNewClick={onOpen}
+          onCreateNewClick={() => {
+            setEditingCredentialsId(undefined)
+            onOpen()
+          }}
+          onEditClick={(id) => {
+            setEditingCredentialsId(id)
+            onOpen()
+          }}
           credentialsName={t(
             'blocks.integrations.httpRequest.credentials.name'
           )}
           defaultCredentialLabel={t(
             'blocks.integrations.httpRequest.credentials.noCredentialLabel'
           )}
-          size="sm"
         />
       )}
       {isSecureMode ? (
         isCredentialError ? (
-          <Tag size="lg" colorScheme="red" alignSelf="flex-start">
+          <Tag
+            size="lg"
+            colorScheme="red"
+            alignSelf="flex-start"
+            py="2"
+            whiteSpace="normal"
+          >
             <Text>{credentialErrorMessage}</Text>
           </Tag>
         ) : (
@@ -147,8 +162,17 @@ export const HttpRequestSettings = ({
       />
       <RestApiCredentialsModal
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={() => {
+          setEditingCredentialsId(undefined)
+          onClose()
+        }}
         onNewCredentials={updateCredentialsId}
+        editingCredentialsId={editingCredentialsId}
+        onUpdated={() => revalidate?.()}
+        onDeleted={(id) => {
+          if (id === credentialsId) updateCredentialsId(undefined)
+          else revalidate?.()
+        }}
       />
     </Stack>
   )

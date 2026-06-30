@@ -1,6 +1,7 @@
 import { env } from '@typebot.io/env'
 import logger from '@typebot.io/lib/logger'
 import { Block, Group, SessionState } from '@typebot.io/schemas'
+import { workspaceLogLabel } from './workspaceLogLabel'
 
 // Block type identifiers for LLM-call integrations.
 // Legacy schema enum value (`OpenAI`) plus forge block ids (lowercase, kebab).
@@ -77,6 +78,10 @@ export const enforceBlockVisitLimit = ({
 
   const typebot = newState.typebotsQueue[0].typebot
   const workspaceName = typebot.workspaceName ?? 'unknown'
+  const workspaceLabel = workspaceLogLabel({
+    id: typebot.workspaceId,
+    name: typebot.workspaceName,
+  })
   const baseLogPayload = {
     workspace: {
       id: typebot.workspaceId ?? 'unknown',
@@ -101,18 +106,15 @@ export const enforceBlockVisitLimit = ({
   }
 
   if (visitCount === warnThreshold) {
-    logger.warn(
-      `${workspaceName} - Block visit warning threshold reached`,
-      {
-        ...baseLogPayload,
-        visit_count: visitCount,
-        threshold: warnThreshold,
-      }
-    )
+    logger.warn(`${workspaceLabel} - Block visit warning threshold reached`, {
+      ...baseLogPayload,
+      visit_count: visitCount,
+      threshold: warnThreshold,
+    })
   }
 
   if (visitCount > limit) {
-    logger.error(`${workspaceName} - Block visit limit exceeded`, {
+    logger.error(`${workspaceLabel} - Block visit limit exceeded`, {
       ...baseLogPayload,
       visit_count: visitCount,
       limit,

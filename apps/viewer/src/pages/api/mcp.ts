@@ -3,7 +3,6 @@ import {
   getWorkflowTools,
   executeWorkflow,
   sanitizeToolName,
-  extractToolOutput,
   transformToMCPTool,
   checkBearerAuth,
 } from '@typebot.io/mcp-tools'
@@ -232,19 +231,36 @@ export default async function handler(
         }
 
         const startTime = Date.now()
-        const result = await executeWorkflow({
+        const { isError, output } = await executeWorkflow({
           publicId: tool.publicName,
           prefilledVariables: args as Record<string, unknown>,
         })
         const durationMs = Date.now() - startTime
 
-        const output = extractToolOutput(result)
+        // `isError` flags a failed run that produced no usable answer (or whose
+        // answer IS the typebot transport-error marker) — see executeWorkflow.
+        // It rides the envelope below as `isError:true`, which makes the
+        // LangChain MCP adapter (`@langchain/mcp-adapters@1.1.3`,
+        // `dist/tools.js:314`) `throw new ToolException(...)` UNCONDITIONALLY on
+        // `result.isError`. That throw is caught by claudia-agentic's
+        // `loggingMiddleware.wrapToolCall` (`logging.ts:131`) and recorded via
+        // `recordToolError` (`logging.ts:143`), which hands the LLM a synthetic
+        // `status:"error"` ToolMessage — NOT the `recordToolResultError`
+        // status-based branch (`logging.ts:48` / #110), which only fires when a
+        // handler RETURNS a status:error ToolMessage (never on this throw path).
+        // It is that throw path — not the #110 status branch — that makes the
+        // `detectSwallowedToolError` shim dead code. Note: `isError:true` drops
+        // the content (the agent gets the error string, not the answer), so we
+        // gate it tightly. A future adapter that maps `isError`→`status:"error"`
+        // instead of throwing would shift which branch fires.
+        // Thrown errors take the JSON-RPC error path below.
         logger.info('MCP tools/call completed', {
           tenant,
           toolName: name,
           workflowId: tool.id,
           publicName: tool.publicName,
           durationMs,
+          isError,
           requestId: id,
         })
 
@@ -252,6 +268,7 @@ export default async function handler(
           jsonrpc: '2.0',
           result: {
             content: [{ type: 'text', text: output }],
+            ...(isError ? { isError: true } : {}),
           },
           id,
         })

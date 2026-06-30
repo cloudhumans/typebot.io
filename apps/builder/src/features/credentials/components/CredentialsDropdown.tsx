@@ -1,6 +1,8 @@
 import {
+  Badge,
   Button,
   ButtonProps,
+  HStack,
   IconButton,
   Menu,
   MenuButton,
@@ -9,12 +11,19 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { ChevronLeftIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import {
+  ChevronLeftIcon,
+  EditIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@/components/icons'
 import React, { useCallback, useState } from 'react'
 import { useToast } from '../../../hooks/useToast'
 import { Credentials } from '@typebot.io/schemas'
 import { trpc } from '@/lib/trpc'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
+import { useTypebot } from '@/features/editor/providers/TypebotProvider'
+import { useEditor } from '@/features/editor/providers/EditorProvider'
 import { useTranslate } from '@tolgee/react'
 import {
   CredentialInUseModal,
@@ -27,6 +36,10 @@ type Props = Omit<ButtonProps, 'type'> & {
   currentCredentialsId?: string
   onCredentialsSelect: (credentialId?: string) => void
   onCreateNewClick: () => void
+  // When provided, each row shows an edit (pencil) action instead of the inline
+  // delete (trash). Deletion then lives inside the edit flow. Used by rest-api,
+  // where the full credential lifecycle is managed in the edit modal.
+  onEditClick?: (credentialsId: string) => void
   defaultCredentialLabel?: string
   credentialsName: string
 }
@@ -37,6 +50,7 @@ export const CredentialsDropdown = ({
   currentCredentialsId,
   onCredentialsSelect,
   onCreateNewClick,
+  onEditClick,
   defaultCredentialLabel,
   credentialsName,
   ...props
@@ -44,19 +58,24 @@ export const CredentialsDropdown = ({
   const { t } = useTranslate()
   const { showToast } = useToast()
   const { currentRole } = useWorkspace()
+  const { typebot } = useTypebot()
+  const { revalidate } = useEditor()
   const { data, refetch } = trpc.credentials.listCredentials.useQuery({
     workspaceId,
     type,
   })
   const [isDeleting, setIsDeleting] = useState<string>()
+  const [isForceDeleting, setIsForceDeleting] = useState(false)
   const [inUseModalState, setInUseModalState] = useState<{
+    credentialsId: string
     credentialName?: string
     usages: CredentialUsage[]
   } | null>(null)
 
   const { mutate } = trpc.credentials.deleteCredentials.useMutation({
-    onMutate: ({ credentialsId }) => {
+    onMutate: ({ credentialsId, force }) => {
       setIsDeleting(credentialsId)
+      if (force) setIsForceDeleting(true)
     },
     onError: (error, variables) => {
       const usages = (error.data as { usages?: CredentialUsage[] } | null)
@@ -66,6 +85,7 @@ export const CredentialsDropdown = ({
           (c) => c.id === variables.credentialsId
         )?.name
         setInUseModalState({
+          credentialsId: variables.credentialsId,
           credentialName,
           usages,
         })
@@ -76,11 +96,21 @@ export const CredentialsDropdown = ({
       })
     },
     onSuccess: ({ credentialsId }) => {
-      if (credentialsId === currentCredentialsId) onCredentialsSelect(undefined)
+      setInUseModalState(null)
       refetch()
+      if (credentialsId === currentCredentialsId) {
+        // Clearing this block's credentialsId is a content change; the
+        // content-keyed validation effect re-runs with the fresh state.
+        onCredentialsSelect(undefined)
+      } else {
+        // No content change for this flow, so force a revalidation to surface
+        // other blocks of this flow that still reference the deleted credential.
+        revalidate?.()
+      }
     },
     onSettled: () => {
       setIsDeleting(undefined)
+      setIsForceDeleting(false)
     },
   })
 
@@ -101,8 +131,21 @@ export const CredentialsDropdown = ({
   const deleteCredentials =
     (credentialsId: string) => async (e: React.MouseEvent) => {
       e.stopPropagation()
-      mutate({ workspaceId, credentialsId })
+      mutate({ workspaceId, credentialsId, currentTypebotId: typebot?.id })
     }
+
+  const editCredentials = (credentialsId: string) => (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onEditClick?.(credentialsId)
+  }
+
+  // Deprecated credentials still resolve, so they stay selectable (you may need
+  // to re-point a block at one), but sink to the bottom of the list.
+  const sortedCredentials = [...(data?.credentials ?? [])].sort((a, b) => {
+    const aDep = a.deprecatedAt ? 1 : 0
+    const bDep = b.deprecatedAt ? 1 : 0
+    return aDep - bDep
+  })
 
   if (data?.credentials.length === 0 && !defaultCredentialLabel) {
     return (
@@ -152,7 +195,7 @@ export const CredentialsDropdown = ({
                 {defaultCredentialLabel}
               </MenuItem>
             )}
-            {data?.credentials.map((credentials) => (
+            {sortedCredentials.map((credentials) => (
               <MenuItem
                 role="menuitem"
                 minH="40px"
@@ -162,17 +205,44 @@ export const CredentialsDropdown = ({
                 fontWeight="normal"
                 rounded="none"
                 justifyContent="space-between"
+                gap="3"
               >
-                {credentials.name}
-                <IconButton
-                  icon={<TrashIcon />}
-                  aria-label={t(
-                    'blocks.inputs.payment.settings.credentials.removeCredentials.label'
+                <HStack spacing="2" overflow="hidden">
+                  <Text
+                    noOfLines={1}
+                    color={credentials.deprecatedAt ? 'gray.500' : undefined}
+                  >
+                    {credentials.name}
+                  </Text>
+                  {credentials.deprecatedAt && (
+                    <Badge
+                      colorScheme="orange"
+                      fontSize="2xs"
+                      flexShrink={0}
+                      textTransform="uppercase"
+                    >
+                      {t('credentials.deprecatedBadge')}
+                    </Badge>
                   )}
-                  size="xs"
-                  onClick={deleteCredentials(credentials.id)}
-                  isLoading={isDeleting === credentials.id}
-                />
+                </HStack>
+                {onEditClick ? (
+                  <IconButton
+                    icon={<EditIcon />}
+                    aria-label={t('credentials.editCredentials.label')}
+                    size="xs"
+                    onClick={editCredentials(credentials.id)}
+                  />
+                ) : (
+                  <IconButton
+                    icon={<TrashIcon />}
+                    aria-label={t(
+                      'blocks.inputs.payment.settings.credentials.removeCredentials.label'
+                    )}
+                    size="xs"
+                    onClick={deleteCredentials(credentials.id)}
+                    isLoading={isDeleting === credentials.id}
+                  />
+                )}
               </MenuItem>
             ))}
             {currentRole === 'GUEST' ? null : (
@@ -197,6 +267,18 @@ export const CredentialsDropdown = ({
         onClose={() => setInUseModalState(null)}
         usages={inUseModalState?.usages ?? []}
         credentialName={inUseModalState?.credentialName}
+        onForceDelete={
+          inUseModalState
+            ? () =>
+                mutate({
+                  workspaceId,
+                  credentialsId: inUseModalState.credentialsId,
+                  force: true,
+                  currentTypebotId: typebot?.id,
+                })
+            : undefined
+        }
+        isForceDeleting={isForceDeleting}
       />
     </>
   )

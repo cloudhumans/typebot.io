@@ -37,7 +37,13 @@ export const listCredentials = authenticatedProcedure
   )
   .output(
     z.object({
-      credentials: z.array(z.object({ id: z.string(), name: z.string() })),
+      credentials: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          deprecatedAt: z.date().nullable(),
+        })
+      ),
     })
   )
   .query(async ({ input: { workspaceId, type }, ctx: { user } }) => {
@@ -55,6 +61,7 @@ export const listCredentials = authenticatedProcedure
           select: {
             id: true,
             name: true,
+            deprecatedAt: true,
           },
         },
       },

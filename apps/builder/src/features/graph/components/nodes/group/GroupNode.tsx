@@ -158,9 +158,15 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
   )
 
   const isFocused = focusedGroups.includes(group.id)
-  const hasError = !!validationErrors?.errors.find(
-    (e) => e.groupId === group.id
+  const groupIssues =
+    validationErrors?.errors.filter((e) => e.groupId === group.id) ?? []
+  const hasError = groupIssues.length > 0
+  // Amber when the group carries only non-blocking warnings (e.g. a deprecated
+  // credential); orange when it has at least one blocking error.
+  const hasBlockingError = groupIssues.some(
+    (e) => (e.severity ?? 'error') === 'error'
   )
+  const issueIconColor = hasBlockingError ? 'orange.500' : 'yellow.500'
 
   const handleDeleteClick = () =>
     dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }))
@@ -221,7 +227,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
               right="4"
               size="sm"
               variant={'ghost'}
-              icon={<AlertIcon color="orange.500" />}
+              icon={<AlertIcon color={issueIconColor} />}
               aria-label="Show validation errors"
             />
           )}
