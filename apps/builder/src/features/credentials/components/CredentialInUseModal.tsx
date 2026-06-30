@@ -76,7 +76,6 @@ export const CredentialInUseModal = ({
   const slugColor = useColorModeValue('gray.500', 'gray.400')
   const mutedColor = useColorModeValue('gray.400', 'gray.500')
   const warningBg = useColorModeValue('red.50', 'red.900')
-  const warningBorder = useColorModeValue('red.200', 'red.700')
   const warningColor = useColorModeValue('red.700', 'red.200')
 
   // Force-deleting an in-use credential breaks live flows, so gate it behind
@@ -228,8 +227,6 @@ export const CredentialInUseModal = ({
                   align="flex-start"
                   spacing={2.5}
                   bg={warningBg}
-                  border="1px solid"
-                  borderColor={warningBorder}
                   borderRadius="md"
                   px={3.5}
                   py={3}
