@@ -156,73 +156,76 @@ export const CredentialInUseModal = ({
                 )}
               </Text>
 
-              <Stack
-                spacing={0}
+              <Box
                 minH={0}
-                maxH="40vh"
+                maxH="280px"
                 overflowY="auto"
                 bg={cardBg}
                 border="1px solid"
                 borderColor={cardBorderColor}
                 borderRadius="md"
-                divider={<StackDivider borderColor={cardBorderColor} />}
               >
-                {sortedUsages.map((u) => (
-                  <Link
-                    key={`${u.source}:${u.typebotId}`}
-                    as={NextLink}
-                    href={`/typebots/${u.typebotId}/edit`}
-                    display="block"
-                    px={4}
-                    py={3}
-                    _hover={{ bg: rowHoverBg, textDecoration: 'none' }}
-                  >
-                    <HStack spacing={3} align="center">
-                      <Box flexShrink={0} w="90px">
-                        <Badge
-                          w="full"
-                          textAlign="center"
-                          borderRadius="full"
-                          textTransform="uppercase"
-                          fontSize="2xs"
-                          letterSpacing="wide"
-                          px={2}
-                          py={0.5}
-                          colorScheme={
-                            u.via === 'whatsApp'
-                              ? 'purple'
-                              : u.source === 'PublicTypebot'
-                              ? 'green'
-                              : 'gray'
-                          }
-                        >
-                          {u.via === 'whatsApp'
-                            ? t('credentialInUse.whatsApp')
-                            : u.source === 'PublicTypebot'
-                            ? t('credentialInUse.published')
-                            : t('credentialInUse.draft')}
-                        </Badge>
-                      </Box>
-                      <Box flex={1} minW={0}>
-                        <Text fontWeight="medium" noOfLines={1}>
-                          {u.name}
-                        </Text>
-                        {u.publicId && (
-                          <Text
-                            fontFamily="mono"
-                            fontSize="xs"
-                            color={slugColor}
-                            noOfLines={1}
+                <Stack
+                  spacing={0}
+                  divider={<StackDivider borderColor={cardBorderColor} />}
+                >
+                  {sortedUsages.map((u) => (
+                    <Link
+                      key={`${u.source}:${u.typebotId}`}
+                      as={NextLink}
+                      href={`/typebots/${u.typebotId}/edit`}
+                      display="block"
+                      px={4}
+                      py={3}
+                      _hover={{ bg: rowHoverBg, textDecoration: 'none' }}
+                    >
+                      <HStack spacing={3} align="center">
+                        <Box flexShrink={0} w="90px">
+                          <Badge
+                            w="full"
+                            textAlign="center"
+                            borderRadius="full"
+                            textTransform="uppercase"
+                            fontSize="2xs"
+                            letterSpacing="wide"
+                            px={2}
+                            py={0.5}
+                            colorScheme={
+                              u.via === 'whatsApp'
+                                ? 'purple'
+                                : u.source === 'PublicTypebot'
+                                ? 'green'
+                                : 'gray'
+                            }
                           >
-                            /{u.publicId}
+                            {u.via === 'whatsApp'
+                              ? t('credentialInUse.whatsApp')
+                              : u.source === 'PublicTypebot'
+                              ? t('credentialInUse.published')
+                              : t('credentialInUse.draft')}
+                          </Badge>
+                        </Box>
+                        <Box flex={1} minW={0}>
+                          <Text fontWeight="medium" noOfLines={1}>
+                            {u.name}
                           </Text>
-                        )}
-                      </Box>
-                      <ExternalLinkIcon flexShrink={0} color={mutedColor} />
-                    </HStack>
-                  </Link>
-                ))}
-              </Stack>
+                          {u.publicId && (
+                            <Text
+                              fontFamily="mono"
+                              fontSize="xs"
+                              color={slugColor}
+                              noOfLines={1}
+                            >
+                              /{u.publicId}
+                            </Text>
+                          )}
+                        </Box>
+                        <ExternalLinkIcon flexShrink={0} color={mutedColor} />
+                      </HStack>
+                    </Link>
+                  ))}
+                </Stack>
+              </Box>
 
               {!isSave && (
                 <Text fontSize="sm" color={subtitleColor}>
