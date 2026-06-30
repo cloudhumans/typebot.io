@@ -22,7 +22,12 @@ import {
 } from '@chakra-ui/react'
 import { T, useTranslate } from '@tolgee/react'
 import NextLink from 'next/link'
-import { AlertIcon, CloseIcon, ExternalLinkIcon } from '@/components/icons'
+import {
+  AlertIcon,
+  CloseIcon,
+  ExternalLinkIcon,
+  ShieldAlertIcon,
+} from '@/components/icons'
 
 export type CredentialUsage = {
   source: 'Typebot' | 'PublicTypebot'
@@ -106,7 +111,7 @@ export const CredentialInUseModal = ({
                 align="center"
                 justify="center"
               >
-                <AlertIcon boxSize="22px" />
+                <ShieldAlertIcon boxSize="22px" />
               </Flex>
               <Stack spacing={1} flex={1} minW={0}>
                 <Text fontSize="lg" fontWeight="bold" lineHeight="short">
@@ -166,28 +171,31 @@ export const CredentialInUseModal = ({
                     _hover={{ bg: rowHoverBg, textDecoration: 'none' }}
                   >
                     <HStack spacing={3} align="center">
-                      <Badge
-                        flexShrink={0}
-                        borderRadius="full"
-                        textTransform="uppercase"
-                        fontSize="2xs"
-                        letterSpacing="wide"
-                        px={2}
-                        py={0.5}
-                        colorScheme={
-                          u.via === 'whatsApp'
-                            ? 'purple'
+                      <Box flexShrink={0} w="90px">
+                        <Badge
+                          w="full"
+                          textAlign="center"
+                          borderRadius="full"
+                          textTransform="uppercase"
+                          fontSize="2xs"
+                          letterSpacing="wide"
+                          px={2}
+                          py={0.5}
+                          colorScheme={
+                            u.via === 'whatsApp'
+                              ? 'purple'
+                              : u.source === 'PublicTypebot'
+                              ? 'green'
+                              : 'gray'
+                          }
+                        >
+                          {u.via === 'whatsApp'
+                            ? t('credentialInUse.whatsApp')
                             : u.source === 'PublicTypebot'
-                            ? 'green'
-                            : 'gray'
-                        }
-                      >
-                        {u.via === 'whatsApp'
-                          ? t('credentialInUse.whatsApp')
-                          : u.source === 'PublicTypebot'
-                          ? t('credentialInUse.published')
-                          : t('credentialInUse.draft')}
-                      </Badge>
+                            ? t('credentialInUse.published')
+                            : t('credentialInUse.draft')}
+                        </Badge>
+                      </Box>
                       <Box flex={1} minW={0}>
                         <Text fontWeight="medium" noOfLines={1}>
                           {u.name}
