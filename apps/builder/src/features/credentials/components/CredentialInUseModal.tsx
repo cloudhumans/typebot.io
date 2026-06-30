@@ -103,6 +103,7 @@ export const CredentialInUseModal = ({
       leastDestructiveRef={closeRef}
       onClose={onClose}
       size="xl"
+      scrollBehavior="inside"
     >
       <AlertDialogOverlay>
         <AlertDialogContent borderRadius="xl">
@@ -157,9 +158,6 @@ export const CredentialInUseModal = ({
               </Text>
 
               <Box
-                minH={0}
-                maxH="280px"
-                overflowY="auto"
                 bg={cardBg}
                 border="1px solid"
                 borderColor={cardBorderColor}
