@@ -249,13 +249,43 @@ export const RestApiCredentialsModal = ({
     })
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!workspace || !editingCredentialsId) return
-    deleteMutation.mutate({
-      workspaceId: workspace.id,
-      credentialsId: editingCredentialsId,
-      currentTypebotId: typebot?.id,
-    })
+    setIsDeleting(true)
+    try {
+      // Read-only pre-check so an in-use credential opens the modal without a
+      // failed delete (412) in the console. Mirrors deleteCredentials' guard:
+      // a usage only from the current flow's draft block doesn't block.
+      const { usages } =
+        await trpcContext.credentials.getCredentialsUsages.fetch({
+          workspaceId: workspace.id,
+          credentialsId: editingCredentialsId,
+        })
+      const blockingUsages = usages.filter(
+        (u) =>
+          !(
+            u.source === 'Typebot' &&
+            u.via === 'block' &&
+            u.typebotId === typebot?.id
+          )
+      )
+      if (blockingUsages.length > 0) {
+        setIsDeleting(false)
+        setInUseModalState({ variant: 'delete', usages: blockingUsages })
+        return
+      }
+      // No blocking usage now: delete. The mutation re-checks atomically, so a
+      // usage that appears between this check and the delete still 412s and
+      // re-opens the modal via onError (keeping the user in the delete flow).
+      deleteMutation.mutate({
+        workspaceId: workspace.id,
+        credentialsId: editingCredentialsId,
+        currentTypebotId: typebot?.id,
+      })
+    } catch (error) {
+      setIsDeleting(false)
+      showToast({ description: (error as Error).message, status: 'error' })
+    }
   }
 
   const showLoader = isEditing && isLoadingCredential
