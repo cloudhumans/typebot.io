@@ -90,6 +90,13 @@ export const CredentialInUseModal = ({
     if (!isOpen) setTypedName('')
   }, [isOpen])
 
+  // Group references to the same flow together (published before draft) so
+  // the two rows of one typebot sit next to each other.
+  const sortedUsages = [...usages].sort(
+    (a, b) =>
+      a.typebotId.localeCompare(b.typebotId) || a.source.localeCompare(b.source)
+  )
+
   return (
     <AlertDialog
       isOpen={isOpen}
@@ -151,6 +158,7 @@ export const CredentialInUseModal = ({
 
               <Stack
                 spacing={0}
+                minH={0}
                 maxH="40vh"
                 overflowY="auto"
                 bg={cardBg}
@@ -159,7 +167,7 @@ export const CredentialInUseModal = ({
                 borderRadius="md"
                 divider={<StackDivider borderColor={cardBorderColor} />}
               >
-                {usages.map((u) => (
+                {sortedUsages.map((u) => (
                   <Link
                     key={`${u.source}:${u.typebotId}`}
                     as={NextLink}
