@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogBody,
@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   HStack,
+  Input,
   Link,
   List,
   ListItem,
@@ -55,6 +56,17 @@ export const CredentialInUseModal = ({
   const { t } = useTranslate()
   const closeRef = useRef(null)
   const isSave = variant === 'save'
+
+  // Force-deleting an in-use credential breaks live flows, so gate it behind
+  // typing the credential name (deprecate/save is reversible — no guard there).
+  const [typedName, setTypedName] = useState('')
+  const requiresNameConfirmation = !isSave && !!credentialName
+  const isNameConfirmed =
+    !requiresNameConfirmation || typedName.trim() === credentialName?.trim()
+
+  useEffect(() => {
+    if (!isOpen) setTypedName('')
+  }, [isOpen])
 
   return (
     <AlertDialog
@@ -140,6 +152,22 @@ export const CredentialInUseModal = ({
                   )}
                 </Text>
               )}
+
+              {onForceDelete && requiresNameConfirmation && (
+                <Stack spacing={1}>
+                  <Text fontSize="sm" color="gray.600">
+                    {t('credentialInUse.typeNameToConfirm', {
+                      name: credentialName,
+                    })}
+                  </Text>
+                  <Input
+                    value={typedName}
+                    onChange={(e) => setTypedName(e.target.value)}
+                    placeholder={credentialName}
+                    autoComplete="off"
+                  />
+                </Stack>
+              )}
             </Stack>
           </AlertDialogBody>
 
@@ -152,6 +180,7 @@ export const CredentialInUseModal = ({
                 colorScheme={isSave ? 'orange' : 'red'}
                 onClick={onForceDelete}
                 isLoading={isForceDeleting}
+                isDisabled={!isNameConfirmed}
               >
                 {t(
                   isSave
