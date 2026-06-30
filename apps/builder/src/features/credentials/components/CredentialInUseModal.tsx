@@ -23,6 +23,7 @@ import {
 import { T, useTranslate } from '@tolgee/react'
 import NextLink from 'next/link'
 import { useRouter } from 'next/router'
+import { useUser } from '@/features/account/hooks/useUser'
 import { getAllowedOrigins } from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
@@ -67,7 +68,12 @@ export const CredentialInUseModal = ({
 }: Props) => {
   const { t } = useTranslate()
   const router = useRouter()
-  const isEmbedded = router.query.embedded === 'true'
+  const { user } = useUser()
+  // The query param is the primary signal, but it can be absent after an
+  // in-app route change while the CloudChat session persists; the session
+  // flag keeps us in embedded mode in that case.
+  const isEmbedded =
+    router.query.embedded === 'true' || !!user?.cloudChatAuthorization
   const isSave = variant === 'save'
 
   // Inside CloudChat the builder runs in an iframe. A plain in-iframe route
@@ -76,13 +82,28 @@ export const CredentialInUseModal = ({
   // router instead. The parent matches `typebot:navigate-to-flow` and routes
   // to /controlled-flows/<typebotId>.
   const handleUsageClick = (typebotId: string) => (e: React.MouseEvent) => {
-    if (!isEmbedded) return
+    if (!isEmbedded || window.parent === window) return
+    const allowedOrigins = getAllowedOrigins()
+    let referrerOrigin: string | undefined
+    try {
+      referrerOrigin = document.referrer
+        ? new URL(document.referrer).origin
+        : undefined
+    } catch {
+      referrerOrigin = undefined
+    }
+    // Post only to the actual embedding origin, falling back to the first
+    // allow-listed one, so the message isn't delivered to every allow-listed
+    // origin.
+    const targetOrigin =
+      referrerOrigin && allowedOrigins.includes(referrerOrigin)
+        ? referrerOrigin
+        : allowedOrigins[0]
+    if (!targetOrigin) return
     e.preventDefault()
-    getAllowedOrigins().forEach((origin) =>
-      window.parent.postMessage(
-        { type: 'typebot:navigate-to-flow', typebotId },
-        origin
-      )
+    window.parent.postMessage(
+      { type: 'typebot:navigate-to-flow', typebotId },
+      targetOrigin
     )
     onClose()
   }
