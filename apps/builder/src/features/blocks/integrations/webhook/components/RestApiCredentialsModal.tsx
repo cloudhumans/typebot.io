@@ -14,7 +14,9 @@ import {
   Stack,
   ModalFooter,
   Button,
+  FormControl,
   FormLabel,
+  Switch,
   Text,
   Center,
   Spinner,
@@ -28,7 +30,6 @@ import { createId } from '@paralleldrive/cuid2'
 import React, { useEffect, useState } from 'react'
 import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
 import { useTranslate } from '@tolgee/react'
-import { SwitchWithLabel } from '@/components/inputs/SwitchWithLabel'
 import { MoreInfoTooltip } from '@/components/MoreInfoTooltip'
 import { ShieldAlertIcon } from '@/components/icons'
 import {
@@ -390,16 +391,23 @@ export const RestApiCredentialsModal = ({
                   </TableList>
                 </Stack>
                 {isEditing && (
-                  <SwitchWithLabel
-                    label={t(
-                      'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.label'
-                    )}
-                    moreInfoContent={t(
-                      'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.sub'
-                    )}
-                    initialValue={deprecated}
-                    onCheckChange={setDeprecated}
-                  />
+                  <FormControl as={HStack} justifyContent="space-between">
+                    <FormLabel mb="0">
+                      {t(
+                        'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.label'
+                      )}
+                      &nbsp;
+                      <MoreInfoTooltip>
+                        {t(
+                          'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.sub'
+                        )}
+                      </MoreInfoTooltip>
+                    </FormLabel>
+                    <Switch
+                      isChecked={deprecated}
+                      onChange={(e) => setDeprecated(e.target.checked)}
+                    />
+                  </FormControl>
                 )}
               </>
             )}
