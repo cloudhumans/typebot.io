@@ -18,9 +18,6 @@ import {
   Text,
   Center,
   Spinner,
-  HStack,
-  Switch,
-  useColorModeValue,
 } from '@chakra-ui/react'
 import { KeyValue } from '@typebot.io/schemas'
 import { isSafeBaseUrl } from '@typebot.io/schemas/features/blocks/integrations/webhook/urlHelpers'
@@ -28,6 +25,8 @@ import { createId } from '@paralleldrive/cuid2'
 import React, { useEffect, useState } from 'react'
 import { HeadersInputs, QueryParamsInputs } from './KeyValueInputs'
 import { useTranslate } from '@tolgee/react'
+import { SwitchWithLabel } from '@/components/inputs/SwitchWithLabel'
+import { MoreInfoTooltip } from '@/components/MoreInfoTooltip'
 import {
   CredentialInUseModal,
   type CredentialUsage,
@@ -185,13 +184,6 @@ export const RestApiCredentialsModal = ({
     },
   })
 
-  // Warning-box palette, dark-mode-aware to match the validation drawer's
-  // amber sections (a fixed orange.50 bg is unreadable in dark mode).
-  const deprecateBoxBg = useColorModeValue('orange.50', 'orange.900')
-  const deprecateBoxBorder = useColorModeValue('orange.200', 'orange.700')
-  const deprecateTitleColor = useColorModeValue('orange.700', 'orange.200')
-  const deprecateSubColor = useColorModeValue('gray.600', 'gray.300')
-
   const isBaseUrlInvalid = baseUrl.trim() !== '' && !isSafeBaseUrl(baseUrl)
 
   const buildData = () => ({
@@ -323,23 +315,20 @@ export const RestApiCredentialsModal = ({
                     </Text>
                   )}
                 </Stack>
-                {isEditing && (
-                  <Text fontSize="sm" color="gray.500">
-                    {t(
-                      'blocks.integrations.httpRequest.credentialsModal.editSecretHint'
-                    )}
-                  </Text>
-                )}
                 <Stack>
                   <FormLabel mb="0">
                     {t(
                       'blocks.integrations.httpRequest.credentialsModal.queryParams.label'
                     )}{' '}
-                    <Text as="span" color="gray.500" fontWeight="normal">
+                    <MoreInfoTooltip>
                       {t(
                         'blocks.integrations.httpRequest.credentialsModal.maskedHint'
                       )}
-                    </Text>
+                      {isEditing &&
+                        ` ${t(
+                          'blocks.integrations.httpRequest.credentialsModal.editSecretHint'
+                        )}`}
+                    </MoreInfoTooltip>
                   </FormLabel>
                   <TableList<KeyValue>
                     key={`queryParams-${formKey}`}
@@ -357,11 +346,15 @@ export const RestApiCredentialsModal = ({
                     {t(
                       'blocks.integrations.httpRequest.credentialsModal.headers.label'
                     )}{' '}
-                    <Text as="span" color="gray.500" fontWeight="normal">
+                    <MoreInfoTooltip>
                       {t(
                         'blocks.integrations.httpRequest.credentialsModal.maskedHint'
                       )}
-                    </Text>
+                      {isEditing &&
+                        ` ${t(
+                          'blocks.integrations.httpRequest.credentialsModal.editSecretHint'
+                        )}`}
+                    </MoreInfoTooltip>
                   </FormLabel>
                   <TableList<KeyValue>
                     key={`headers-${formKey}`}
@@ -375,36 +368,16 @@ export const RestApiCredentialsModal = ({
                   </TableList>
                 </Stack>
                 {isEditing && (
-                  <HStack
-                    justify="space-between"
-                    p="3"
-                    borderWidth="1px"
-                    borderColor={deprecateBoxBorder}
-                    bg={deprecateBoxBg}
-                    rounded="md"
-                  >
-                    <Stack spacing="0">
-                      <Text
-                        fontWeight="medium"
-                        fontSize="sm"
-                        color={deprecateTitleColor}
-                      >
-                        {t(
-                          'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.label'
-                        )}
-                      </Text>
-                      <Text fontSize="xs" color={deprecateSubColor}>
-                        {t(
-                          'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.sub'
-                        )}
-                      </Text>
-                    </Stack>
-                    <Switch
-                      isChecked={deprecated}
-                      onChange={(e) => setDeprecated(e.target.checked)}
-                      colorScheme="orange"
-                    />
-                  </HStack>
+                  <SwitchWithLabel
+                    label={t(
+                      'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.label'
+                    )}
+                    moreInfoContent={t(
+                      'blocks.integrations.httpRequest.credentialsModal.deprecateToggle.sub'
+                    )}
+                    initialValue={deprecated}
+                    onCheckChange={setDeprecated}
+                  />
                 )}
               </>
             )}
