@@ -124,6 +124,7 @@ export const RestApiCredentialsModal = ({
     setQueryParams([])
     setDeprecated(false)
     setInUseModalState(null)
+    setIsConfirmingDelete(false)
   }
 
   // Reset on close so reopening the modal (X / overlay click / Esc) doesn't show
@@ -419,6 +420,7 @@ export const RestApiCredentialsModal = ({
                 variant="outline"
                 colorScheme="red"
                 isLoading={isDeleting}
+                isDisabled={showLoader}
                 onClick={() => setIsConfirmingDelete(true)}
               >
                 {t(

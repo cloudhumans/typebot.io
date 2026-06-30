@@ -60,9 +60,10 @@ export const CredentialInUseModal = ({
   // Force-deleting an in-use credential breaks live flows, so gate it behind
   // typing the credential name (deprecate/save is reversible — no guard there).
   const [typedName, setTypedName] = useState('')
-  const requiresNameConfirmation = !isSave && !!credentialName
+  const trimmedCredentialName = credentialName?.trim() ?? ''
+  const requiresNameConfirmation = !isSave && trimmedCredentialName.length > 0
   const isNameConfirmed =
-    !requiresNameConfirmation || typedName.trim() === credentialName?.trim()
+    !requiresNameConfirmation || typedName.trim() === trimmedCredentialName
 
   useEffect(() => {
     if (!isOpen) setTypedName('')
