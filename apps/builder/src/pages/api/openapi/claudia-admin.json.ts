@@ -16,44 +16,44 @@ const doc = generateOpenApiDocument(claudiaAdminRouter, {
 // here instead. The MCP server derives each tool's description from these
 // summary/description fields, so this directly shapes what the GAD sees.
 doc.info.description =
-  "Authoring API for CloudHumans-managed Typebot flows, exposed to the AI Companion (GAD). Create, edit, publish, and inspect flows using Typebot's canonical contract — payloads are validated server-side, so a flow is born valid or rejected with an actionable error. Authorized as the logged-in user (you can only act on workspaces your account has access to). Authoring-only — does not run or test flows."
+  "Authoring API for CloudHumans-managed Typebot flows, exposed to the AI Companion (GAD). Create, edit, publish, and inspect flows using Typebot's canonical contract — payloads are validated server-side, so a flow is born valid or rejected with an actionable error. Authorized as the logged-in user (you can only act on workspaces your account has access to). Authoring-only — does not run or test flows. Your target workspace is provided in the [SYSTEM CONTEXT] as `eddie_workspace_id` — pass it directly as `workspaceId` to createTypebot and listTypebots; do not attempt to look it up. Typical flow: listTypebots(workspaceId) to find a flow's id -> getTypebot to read it -> createTypebot/updateTypebot to author -> publishTypebot to go live."
 
 const OPERATION_DOCS: Record<string, { summary: string; description: string }> =
   {
     createTypebot: {
       summary: 'Create a Typebot flow',
       description:
-        'Create a new flow in a workspace. Requires `workspaceId` and a `typebot` object (`name` is mandatory). The authenticated user must be a non-guest member of the target workspace. Returns the created typebot (with generated `id`).',
+        'Create a new flow in a workspace. `workspaceId` is the `eddie_workspace_id` from your [SYSTEM CONTEXT] — pass it directly; do not try to discover it. Provide a `typebot` object (`name` is mandatory; groups/blocks/settings are optional and can be added later via updateTypebot). The flow is created as a DRAFT — call publishTypebot to make it live. Returns the created typebot with its generated `id`.',
     },
     updateTypebot: {
       summary: 'Update a Typebot flow',
       description:
-        'Update an existing flow identified by `typebotId` — its groups/blocks, settings, theme, or name. Partial: send only the fields you want to change. Read the current state via getTypebot first to avoid clobbering.',
+        'Edit an existing flow identified by `typebotId` — its groups/blocks, settings, theme, or name. Partial: send only the fields you want to change; read current state with getTypebot first to avoid overwriting. Changes affect the DRAFT only — call publishTypebot to make them live. Get the `typebotId` from listTypebots.',
     },
     publishTypebot: {
       summary: 'Publish a Typebot flow',
       description:
-        'Publish the current draft of the Typebot `{typebotId}`, making it the live version. Republishing overwrites the previously published version with the current draft. Publish only after the draft is complete.',
+        'Make the current draft of `{typebotId}` the live version. createTypebot and updateTypebot leave changes in draft; call this once the draft is complete. Republishing overwrites the previously published version.',
     },
     getTypebot: {
       summary: 'Get a Typebot flow',
       description:
-        'Fetch a single Typebot flow by `typebotId`, including its full definition (groups, blocks, settings, theme). Use to read current state before updating.',
+        'Fetch a single flow by `typebotId`, including its full definition (groups, blocks, settings, theme). Use to read current state before updateTypebot. Get the `typebotId` from listTypebots.',
     },
     listTypebots: {
-      summary: 'List Typebot flows',
+      summary: 'List Typebot flows (by workspace id)',
       description:
-        'List the Typebots the authenticated user can access within a workspace.',
+        "Primary way to list flows: pass `workspaceId` (the `eddie_workspace_id` from your [SYSTEM CONTEXT]). Returns each flow's `id`, `name`, and published state — use it to resolve a flow's `typebotId` before get/update/publish.",
     },
     listTypebotsClaudia: {
-      summary: 'List Typebot flows (CloudHumans)',
+      summary: 'List Typebot flows (CloudHumans, by workspace name)',
       description:
-        'CloudHumans-scoped listing: returns a lightweight `{ id, name, publicId }` for each Typebot in a workspace, selected by `workspaceName` (optionally filtered by `folderId`). Use it to resolve a typebot `id` from a workspace name.',
+        'Alternative listing keyed by workspace *name* instead of id, returning a lightweight `{ id, name, publicId }` per flow (optionally filtered by `folderId`). You normally have the workspace id (`eddie_workspace_id`) in context — prefer listTypebots. Use this only when you have a workspace name but not its id.',
     },
     getTypebotHistory: {
       summary: 'Get Typebot version history',
       description:
-        'Return the version history of the Typebot `{typebotId}` — useful to review past versions or roll back.',
+        'Return the version history of `{typebotId}` — read-only, for reviewing past versions. There is no rollback endpoint; to revert, read a past version and re-apply it via updateTypebot.',
     },
   }
 
