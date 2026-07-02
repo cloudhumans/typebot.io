@@ -22,6 +22,12 @@ import {
 } from '@chakra-ui/react'
 import { T, useTranslate } from '@tolgee/react'
 import NextLink from 'next/link'
+import { useRouter } from 'next/router'
+import { useUser } from '@/features/account/hooks/useUser'
+import {
+  getAllowedOrigins,
+  isOriginAllowed,
+} from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
   CloseIcon,
@@ -64,7 +70,49 @@ export const CredentialInUseModal = ({
   isForceDeleting,
 }: Props) => {
   const { t } = useTranslate()
+  const router = useRouter()
+  const { user } = useUser()
+  // The query param is the primary signal, but it can be absent after an
+  // in-app route change while the CloudChat session persists; the session
+  // flag keeps us in embedded mode in that case.
+  const isEmbedded =
+    router.query.embedded === 'true' || !!user?.cloudChatAuthorization
   const isSave = variant === 'save'
+
+  // Inside CloudChat the builder runs in an iframe. A plain in-iframe route
+  // change would drop the embedded auth params (?embedded&jwt) and leave the
+  // host URL stale, so we ask the CloudChat parent to navigate via its own
+  // router instead. The parent matches `typebot:navigate-to-flow` and routes
+  // to /controlled-flows/<typebotId>.
+  const handleUsageClick = (typebotId: string) => (e: React.MouseEvent) => {
+    if (!isEmbedded || window.parent === window) return
+    // postMessage needs a concrete target origin. Derive it from the embedding
+    // page (document.referrer) and accept it only if the allow-list matches —
+    // the list may hold wildcard patterns, which aren't valid postMessage
+    // targets, so we never post to a pattern directly.
+    let targetOrigin: string | undefined
+    try {
+      const referrerOrigin = document.referrer
+        ? new URL(document.referrer).origin
+        : undefined
+      if (referrerOrigin && isOriginAllowed(referrerOrigin))
+        targetOrigin = referrerOrigin
+    } catch {
+      targetOrigin = undefined
+    }
+    if (!targetOrigin) {
+      const [firstAllowed] = getAllowedOrigins()
+      if (firstAllowed && !firstAllowed.includes('*'))
+        targetOrigin = firstAllowed
+    }
+    if (!targetOrigin) return
+    e.preventDefault()
+    window.parent.postMessage(
+      { type: 'typebot:navigate-to-flow', typebotId },
+      targetOrigin
+    )
+    onClose()
+  }
 
   const iconBg = useColorModeValue('orange.100', 'orange.900')
   const iconColor = useColorModeValue('orange.500', 'orange.300')
@@ -174,6 +222,7 @@ export const CredentialInUseModal = ({
                   key={`${u.source}:${u.typebotId}:${u.via ?? ''}`}
                   as={NextLink}
                   href={`/typebots/${u.typebotId}/edit`}
+                  onClick={handleUsageClick(u.typebotId)}
                   display="block"
                   px={4}
                   py={3}
