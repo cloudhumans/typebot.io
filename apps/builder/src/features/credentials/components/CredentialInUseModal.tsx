@@ -86,30 +86,37 @@ export const CredentialInUseModal = ({
   // to /controlled-flows/<typebotId>.
   const handleUsageClick = (typebotId: string) => (e: React.MouseEvent) => {
     if (!isEmbedded || window.parent === window) return
-    // postMessage needs a concrete target origin. Derive it from the embedding
-    // page (document.referrer) and accept it only if the allow-list matches —
-    // the list may hold wildcard patterns, which aren't valid postMessage
-    // targets, so we never post to a pattern directly.
-    let targetOrigin: string | undefined
+    // We can't read the parent's origin cross-origin, and document.referrer is
+    // unreliable here (the embedded-auth redirects leave it pointing at our own
+    // origin, which is itself allow-listed). So post to every concrete
+    // allow-listed origin except our own; the browser only delivers to the one
+    // that matches the real parent and drops the rest (no leakage — all are
+    // trusted and the receiver re-checks event.origin). Wildcard allow-list
+    // entries aren't valid targets, so we resolve those to the concrete parent
+    // via ancestorOrigins/referrer when they match the allow-list.
+    const selfOrigin = window.location.origin
+    const targets = new Set<string>()
+    for (const origin of getAllowedOrigins())
+      if (origin && !origin.includes('*') && origin !== selfOrigin)
+        targets.add(origin)
+    const hints = window.location.ancestorOrigins
+      ? Array.from(window.location.ancestorOrigins)
+      : []
     try {
-      const referrerOrigin = document.referrer
-        ? new URL(document.referrer).origin
-        : undefined
-      if (referrerOrigin && isOriginAllowed(referrerOrigin))
-        targetOrigin = referrerOrigin
+      if (document.referrer) hints.push(new URL(document.referrer).origin)
     } catch {
-      targetOrigin = undefined
+      // Ignore a malformed referrer.
     }
-    if (!targetOrigin) {
-      const [firstAllowed] = getAllowedOrigins()
-      if (firstAllowed && !firstAllowed.includes('*'))
-        targetOrigin = firstAllowed
-    }
-    if (!targetOrigin) return
+    for (const origin of hints)
+      if (origin && origin !== selfOrigin && isOriginAllowed(origin))
+        targets.add(origin)
+    if (targets.size === 0) return
     e.preventDefault()
-    window.parent.postMessage(
-      { type: 'typebot:navigate-to-flow', typebotId },
-      targetOrigin
+    targets.forEach((origin) =>
+      window.parent.postMessage(
+        { type: 'typebot:navigate-to-flow', typebotId },
+        origin
+      )
     )
     onClose()
   }
