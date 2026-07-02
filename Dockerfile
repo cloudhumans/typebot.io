@@ -2,11 +2,17 @@ FROM node:18-bullseye-slim AS base
 WORKDIR /app
 ARG SCOPE
 ENV SCOPE=${SCOPE}
-# Install required base packages (openssl + curl for preStop drain hook and build)
+# Install required base packages (openssl + curl for preStop drain hook and build).
+# python3/make/g++ are needed by node-gyp to compile isolated-vm from source on
+# arm64 hosts (no prebuilt binary published for linux/arm64) — no-op overhead on
+# amd64, where the prebuilt binary is used and node-gyp never runs.
 RUN apt-get -qy update \
     && apt-get -qy --no-install-recommends install \
     openssl \
     curl \
+    python3 \
+    make \
+    g++ \
     && apt-get autoremove -yq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
