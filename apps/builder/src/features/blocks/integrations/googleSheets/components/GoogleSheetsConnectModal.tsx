@@ -11,7 +11,9 @@ import {
   Button,
   ModalFooter,
   Flex,
+  useColorModeValue,
 } from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import React from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -40,6 +42,11 @@ export const GoogleSheetConnectModal = ({
   const { workspace } = useWorkspace()
   const searchParams = useSearchParams()
   const { showToast } = useToast()
+  const { t } = useTranslate()
+  const scopesImageSrc = useColorModeValue(
+    '/images/google-spreadsheets-scopes-light.png',
+    '/images/google-spreadsheets-scopes-dark.png'
+  )
 
   // Run the OAuth consent in a top-level popup instead of navigating the current
   // frame. Embedded inside CloudChat's iframe, Google refuses to render consent
@@ -105,23 +112,25 @@ export const GoogleSheetConnectModal = ({
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Connect Spreadsheets</ModalHeader>
+        <ModalHeader>
+          {t('blocks.integrations.googleSheets.connectModal.title')}
+        </ModalHeader>
         <ModalCloseButton />
         <ModalBody as={Stack} spacing="6">
           <Text>
-            Make sure to check all the permissions so that the integration works
-            as expected:
+            {t(
+              'blocks.integrations.googleSheets.connectModal.checkPermissions'
+            )}
           </Text>
           <Image
-            src="/images/google-spreadsheets-scopes.png"
-            alt="Google Spreadsheets checkboxes"
+            src={scopesImageSrc}
+            alt={t(
+              'blocks.integrations.googleSheets.connectModal.scopesImageAlt'
+            )}
             rounded="md"
           />
           <AlertInfo>
-            Google does not provide more granular permissions than
-            &quot;read&quot; or &quot;write&quot; access. That&apos;s why it
-            states that Typebot can also delete your spreadsheets which it
-            won&apos;t.
+            {t('blocks.integrations.googleSheets.connectModal.permissionsInfo')}
           </AlertInfo>
           <Flex>
             <Button
@@ -131,7 +140,9 @@ export const GoogleSheetConnectModal = ({
               onClick={openConsentPopup}
               mx="auto"
             >
-              Continue with Google
+              {t(
+                'blocks.integrations.googleSheets.connectModal.continueWithGoogle'
+              )}
             </Button>
           </Flex>
         </ModalBody>
