@@ -73,6 +73,33 @@ for (const pathItem of Object.values(doc.paths ?? {})) {
   }
 }
 
+// trpc-openapi renders Zod unions as JSON Schema `oneOf`, which asserts that
+// exactly one branch matches. Zod unions are first-match (at-least-one) and the
+// server never enforces exclusivity, so the promise is false: e.g. the workflow
+// block's `options` union has a branch that is a bare object, which overlaps the
+// `{ action: "Return Output" }` branch and matches both. Consumers (the GAD's
+// claudia-agentic) validate tool args client-side against this doc and reject
+// payloads the server would accept. `anyOf` is the faithful semantics, so
+// rewrite every `oneOf` keyword (a schema key whose value is an array of
+// sub-schemas) to `anyOf` across the whole document. A property literally named
+// `oneOf` never has an array value (its value is a schema object), so the array
+// guard leaves it untouched.
+const convertOneOfToAnyOf = (node: unknown): void => {
+  if (Array.isArray(node)) {
+    for (const item of node) convertOneOfToAnyOf(item)
+    return
+  }
+  if (node === null || typeof node !== 'object') return
+  const obj = node as Record<string, unknown>
+  if (Array.isArray(obj.oneOf)) {
+    obj.anyOf = obj.oneOf
+    delete obj.oneOf
+  }
+  for (const value of Object.values(obj)) convertOneOfToAnyOf(value)
+}
+
+convertOneOfToAnyOf(doc)
+
 export default function handler(_req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Cache-Control', 'no-cache')
   res.status(200).json(doc)
