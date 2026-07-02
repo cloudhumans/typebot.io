@@ -26,7 +26,7 @@ import { useRouter } from 'next/router'
 import { useUser } from '@/features/account/hooks/useUser'
 import {
   getAllowedOrigins,
-  isOriginAllowed,
+  resolveEmbeddingTargetOrigins,
 } from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
@@ -86,31 +86,15 @@ export const CredentialInUseModal = ({
   // to /controlled-flows/<typebotId>.
   const handleUsageClick = (typebotId: string) => (e: React.MouseEvent) => {
     if (!isEmbedded || window.parent === window) return
-    // We can't read the parent's origin cross-origin, and document.referrer is
-    // unreliable here (the embedded-auth redirects leave it pointing at our own
-    // origin, which is itself allow-listed). So post to every concrete
-    // allow-listed origin except our own; the browser only delivers to the one
-    // that matches the real parent and drops the rest (no leakage — all are
-    // trusted and the receiver re-checks event.origin). Wildcard allow-list
-    // entries aren't valid targets, so we resolve those to the concrete parent
-    // via ancestorOrigins/referrer when they match the allow-list.
-    const selfOrigin = window.location.origin
-    const targets = new Set<string>()
-    for (const origin of getAllowedOrigins())
-      if (origin && !origin.includes('*') && origin !== selfOrigin)
-        targets.add(origin)
-    const hints = window.location.ancestorOrigins
-      ? Array.from(window.location.ancestorOrigins)
-      : []
-    try {
-      if (document.referrer) hints.push(new URL(document.referrer).origin)
-    } catch {
-      // Ignore a malformed referrer.
-    }
-    for (const origin of hints)
-      if (origin && origin !== selfOrigin && isOriginAllowed(origin))
-        targets.add(origin)
-    if (targets.size === 0) return
+    const targets = resolveEmbeddingTargetOrigins({
+      allowedOrigins: getAllowedOrigins(),
+      selfOrigin: window.location.origin,
+      ancestorOrigins: window.location.ancestorOrigins
+        ? Array.from(window.location.ancestorOrigins)
+        : [],
+      referrer: document.referrer,
+    })
+    if (targets.length === 0) return
     e.preventDefault()
     targets.forEach((origin) =>
       window.parent.postMessage(
