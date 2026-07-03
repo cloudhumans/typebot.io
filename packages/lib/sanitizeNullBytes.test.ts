@@ -118,6 +118,19 @@ describe('sanitizeNullBytes', () => {
     expect(result.data.sibling).toBe(untouchedSibling)
   })
 
+  it('stores a key that sanitizes to __proto__ as an own property', () => {
+    const input = { ['__pr\u0000oto__']: { polluted: true } }
+    const result = sanitizeNullBytes(input)
+
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype)
+    expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(
+      true
+    )
+    expect(
+      (result as Record<string, unknown>)['__proto__']
+    ).toEqual({ polluted: true })
+  })
+
   it('strips null bytes from object keys', () => {
     const input = { ['a\u0000b']: 'value' }
     const result = sanitizeNullBytes(input)

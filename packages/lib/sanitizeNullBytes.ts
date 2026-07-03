@@ -36,7 +36,15 @@ export const sanitizeNullBytes = <T>(value: T): T => {
       const cleanedKey = sanitizeNullBytes(key)
       const cleaned = sanitizeNullBytes(value[key])
       if (cleanedKey !== key || cleaned !== value[key]) changed = true
-      next[cleanedKey] = cleaned
+      // defineProperty, not bracket assignment: a sanitized key equal to
+      // "__proto__" would otherwise hit the inherited Annex B setter and
+      // swap the copy's prototype instead of storing an own property.
+      Object.defineProperty(next, cleanedKey, {
+        value: cleaned,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
     }
     return (changed ? next : value) as T
   }
