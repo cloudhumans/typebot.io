@@ -7,11 +7,13 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
 }
 
 /**
- * Removes U+0000 from every string in a value tree. PostgreSQL text/jsonb
- * cannot store the null byte (error 22P05); AI agents occasionally send one
- * in tool-call args. Returns the same reference when nothing changed. Non-plain
- * objects (Date, Buffer, Prisma JsonNull/DbNull sentinels, Decimal) pass
- * through untouched by identity.
+ * Removes U+0000 from every string in a value tree, including object keys
+ * (jsonb rejects the null byte in keys too — external webhook responses are
+ * merged raw into session state). PostgreSQL text/jsonb cannot store the null
+ * byte (error 22P05); AI agents occasionally send one in tool-call args.
+ * Returns the same reference when nothing changed. Non-plain objects (Date,
+ * Buffer, Prisma JsonNull/DbNull sentinels, Decimal) pass through untouched
+ * by identity.
  */
 export const sanitizeNullBytes = <T>(value: T): T => {
   if (typeof value === 'string')
@@ -31,9 +33,10 @@ export const sanitizeNullBytes = <T>(value: T): T => {
     let changed = false
     const next: Record<string, unknown> = {}
     for (const key of Object.keys(value)) {
+      const cleanedKey = sanitizeNullBytes(key)
       const cleaned = sanitizeNullBytes(value[key])
-      if (cleaned !== value[key]) changed = true
-      next[key] = cleaned
+      if (cleanedKey !== key || cleaned !== value[key]) changed = true
+      next[cleanedKey] = cleaned
     }
     return (changed ? next : value) as T
   }

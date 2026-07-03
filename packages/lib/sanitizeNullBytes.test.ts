@@ -112,11 +112,12 @@ describe('sanitizeNullBytes', () => {
     expect(result.data.sibling).toBe(untouchedSibling)
   })
 
-  it('leaves object keys containing null bytes intact (values-only scope)', () => {
+  it('strips null bytes from object keys', () => {
     const input = { ['a\u0000b']: 'value' }
     const result = sanitizeNullBytes(input)
 
-    expect(Object.keys(result)).toEqual(['a\u0000b'])
-    expect(result['a\u0000b']).toBe('value')
+    expect(result).not.toBe(input)
+    expect(Object.keys(result)).toEqual(['ab'])
+    expect(result['ab']).toBe('value')
   })
 })
