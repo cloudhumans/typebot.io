@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { Prisma } from '@typebot.io/prisma'
 import { sanitizeNullBytes } from './sanitizeNullBytes'
+
+// Prisma's JsonNull/DbNull sentinels are class instances with a non-Object
+// prototype (verified against @prisma/client 5.12.1). Stubs keep this suite
+// free of the generated client, which CI's unit-test job never generates.
+class SentinelStub {}
+const jsonNullStub = new SentinelStub()
+const dbNullStub = new SentinelStub()
 
 describe('sanitizeNullBytes', () => {
   it('strips a single null byte from a string', () => {
@@ -63,9 +69,9 @@ describe('sanitizeNullBytes', () => {
     expect(sanitizeNullBytes(uint8Array)).toBe(uint8Array)
   })
 
-  it('passes Prisma JsonNull and DbNull sentinels through by identity', () => {
-    expect(sanitizeNullBytes(Prisma.JsonNull)).toBe(Prisma.JsonNull)
-    expect(sanitizeNullBytes(Prisma.DbNull)).toBe(Prisma.DbNull)
+  it('passes class-instance sentinels (Prisma JsonNull/DbNull shape) through by identity', () => {
+    expect(sanitizeNullBytes(jsonNullStub)).toBe(jsonNullStub)
+    expect(sanitizeNullBytes(dbNullStub)).toBe(dbNullStub)
   })
 
   it('passes primitives through unchanged', () => {
