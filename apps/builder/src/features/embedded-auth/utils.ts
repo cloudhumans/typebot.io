@@ -1,6 +1,8 @@
 import { env } from '@typebot.io/env'
 import { isOriginAllowed as checkOriginAllowed } from '@typebot.io/lib/origin'
 
+export { resolveEmbeddingTargetOrigins } from '@typebot.io/lib/origin'
+
 // Helper function to get the allowed origins for postMessage
 export const getAllowedOrigins = (): string[] => {
   const allowedOrigins = env.NEXT_PUBLIC_EMBEDDED_AUTH_ALLOWED_ORIGIN

@@ -26,7 +26,7 @@ import { useRouter } from 'next/router'
 import { useUser } from '@/features/account/hooks/useUser'
 import {
   getAllowedOrigins,
-  isOriginAllowed,
+  resolveEmbeddingTargetOrigins,
 } from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
@@ -86,30 +86,21 @@ export const CredentialInUseModal = ({
   // to /controlled-flows/<typebotId>.
   const handleUsageClick = (typebotId: string) => (e: React.MouseEvent) => {
     if (!isEmbedded || window.parent === window) return
-    // postMessage needs a concrete target origin. Derive it from the embedding
-    // page (document.referrer) and accept it only if the allow-list matches —
-    // the list may hold wildcard patterns, which aren't valid postMessage
-    // targets, so we never post to a pattern directly.
-    let targetOrigin: string | undefined
-    try {
-      const referrerOrigin = document.referrer
-        ? new URL(document.referrer).origin
-        : undefined
-      if (referrerOrigin && isOriginAllowed(referrerOrigin))
-        targetOrigin = referrerOrigin
-    } catch {
-      targetOrigin = undefined
-    }
-    if (!targetOrigin) {
-      const [firstAllowed] = getAllowedOrigins()
-      if (firstAllowed && !firstAllowed.includes('*'))
-        targetOrigin = firstAllowed
-    }
-    if (!targetOrigin) return
+    const targets = resolveEmbeddingTargetOrigins({
+      allowedOrigins: getAllowedOrigins(),
+      selfOrigin: window.location.origin,
+      ancestorOrigins: window.location.ancestorOrigins
+        ? Array.from(window.location.ancestorOrigins)
+        : [],
+      referrer: document.referrer,
+    })
+    if (targets.length === 0) return
     e.preventDefault()
-    window.parent.postMessage(
-      { type: 'typebot:navigate-to-flow', typebotId },
-      targetOrigin
+    targets.forEach((origin) =>
+      window.parent.postMessage(
+        { type: 'typebot:navigate-to-flow', typebotId },
+        origin
+      )
     )
     onClose()
   }
