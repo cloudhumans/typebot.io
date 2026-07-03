@@ -18,7 +18,9 @@ import {
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { z } from 'zod'
+import { parseDefaultPublicId } from '@/features/publish/helpers/parseDefaultPublicId'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
+import { isPublicIdNotAvailable } from '../helpers/sanitizers'
 
 export const publishTypebot = authenticatedProcedure
   .meta({
@@ -146,6 +148,26 @@ export const publishTypebot = authenticatedProcedure
       hasFileUploadBlocks,
     })
 
+    // The published bot is resolved by the typebot row's publicId
+    // (findPublicTypebot queries publicTypebot where typebot.publicId matches).
+    // The builder UI sets publicId before publishing, but API callers such as
+    // the claudia-admin OpenAPI (used by the GAD) do not, which left publicId
+    // null and made the published bot unresolvable. Backfill a default here.
+    let publicId = existingTypebot.publicId
+    if (!publicId) {
+      const defaultPublicId = parseDefaultPublicId(
+        existingTypebot.name,
+        existingTypebot.id
+      )
+      publicId = (await isPublicIdNotAvailable(defaultPublicId))
+        ? `${defaultPublicId}-${existingTypebot.id.slice(0, 5)}`
+        : defaultPublicId
+      await prisma.typebot.update({
+        where: { id: existingTypebot.id },
+        data: { publicId },
+      })
+    }
+
     if (existingTypebot.publishedTypebot)
       await prisma.publicTypebot.updateMany({
         where: {
@@ -251,7 +273,7 @@ export const publishTypebot = authenticatedProcedure
         resultsTablePreferences: existingTypebot.resultsTablePreferences
           ? existingTypebot.resultsTablePreferences
           : Prisma.JsonNull,
-        publicId: existingTypebot.publicId,
+        publicId,
         customDomain: existingTypebot.customDomain,
         workspaceId: existingTypebot.workspaceId,
         isArchived: existingTypebot.isArchived,
