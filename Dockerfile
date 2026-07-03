@@ -12,15 +12,33 @@ RUN apt-get -qy update \
     && rm -rf /var/lib/apt/lists/*
 RUN npm --global install pnpm@8
 
+# Dev-container stage: base + toolchain pro node-gyp compilar isolated-vm do
+# código-fonte em hosts arm64 (não há binário pré-compilado pra linux/arm64;
+# em amd64 o binário pronto é usado e o node-gyp nem roda). Os containers de
+# desenvolvimento do composezao (typebot-builder/viewer, que rodam `pnpm
+# install` em runtime) fazem build com target=dev. Mantido fora de base pra
+# runner (imagem de produção) não carregar compilador C++.
+FROM base AS dev
+RUN apt-get -qy update \
+    && apt-get -qy --no-install-recommends install \
+    python3 \
+    make \
+    g++ \
+    && apt-get autoremove -yq \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 FROM base AS pruner
 RUN npm --global install turbo@1.11.3
 WORKDIR /app
 COPY . .
 RUN turbo prune --scope=${SCOPE} --docker
 
+# git pro pnpm resolver deps de repositório; python3/make/g++ pro node-gyp
+# compilar isolated-vm do código-fonte em arm64 (ver stage dev acima).
 FROM base AS builder
 RUN apt-get -qy update \
-    && apt-get -qy --no-install-recommends install git \
+    && apt-get -qy --no-install-recommends install git python3 make g++ \
     && apt-get autoremove -yq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
