@@ -6,6 +6,22 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   return proto === Object.prototype || proto === null
 }
 
+// defineProperty, not bracket assignment: a key equal to "__proto__" (whether
+// sanitized into it or already present as an own key, as JSON.parse can
+// produce) would otherwise hit the inherited Annex B setter and swap the
+// copy's prototype instead of storing an own property.
+const defineOwn = (
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown
+) =>
+  Object.defineProperty(target, key, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  })
+
 /**
  * Removes U+0000 from every string in a value tree, including object keys
  * (jsonb rejects the null byte in keys too — external webhook responses are
@@ -14,6 +30,9 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * Returns the same reference when nothing changed. Non-plain objects (Date,
  * Buffer, Prisma JsonNull/DbNull sentinels, Decimal) pass through untouched
  * by identity.
+ *
+ * Runs on every Prisma write (middleware hot path), so copies are allocated
+ * lazily: a clean tree allocates nothing.
  */
 export const sanitizeNullBytes = <T>(value: T): T => {
   if (typeof value === 'string')
@@ -21,32 +40,34 @@ export const sanitizeNullBytes = <T>(value: T): T => {
       value.includes('\u0000') ? value.replace(NULL_BYTE, '') : value
     ) as T
   if (Array.isArray(value)) {
-    let changed = false
-    const next = value.map((item) => {
-      const cleaned = sanitizeNullBytes(item)
-      if (cleaned !== item) changed = true
-      return cleaned
-    })
-    return (changed ? next : value) as T
+    let next: unknown[] | undefined
+    for (let i = 0; i < value.length; i++) {
+      const cleaned = sanitizeNullBytes(value[i])
+      if (next === undefined && cleaned !== value[i]) next = value.slice(0, i)
+      if (next !== undefined) next.push(cleaned)
+    }
+    return (next ?? value) as T
   }
   if (isPlainObject(value)) {
-    let changed = false
-    const next: Record<string, unknown> = {}
-    for (const key of Object.keys(value)) {
-      const cleanedKey = sanitizeNullBytes(key)
+    const keys = Object.keys(value)
+    let next: Record<string, unknown> | undefined
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
       const cleaned = sanitizeNullBytes(value[key])
-      if (cleanedKey !== key || cleaned !== value[key]) changed = true
-      // defineProperty, not bracket assignment: a sanitized key equal to
-      // "__proto__" would otherwise hit the inherited Annex B setter and
-      // swap the copy's prototype instead of storing an own property.
-      Object.defineProperty(next, cleanedKey, {
-        value: cleaned,
-        writable: true,
-        enumerable: true,
-        configurable: true,
-      })
+      const cleanedKey = sanitizeNullBytes(key)
+      if (
+        next === undefined &&
+        (cleanedKey !== key || cleaned !== value[key])
+      ) {
+        next = Object.create(Object.getPrototypeOf(value)) as Record<
+          string,
+          unknown
+        >
+        for (let j = 0; j < i; j++) defineOwn(next, keys[j], value[keys[j]])
+      }
+      if (next !== undefined) defineOwn(next, cleanedKey, cleaned)
     }
-    return (changed ? next : value) as T
+    return (next ?? value) as T
   }
   return value
 }

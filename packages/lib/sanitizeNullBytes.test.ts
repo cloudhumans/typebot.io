@@ -123,12 +123,20 @@ describe('sanitizeNullBytes', () => {
     const result = sanitizeNullBytes(input)
 
     expect(Object.getPrototypeOf(result)).toBe(Object.prototype)
-    expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(
-      true
-    )
-    expect(
-      (result as Record<string, unknown>)['__proto__']
-    ).toEqual({ polluted: true })
+    expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(true)
+    expect((result as Record<string, unknown>)['__proto__']).toEqual({
+      polluted: true,
+    })
+  })
+
+  it('preserves a null prototype on sanitized copies', () => {
+    const input = Object.create(null) as Record<string, unknown>
+    input.dirty = 'foo\u0000bar'
+    const result = sanitizeNullBytes(input)
+
+    expect(result).not.toBe(input)
+    expect(Object.getPrototypeOf(result)).toBe(null)
+    expect(result.dirty).toBe('foobar')
   })
 
   it('strips null bytes from object keys', () => {
@@ -137,6 +145,6 @@ describe('sanitizeNullBytes', () => {
 
     expect(result).not.toBe(input)
     expect(Object.keys(result)).toEqual(['ab'])
-    expect(result['ab']).toBe('value')
+    expect((result as Record<string, unknown>)['ab']).toBe('value')
   })
 })
