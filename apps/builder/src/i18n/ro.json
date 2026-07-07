@@ -158,6 +158,7 @@
   "editor.header.resultsButton.label": "Rezultate",
   "editor.header.savingSpinner.label": "Salvare...",
   "editor.header.settingsButton.label": "Setări",
+  "editor.header.toolName.immutable.tooltip": "This tool's name is permanent and can't be changed.",
   "editor.header.themeButton.label": "Temă",
   "editor.sidebarBlock.abTest.label": "Testul AB",
   "editor.sidebarBlock.analytics.label": "Analitica",

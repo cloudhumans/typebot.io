@@ -336,6 +336,7 @@
   "editor.header.resultsButton.label": "Results",
   "editor.header.savingSpinner.label": "Saving...",
   "editor.header.settingsButton.label": "Settings",
+  "editor.header.toolName.immutable.tooltip": "This tool's name is permanent and can't be changed.",
   "editor.header.themeButton.label": "Theme",
   "editor.header.tooltip.changeIcon.label": "Change icon",
   "editor.header.undo.tooltip.label": "Changes reverted!",

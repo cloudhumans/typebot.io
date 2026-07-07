@@ -205,6 +205,7 @@ const LeftElements = ({
             key={`typebot-name-${typebot?.name ?? ''}`}
             defaultName={typebot?.name ?? ''}
             onNewName={handleNameSubmit}
+            isReadOnly={typebot?.settings?.general?.type === 'TOOL'}
           />
           )
         </HStack>
