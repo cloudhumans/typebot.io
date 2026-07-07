@@ -91,4 +91,24 @@ describe('importTypebot', () => {
       })
     ).rejects.toThrow('already exists in this tenant')
   })
+
+  it('should throw if an imported TOOL has no tenant', async () => {
+    const typebot = parseTestTypebot({
+      version: '6',
+      name: 'Get Order',
+      toolDescription: 'desc',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      settings: { general: { type: 'TOOL' } } as any,
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (typebot as any).tenant
+
+    await expect(
+      caller()({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: typebot as any,
+      })
+    ).rejects.toThrow('Tenant and Tool description are mandatory')
+  })
 })

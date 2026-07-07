@@ -131,6 +131,13 @@ export const importTypebot = authenticatedProcedure
     const migratedTypebot = await migrateImportingTypebot(typebot)
 
     if (migratedTypebot.settings?.general?.type === 'TOOL') {
+      if (!migratedTypebot.tenant || !migratedTypebot.toolDescription)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Tenant and Tool description are mandatory for Tool workflows',
+        })
+
       if (sanitizeToolName(migratedTypebot.name) === '')
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -139,11 +146,10 @@ export const importTypebot = authenticatedProcedure
         })
 
       if (
-        migratedTypebot.tenant &&
-        (await isToolNameTaken({
+        await isToolNameTaken({
           name: migratedTypebot.name,
           tenant: migratedTypebot.tenant,
-        }))
+        })
       )
         throw new TRPCError({
           code: 'BAD_REQUEST',
