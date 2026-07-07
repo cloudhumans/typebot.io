@@ -20,6 +20,7 @@ import {
 import { preprocessTypebot } from '@typebot.io/schemas/features/typebot/helpers/preprocessTypebot'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
+import { isToolNameTaken } from '../helpers/isToolNameTaken'
 
 const omittedProps = {
   id: true,
@@ -127,6 +128,20 @@ export const importTypebot = authenticatedProcedure
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' })
 
     const migratedTypebot = await migrateImportingTypebot(typebot)
+
+    if (
+      migratedTypebot.settings?.general?.type === 'TOOL' &&
+      migratedTypebot.tenant &&
+      migratedTypebot.name &&
+      (await isToolNameTaken({
+        name: migratedTypebot.name,
+        tenant: migratedTypebot.tenant,
+      }))
+    )
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `A tool named '${migratedTypebot.name}' already exists in this tenant. Tool names must be unique.`,
+      })
 
     const groups = (
       migratedTypebot.groups

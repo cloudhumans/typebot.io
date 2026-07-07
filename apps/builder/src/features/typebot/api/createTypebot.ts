@@ -15,6 +15,7 @@ import {
 import { createId } from '@paralleldrive/cuid2'
 import { EventType } from '@typebot.io/schemas/features/events/constants'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
+import { isToolNameTaken } from '../helpers/isToolNameTaken'
 
 const typebotCreateSchemaPick = {
   name: true,
@@ -97,14 +98,23 @@ export const createTypebot = authenticatedProcedure
         message: 'Name is mandatory',
       })
 
-    if (
-      typebot.settings?.general?.type === 'TOOL' &&
-      (!typebot.tenant || !typebot.toolDescription)
-    )
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Tenant and Tool description are mandatory for Tool workflows',
-      })
+    if (typebot.settings?.general?.type === 'TOOL') {
+      if (!typebot.tenant || !typebot.toolDescription)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Tenant and Tool description are mandatory for Tool workflows',
+        })
+
+      if (
+        typebot.name &&
+        (await isToolNameTaken({ name: typebot.name, tenant: typebot.tenant }))
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `A tool named '${typebot.name}' already exists in this tenant. Tool names must be unique.`,
+        })
+    }
 
     if (typebot.folderId) {
       const existingFolder = await prisma.dashboardFolder.findUnique({
