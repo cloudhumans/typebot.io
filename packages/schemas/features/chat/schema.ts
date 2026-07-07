@@ -392,6 +392,7 @@ export const startPreviewChatResponseSchema = startChatResponseSchema.omit({
 })
 
 export const continueChatResponseSchema = chatResponseBaseSchema.extend({
+  resultId: z.string().optional(),
   toolOutput: z
     .unknown()
     .optional()
