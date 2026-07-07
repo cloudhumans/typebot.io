@@ -16,6 +16,7 @@ import { createId } from '@paralleldrive/cuid2'
 import { EventType } from '@typebot.io/schemas/features/events/constants'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
+import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
 
 const typebotCreateSchemaPick = {
   name: true,
@@ -104,6 +105,13 @@ export const createTypebot = authenticatedProcedure
           code: 'BAD_REQUEST',
           message:
             'Tenant and Tool description are mandatory for Tool workflows',
+        })
+
+      if (typebot.name && sanitizeToolName(typebot.name) === '')
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Tool name must contain at least one letter or number so the agent can reference it.',
         })
 
       if (

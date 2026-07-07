@@ -130,6 +130,27 @@ describe('createTypebot', () => {
     ).resolves.toBeDefined()
   })
 
+  it('should throw if a TOOL name sanitizes to an empty MCP name', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: {
+          name: '!!!',
+          settings: { general: { type: 'TOOL' } },
+          tenant: 'ten-1',
+          toolDescription: 'desc',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow('at least one letter or number')
+  })
+
   it('should throw if a TOOL with a colliding sanitized name exists in the tenant', async () => {
     vi.mocked(prisma.typebot.findMany).mockResolvedValue([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
