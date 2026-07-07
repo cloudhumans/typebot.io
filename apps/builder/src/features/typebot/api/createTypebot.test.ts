@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { router } from '@/helpers/server/trpc'
 import { createTypebot } from './createTypebot'
 import { WorkspaceRole, Plan } from '@typebot.io/prisma'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
@@ -11,6 +12,7 @@ vi.mock('@typebot.io/lib/prisma', () => ({
     },
     typebot: {
       create: vi.fn(),
+      findMany: vi.fn(),
     },
     dashboardFolder: {
       findUnique: vi.fn(),
@@ -46,16 +48,19 @@ describe('createTypebot', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockWorkspace as any
     )
+    vi.mocked(prisma.typebot.findMany).mockResolvedValue([])
     vi.mocked(getUserRoleInWorkspace).mockReturnValue(WorkspaceRole.ADMIN)
   })
 
   it('should throw if TOOL is missing tenant', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const caller = createTypebot.createCaller({ user: mockUser } as any)
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
 
     await expect(
-      caller({
+      caller.createTypebot({
         workspaceId: mockWorkspace.id,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,10 +78,12 @@ describe('createTypebot', () => {
   it('should throw if TOOL is missing toolDescription', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const caller = createTypebot.createCaller({ user: mockUser } as any)
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
 
     await expect(
-      caller({
+      caller.createTypebot({
         workspaceId: mockWorkspace.id,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,10 +112,12 @@ describe('createTypebot', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const caller = createTypebot.createCaller({ user: mockUser } as any)
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
 
     await expect(
-      caller({
+      caller.createTypebot({
         workspaceId: mockWorkspace.id,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: {
@@ -117,6 +126,88 @@ describe('createTypebot', () => {
           tenant: 'ten-1',
           toolDescription: 'desc',
         },
+      })
+    ).resolves.toBeDefined()
+  })
+
+  it('should throw if a TOOL name sanitizes to an empty MCP name', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: {
+          name: '!!!',
+          settings: { general: { type: 'TOOL' } },
+          tenant: 'ten-1',
+          toolDescription: 'desc',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow('at least one letter or number')
+  })
+
+  it('should throw if a TOOL with a colliding sanitized name exists in the tenant', async () => {
+    vi.mocked(prisma.typebot.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { name: 'Get Order' } as any,
+    ])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: {
+          name: 'get order',
+          settings: { general: { type: 'TOOL' } },
+          tenant: 'ten-1',
+          toolDescription: 'desc',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow('already exists in this tenant')
+  })
+
+  it('should create a TOOL when the same name exists in a different tenant', async () => {
+    // findMany is scoped by tenant, so a colliding name in another tenant is
+    // simply not returned here.
+    vi.mocked(prisma.typebot.findMany).mockResolvedValue([])
+    vi.mocked(prisma.typebot.create).mockResolvedValue({
+      id: 'tb-3',
+      workspaceId: mockWorkspace.id,
+      name: 'Get Order',
+      settings: { general: { type: 'TOOL' } },
+      tenant: 'ten-2',
+      toolDescription: 'desc',
+      groups: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: {
+          name: 'Get Order',
+          settings: { general: { type: 'TOOL' } },
+          tenant: 'ten-2',
+          toolDescription: 'desc',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       })
     ).resolves.toBeDefined()
   })
@@ -133,10 +224,12 @@ describe('createTypebot', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const caller = createTypebot.createCaller({ user: mockUser } as any)
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
 
     await expect(
-      caller({
+      caller.createTypebot({
         workspaceId: mockWorkspace.id,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: {

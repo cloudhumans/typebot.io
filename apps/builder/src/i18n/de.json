@@ -157,6 +157,7 @@
   "editor.header.resultsButton.label": "Ergebnisse",
   "editor.header.savingSpinner.label": "Speichern...",
   "editor.header.settingsButton.label": "Einstellungen",
+  "editor.header.toolName.immutable.tooltip": "This tool's name is permanent and can't be changed.",
   "editor.header.themeButton.label": "Design",
   "editor.sidebarBlock.abTest.label": "AB-Test",
   "editor.sidebarBlock.analytics.label": "Analytics",

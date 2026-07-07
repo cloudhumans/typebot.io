@@ -20,6 +20,8 @@ import {
 import { preprocessTypebot } from '@typebot.io/schemas/features/typebot/helpers/preprocessTypebot'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
+import { isToolNameTaken } from '../helpers/isToolNameTaken'
+import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
 
 const omittedProps = {
   id: true,
@@ -127,6 +129,33 @@ export const importTypebot = authenticatedProcedure
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' })
 
     const migratedTypebot = await migrateImportingTypebot(typebot)
+
+    if (migratedTypebot.settings?.general?.type === 'TOOL') {
+      if (!migratedTypebot.tenant || !migratedTypebot.toolDescription)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Tenant and Tool description are mandatory for Tool workflows',
+        })
+
+      if (sanitizeToolName(migratedTypebot.name) === '')
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Tool name must contain at least one letter or number so the agent can reference it.',
+        })
+
+      if (
+        await isToolNameTaken({
+          name: migratedTypebot.name,
+          tenant: migratedTypebot.tenant,
+        })
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `A tool named '${migratedTypebot.name}' already exists in this tenant. Tool names must be unique.`,
+        })
+    }
 
     const groups = (
       migratedTypebot.groups

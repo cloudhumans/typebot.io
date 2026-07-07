@@ -1,6 +1,7 @@
 import prisma from '@typebot.io/lib/prisma'
 import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
+import { Settings } from '@typebot.io/schemas'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 
@@ -35,6 +36,8 @@ export const deleteTypebot = authenticatedProcedure
       },
       select: {
         id: true,
+        settings: true,
+        publishedTypebot: { select: { id: true } },
         workspace: {
           select: {
             id: true,
@@ -62,6 +65,16 @@ export const deleteTypebot = authenticatedProcedure
       (await isWriteTypebotForbidden(existingTypebot, user))
     )
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
+
+    const isTool =
+      !!existingTypebot.settings &&
+      (existingTypebot.settings as unknown as Settings).general?.type === 'TOOL'
+
+    if (isTool && existingTypebot.publishedTypebot)
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Published tools cannot be deleted',
+      })
 
     await prisma.$transaction([
       prisma.$executeRaw`
