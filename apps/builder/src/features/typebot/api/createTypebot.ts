@@ -107,17 +107,14 @@ export const createTypebot = authenticatedProcedure
             'Tenant and Tool description are mandatory for Tool workflows',
         })
 
-      if (typebot.name && sanitizeToolName(typebot.name) === '')
+      if (sanitizeToolName(typebot.name) === '')
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message:
             'Tool name must contain at least one letter or number so the agent can reference it.',
         })
 
-      if (
-        typebot.name &&
-        (await isToolNameTaken({ name: typebot.name, tenant: typebot.tenant }))
-      )
+      if (await isToolNameTaken({ name: typebot.name, tenant: typebot.tenant }))
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `A tool named '${typebot.name}' already exists in this tenant. Tool names must be unique.`,

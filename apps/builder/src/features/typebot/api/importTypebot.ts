@@ -131,7 +131,7 @@ export const importTypebot = authenticatedProcedure
     const migratedTypebot = await migrateImportingTypebot(typebot)
 
     if (migratedTypebot.settings?.general?.type === 'TOOL') {
-      if (migratedTypebot.name && sanitizeToolName(migratedTypebot.name) === '')
+      if (sanitizeToolName(migratedTypebot.name) === '')
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message:
@@ -140,7 +140,6 @@ export const importTypebot = authenticatedProcedure
 
       if (
         migratedTypebot.tenant &&
-        migratedTypebot.name &&
         (await isToolNameTaken({
           name: migratedTypebot.name,
           tenant: migratedTypebot.tenant,
