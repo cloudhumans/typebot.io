@@ -59,4 +59,11 @@ describe('formatErrorWithCause', () => {
     const result = formatErrorWithCause(current, 2)
     expect(result.match(/cause:/g)?.length).toBe(2)
   })
+
+  it('does not throw on AggregateErrors nested past the depth limit', () => {
+    let current = new AggregateError([new Error('leaf')], 'level 0')
+    for (let i = 1; i < 10; i++)
+      current = new AggregateError([current], `level ${i}`)
+    expect(() => formatErrorWithCause(current)).not.toThrow()
+  })
 })

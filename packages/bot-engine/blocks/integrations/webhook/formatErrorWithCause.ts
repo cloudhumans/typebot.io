@@ -12,7 +12,7 @@ export const formatErrorWithCause = (error: unknown, maxDepth = 5): string => {
       value.errors.length > 0
     ) {
       const inner = value.errors
-        .map((sub) => formatErrorWithCause(sub, maxDepth - 1))
+        .map((sub) => formatErrorWithCause(sub, Math.max(0, maxDepth - 1)))
         .join('; ')
       return `${String(value)} [${inner}]`
     }
