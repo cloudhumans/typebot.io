@@ -17,6 +17,7 @@ import { stringify } from 'qs'
 import { isDefined, isEmpty, isNotDefined, omit } from '@typebot.io/lib'
 import ky, { HTTPError, Options, TimeoutError } from 'ky'
 import { resumeWebhookExecution } from './resumeWebhookExecution'
+import { formatErrorWithCause } from './formatErrorWithCause'
 import { ExecuteIntegrationResponse } from '../../../types'
 import { parseVariables } from '@typebot.io/variables/parseVariables'
 import prisma from '@typebot.io/lib/prisma'
@@ -377,8 +378,8 @@ export const executeWebhook = async (
 
   const isLongRequest = params.disableRequestTimeout
     ? true
-    : longReqTimeoutWhitelist.some((whiteListedUrl) =>
-        url?.includes(whiteListedUrl)
+    : longReqTimeoutWhitelist.some(
+        (whiteListedUrl) => url?.includes(whiteListedUrl)
       )
 
   const isFormData = contentType?.includes('x-www-form-urlencoded')
@@ -535,8 +536,14 @@ export const executeWebhook = async (
     const response = {
       statusCode: 500,
       // This message is returned to the flow (and may be persisted), and a raw
-      // error can embed the request URL/secret query params, so mask it.
-      data: { message: mask(`Error from Typebot server: ${error}`) },
+      // error can embed the request URL/secret query params, so mask it. The
+      // `Error from Typebot server:` prefix is a marker matched byte-for-byte
+      // via includes() by @typebot.io/mcp-tools — the cause goes after it.
+      data: {
+        message: mask(
+          `Error from Typebot server: ${formatErrorWithCause(error)}`
+        ),
+      },
     }
     logger.error(
       `${workspaceLogLabel(logContext?.workspace)} - HTTP Request Failed`,
@@ -547,7 +554,7 @@ export const executeWebhook = async (
           method: request.method,
           duration: Date.now() - requestStartTime,
         },
-        error: mask(error instanceof Error ? error.message : String(error)),
+        error: mask(formatErrorWithCause(error)),
       }
     )
     logs.push({
