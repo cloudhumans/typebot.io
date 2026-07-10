@@ -231,23 +231,23 @@ const TypebotButton = ({
                 <AlertIcon />
                 {t('folders.typebotButton.deleteConfirmationMessageWarning')}
               </Alert>
-              {typebot.publishedTypebotId && (
-                <FormControl>
-                  <FormLabel>
-                    {t('folders.typebotButton.deleteConfirmationLabel')}
-                  </FormLabel>
-                  <Input
-                    value={confirmInput}
-                    onChange={(e) => setConfirmInput(e.target.value)}
-                    placeholder={typebot.name}
-                  />
-                </FormControl>
-              )}
+              <FormControl>
+                <FormLabel>
+                  {t('folders.typebotButton.deleteConfirmationLabel')}
+                </FormLabel>
+                <Input
+                  autoFocus
+                  value={confirmInput}
+                  onChange={(e) => setConfirmInput(e.target.value)}
+                  placeholder={typebot.name}
+                />
+              </FormControl>
             </Stack>
           }
           confirmButtonLabel={t('delete')}
           confirmButtonDisabled={
-            typebot.publishedTypebotId ? confirmInput !== typebot.name : false
+            confirmInput.trim().toLowerCase() !==
+            typebot.name.trim().toLowerCase()
           }
           onConfirm={handleDeleteTypebotClick}
           isOpen={isDeleteOpen}
