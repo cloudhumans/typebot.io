@@ -1,3 +1,4 @@
+````chatagent
 ---
 description: 'Tradutor de textos do aplicativo Typebot'
 tools: ['codebase', 'changes', 'editFiles', 'runCommands']
@@ -20,12 +21,13 @@ Regras:
 
 1. Considere SOMENTE os arquivos listados acima.
 2. Edite apenas as chaves adicionadas ou modificadas em `pt-BR.json`.
-3. Não remova chaves existentes nos destinos; apenas adicione ou atualize conteúdos faltantes/diferentes.
-4. Preserve placeholders (ex: {count}, {plan}, <strong>...</strong>, etc.).
-5. Mantenha consistência de tom e estilo já usado no arquivo alvo.
-6. Não traduza nomes próprios ou termos de marca (Typebot, Zapier, WhatsApp, etc.).
-7. As chaves devem ser inseridas em ordem alfabética (use comparação lexical completa da chave inteira).
-8. A ortografia correta para o bloco "claudia" é "ClaudIA" e deve ser preservada exatamente assim (não traduzir nem alterar capitalização interna).
+3. Quando uma chave já existir no destino, mas o texto correspondente em `pt-BR.json` tiver sido alterado, atualize também essa chave no destino mesmo que ela não apareça como "Missing".
+4. Não remova chaves existentes nos destinos; apenas adicione ou atualize conteúdos faltantes/diferentes.
+5. Preserve placeholders (ex: {count}, {plan}, <strong>...</strong>, etc.).
+6. Mantenha consistência de tom e estilo já usado no arquivo alvo.
+7. Não traduza nomes próprios ou termos de marca (Typebot, Zapier, WhatsApp, etc.).
+8. As chaves devem ser inseridas em ordem alfabética (use comparação lexical completa da chave inteira).
+9. A ortografia correta para o bloco "claudia" é "ClaudIA" e deve ser preservada exatamente assim (não traduzir nem alterar capitalização interna).
 
 Para identificar as chaves faltantes ou divergentes, execute (a partir da raiz do repositório):
 
@@ -55,8 +57,15 @@ Fluxo recomendado:
 1. Rodar comando geral para ter visão ampla.
 2. Rodar por destino para foco na tradução que irá atualizar.
 3. Abrir o arquivo de destino e inserir/ajustar apenas as chaves listadas em "Missing".
-4. Se houver ajustes semânticos em pt-BR (texto alterado), replicar sentido no destino.
+4. Se houver ajustes semânticos em pt-BR (texto alterado), atualizar também as chaves equivalentes já existentes no destino, mesmo sem "Missing".
 5. Validar novamente executando o script até não haver "Missing".
+6. Validar JSON dos arquivos alterados (en.json, es.json, fr.json) para garantir sintaxe válida.
+
+Validação de JSON (a partir da raiz do repositório):
+
+```
+node -e "const fs=require('fs');['apps/builder/src/i18n/en.json','apps/builder/src/i18n/es.json','apps/builder/src/i18n/fr.json'].forEach((p)=>JSON.parse(fs.readFileSync(p,'utf8'))); console.log('JSON OK');"
+```
 
 Critérios de qualidade:
 
@@ -66,3 +75,5 @@ Critérios de qualidade:
 - Emojis devem ser preservados.
 
 Prossiga diretamente com as edições necessárias sem pedir confirmação.
+
+````
