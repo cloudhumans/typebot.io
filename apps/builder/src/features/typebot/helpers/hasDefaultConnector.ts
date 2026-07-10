@@ -1,1 +1,28 @@
-aW1wb3J0IHsgaXNEZWZpbmVkIH0gZnJvbSAnQHR5cGVib3QuaW8vbGliJwppbXBvcnQgewogIGlzQ2hvaWNlSW5wdXQsCiAgaXNDb25kaXRpb25CbG9jaywKICBpc1BpY3R1cmVDaG9pY2VJbnB1dCwKfSBmcm9tICdAdHlwZWJvdC5pby9zY2hlbWFzL2hlbHBlcnMnCmltcG9ydCB7IEJsb2NrVjYgfSBmcm9tICdAdHlwZWJvdC5pby9zY2hlbWFzJwppbXBvcnQgeyBJbnB1dEJsb2NrVHlwZSB9IGZyb20gJ0B0eXBlYm90LmlvL3NjaGVtYXMvZmVhdHVyZXMvYmxvY2tzL2lucHV0cy9jb25zdGFudHMnCmltcG9ydCB7IExvZ2ljQmxvY2tUeXBlIH0gZnJvbSAnQHR5cGVib3QuaW8vc2NoZW1hcy9mZWF0dXJlcy9ibG9ja3MvbG9naWMvY29uc3RhbnRzJwoKY29uc3QgQ0xBVURJQV9CTE9DS19UWVBFID0gJ2NsYXVkaWEnCgpleHBvcnQgY29uc3QgaGFzRGVmYXVsdENvbm5lY3RvciA9IChibG9jazogQmxvY2tWNikgPT4gewogIC8vIENsYXVkSUEgY3VzdG9tIGJsb2NrIHNob3VsZCBuZXZlciBjb25uZWN0IHRvIG90aGVyIGNhcmRzCiAgaWYgKGJsb2NrLnR5cGUgPT09IENMQVVESUFfQkxPQ0tfVFlQRSkgcmV0dXJuIGZhbHNlCgogIHJldHVybiAoCiAgICAoIWlzQ2hvaWNlSW5wdXQoYmxvY2spICYmCiAgICAgICFpc1BpY3R1cmVDaG9pY2VJbnB1dChibG9jaykgJiYKICAgICAgIWlzQ29uZGl0aW9uQmxvY2soYmxvY2spICYmCiAgICAgIGJsb2NrLnR5cGUgIT09IExvZ2ljQmxvY2tUeXBlLkFCX1RFU1QpIHx8CiAgICAoYmxvY2sudHlwZSA9PT0gSW5wdXRCbG9ja1R5cGUuQ0hPSUNFICYmCiAgICAgIGlzRGVmaW5lZChibG9jay5vcHRpb25zPy5keW5hbWljVmFyaWFibGVJZCkpIHx8CiAgICAoYmxvY2sudHlwZSA9PT0gSW5wdXRCbG9ja1R5cGUuUElDVFVSRV9DSE9JQ0UgJiYKICAgICAgYmxvY2sub3B0aW9ucz8uZHluYW1pY0l0ZW1zPy5pc0VuYWJsZWQgJiYKICAgICAgYmxvY2sub3B0aW9ucy5keW5hbWljSXRlbXMucGljdHVyZVNyY3NWYXJpYWJsZUlkKQogICkKfQo=
+import { isDefined } from '@typebot.io/lib'
+import {
+  isChoiceInput,
+  isConditionBlock,
+  isPictureChoiceInput,
+} from '@typebot.io/schemas/helpers'
+import { BlockV6 } from '@typebot.io/schemas'
+import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
+import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
+
+const CLAUDIA_BLOCK_TYPE = 'claudia'
+
+export const hasDefaultConnector = (block: BlockV6) => {
+  // ClaudIA custom block should never connect to other cards
+  if (block.type === CLAUDIA_BLOCK_TYPE) return false
+
+  return (
+    (!isChoiceInput(block) &&
+      !isPictureChoiceInput(block) &&
+      !isConditionBlock(block) &&
+      block.type !== LogicBlockType.AB_TEST) ||
+    (block.type === InputBlockType.CHOICE &&
+      isDefined(block.options?.dynamicVariableId)) ||
+    (block.type === InputBlockType.PICTURE_CHOICE &&
+      block.options?.dynamicItems?.isEnabled &&
+      block.options.dynamicItems.pictureSrcsVariableId)
+  )
+}
