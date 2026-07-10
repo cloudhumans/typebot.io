@@ -56,7 +56,7 @@ export const GettingStartedModal = () => {
               color="blue.500"
               _hover={{ textDecoration: 'underline', cursor: 'pointer' }}
             >
-              {t('editor.gettingStartedModal.editorBasics.list.faq')}
+              {t('editor.gettingStartedModal.editorBasics.list.faqLabel')}
             </Text>
           </Link>
 
