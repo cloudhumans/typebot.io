@@ -142,6 +142,12 @@ const TypebotButton = ({
     unpublishTypebot({ typebotId: typebot.id })
   }
 
+  // Texto que o usuário precisa digitar para confirmar a exclusão. Quando o
+  // Flow não tem nome (vazio ou só espaços), usamos o nome padrão como alvo,
+  // garantindo que a confirmação continue possível sem abrir brecha de bypass.
+  const deleteConfirmationTarget =
+    typebot.name.trim().length > 0 ? typebot.name : t('typebots.defaultName')
+
   return (
     <Button
       ref={buttonRef}
@@ -223,7 +229,7 @@ const TypebotButton = ({
                 <T
                   keyName="folders.typebotButton.deleteConfirmationMessage"
                   params={{
-                    strong: <strong>{typebot.name}</strong>,
+                    strong: <strong>{deleteConfirmationTarget}</strong>,
                   }}
                 />
               </Text>
@@ -239,16 +245,15 @@ const TypebotButton = ({
                   autoFocus
                   value={confirmInput}
                   onChange={(e) => setConfirmInput(e.target.value)}
-                  placeholder={typebot.name}
+                  placeholder={deleteConfirmationTarget}
                 />
               </FormControl>
             </Stack>
           }
           confirmButtonLabel={t('delete')}
           confirmButtonDisabled={
-            typebot.name.trim().length === 0 ||
             confirmInput.trim().toLowerCase() !==
-              typebot.name.trim().toLowerCase()
+            deleteConfirmationTarget.trim().toLowerCase()
           }
           onConfirm={handleDeleteTypebotClick}
           isOpen={isDeleteOpen}
