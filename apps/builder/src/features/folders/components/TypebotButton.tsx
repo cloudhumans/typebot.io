@@ -246,8 +246,9 @@ const TypebotButton = ({
           }
           confirmButtonLabel={t('delete')}
           confirmButtonDisabled={
+            typebot.name.trim().length === 0 ||
             confirmInput.trim().toLowerCase() !==
-            typebot.name.trim().toLowerCase()
+              typebot.name.trim().toLowerCase()
           }
           onConfirm={handleDeleteTypebotClick}
           isOpen={isDeleteOpen}
