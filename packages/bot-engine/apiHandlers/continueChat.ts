@@ -113,6 +113,7 @@ export const continueChat = async ({
   return {
     messages,
     input,
+    resultId: session.state.typebotsQueue.at(0)?.resultId,
     clientSideActions,
     dynamicTheme: parseDynamicTheme(newSessionState),
     logs: isPreview ? logs : logs?.filter(filterPotentiallySensitiveLogs),
