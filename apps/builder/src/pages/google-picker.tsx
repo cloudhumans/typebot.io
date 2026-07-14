@@ -117,11 +117,15 @@ export default function Page() {
         blockId,
         spreadsheetId,
       }
-      // Broadcast on the same-origin channel (opener-independent — see
-      // popupMessaging.ts). Delivery across windows is async, so let it flush
-      // before closing or the message is dropped.
+      // The Picker renders as an overlay, so this popup never navigates
+      // cross-origin and keeps its opener — unlike the OAuth connect popup.
+      // Post to the opener too: BroadcastChannel is storage-partitioned, so a
+      // builder embedded cross-site (CloudChat iframe) is in a different
+      // partition and never receives the channel message; opener.postMessage
+      // crosses that boundary. Keep the channel for standalone.
       const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
       channel.postMessage(message)
+      globalThis.opener?.postMessage(message, globalThis.location.origin)
       globalThis.setTimeout(() => {
         channel.close()
         globalThis.close()
