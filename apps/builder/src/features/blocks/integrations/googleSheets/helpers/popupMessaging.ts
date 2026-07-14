@@ -4,16 +4,18 @@
 // different origin), Google refuses to render its consent / account-chooser
 // screens (Sec-Fetch-Dest: iframe → 403) and partitions cookies/storage. We run
 // both the OAuth connect and the Drive Picker in a top-level popup that escapes
-// the iframe sandbox, then hand the result back over a same-origin
-// BroadcastChannel.
+// the iframe sandbox, then hand the result back to the builder.
 //
-// Why BroadcastChannel instead of window.opener.postMessage: after a popup
-// navigates to Google's OAuth and back, COOP can sever window.opener (a
-// browsing-context-group switch the spec never restores). BroadcastChannel is
-// same-origin and opener-independent — the popup returns to our origin
-// (callback-complete / google-picker) and posts; the builder on the same origin
-// receives it regardless. A single channel carries both message types; each
-// listener filters by message `type`.
+// Return transport: the OAuth connect popup navigates to Google and back, which
+// COOP can use to sever window.opener (a browsing-context-group switch the spec
+// never restores), so it returns over a same-origin BroadcastChannel. But
+// BroadcastChannel is storage-partitioned: a builder embedded cross-site is in a
+// different partition than the top-level popup and never receives it. The Picker
+// popup never navigates cross-origin (the Picker is an overlay), so it keeps its
+// opener and returns via window.opener.postMessage, which crosses the partition
+// boundary, falling back to the channel only when there is no opener. Both
+// message types share the channel and a listener filters by message `type`; the
+// picked message also arrives as an origin-checked window message.
 export const GOOGLE_SHEETS_OAUTH_CHANNEL = 'google-sheets-oauth' as const
 
 export const GOOGLE_SHEETS_CONNECTED_MESSAGE =
