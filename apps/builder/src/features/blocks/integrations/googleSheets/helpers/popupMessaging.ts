@@ -12,9 +12,10 @@
 // BroadcastChannel is storage-partitioned: a builder embedded cross-site is in a
 // different partition than the top-level popup and never receives it. The Picker
 // popup never navigates cross-origin (the Picker is an overlay), so it keeps its
-// opener and additionally posts via window.opener.postMessage, which crosses the
-// partition boundary. Both message types share the channel and a listener
-// filters by message `type`; the picked message is also delivered via opener.
+// opener and returns via window.opener.postMessage, which crosses the partition
+// boundary, falling back to the channel only when there is no opener. Both
+// message types share the channel and a listener filters by message `type`; the
+// picked message also arrives as an origin-checked window message.
 export const GOOGLE_SHEETS_OAUTH_CHANNEL = 'google-sheets-oauth' as const
 
 export const GOOGLE_SHEETS_CONNECTED_MESSAGE =

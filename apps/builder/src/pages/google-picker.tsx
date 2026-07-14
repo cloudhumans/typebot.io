@@ -117,19 +117,24 @@ export default function Page() {
         blockId,
         spreadsheetId,
       }
-      // The Picker renders as an overlay, so this popup never navigates
-      // cross-origin and keeps its opener — unlike the OAuth connect popup.
-      // Post to the opener too: BroadcastChannel is storage-partitioned, so a
-      // builder embedded cross-site (CloudChat iframe) is in a different
-      // partition and never receives the channel message; opener.postMessage
-      // crosses that boundary. Keep the channel for standalone.
-      const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
-      channel.postMessage(message)
-      globalThis.opener?.postMessage(message, globalThis.location.origin)
-      globalThis.setTimeout(() => {
-        channel.close()
-        globalThis.close()
-      }, 200)
+      // The Picker is an overlay, so this popup never navigates cross-origin and
+      // keeps its opener (unlike the OAuth connect popup, which COOP severs).
+      // Prefer opener.postMessage: it reaches the builder both standalone and
+      // embedded, crossing the storage-partition boundary that stops the
+      // BroadcastChannel when embedded cross-site (CloudChat iframe). Fall back
+      // to the channel only when there's no opener — using both would deliver the
+      // pick twice.
+      if (globalThis.opener) {
+        globalThis.opener.postMessage(message, globalThis.location.origin)
+        globalThis.setTimeout(() => globalThis.close(), 200)
+      } else {
+        const channel = new BroadcastChannel(GOOGLE_SHEETS_OAUTH_CHANNEL)
+        channel.postMessage(message)
+        globalThis.setTimeout(() => {
+          channel.close()
+          globalThis.close()
+        }, 200)
+      }
     }
 
     const picker = new window.google.picker.PickerBuilder()
