@@ -3,6 +3,7 @@ import { LogsStore } from '@typebot.io/forge'
 type ClaudiaAction =
   | 'END_FLOW'
   | 'FORWARD_TO_HUMAN'
+  | 'FORWARD_TO_HUMAN_IGNORE_HOURS'
   | 'CLOSE_TICKET'
   | 'ANSWER_TICKET'
 
