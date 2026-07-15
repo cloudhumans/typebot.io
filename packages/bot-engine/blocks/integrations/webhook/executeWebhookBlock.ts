@@ -428,10 +428,13 @@ export const executeWebhook = async (
     // with "Failed to parse URL from [object Request]"). Rebuild a plain
     // request from its parts before handing it to undici.
     fetch: (async (request: globalThis.Request, opts?: RequestInit) => {
+      // `request.body` is null for any bodyless request (not just GET/HEAD —
+      // e.g. a POST/DELETE with no body configured), so check it directly
+      // instead of the method. Otherwise arrayBuffer() on a bodyless request
+      // still yields an empty ArrayBuffer, sending Content-Length: 0 instead
+      // of no body at all.
       const requestBody =
-        request.method === 'GET' || request.method === 'HEAD'
-          ? undefined
-          : await request.arrayBuffer()
+        request.body === null ? undefined : await request.arrayBuffer()
       return undiciFetch(request.url, {
         method: request.method,
         headers: Object.fromEntries(request.headers.entries()),
