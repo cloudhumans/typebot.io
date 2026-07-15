@@ -16,6 +16,7 @@ import {
 import { stringify } from 'qs'
 import { isDefined, isEmpty, isNotDefined, omit } from '@typebot.io/lib'
 import ky, { HTTPError, Options, TimeoutError } from 'ky'
+import { fetch as undiciFetch, RequestInit as UndiciRequestInit } from 'undici'
 import { resumeWebhookExecution } from './resumeWebhookExecution'
 import { formatErrorWithCause } from './formatErrorWithCause'
 import { ExecuteIntegrationResponse } from '../../../types'
@@ -417,6 +418,37 @@ export const executeWebhook = async (
     body: (isFormData && body ? body : undefined) as any,
     timeout: calculateTimeout(),
     ...(isCredentialed ? { redirect: 'manual' as const } : {}),
+    // Next.js App Router replaces globalThis.fetch with an instrumented
+    // version (for cache/dedup) that intermittently throws `TypeError: fetch
+    // failed` on cross-origin redirects requiring a POST->GET downgrade
+    // (e.g. Google Apps Script's script.google.com -> script.googleusercontent.com).
+    // ky passes its internal Request object straight to a custom `fetch`, but
+    // that Request was built with Next's patched global Request class, which
+    // undici's standalone fetch doesn't recognize as valid input (it fails
+    // with "Failed to parse URL from [object Request]"). Rebuild a plain
+    // request from its parts before handing it to undici.
+    fetch: (async (request: globalThis.Request, opts?: RequestInit) => {
+      // `request.body` is null for any bodyless request (not just GET/HEAD —
+      // e.g. a POST/DELETE with no body configured), so check it directly
+      // instead of the method. Otherwise arrayBuffer() on a bodyless request
+      // still yields an empty ArrayBuffer, sending Content-Length: 0 instead
+      // of no body at all.
+      const requestBody =
+        request.body === null ? undefined : await request.arrayBuffer()
+      return undiciFetch(request.url, {
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        body: requestBody,
+        redirect: request.redirect,
+        ...opts,
+        // ky's timeout aborts via an AbortController whose signal it attaches
+        // to `request` itself (not `opts` — `findUnknownOptions` filters out
+        // standard Request options like `signal`). Forwarding it here lets an
+        // actual ky timeout also cancel the underlying undici request instead
+        // of leaving it running in the background.
+        signal: opts?.signal ?? request.signal,
+      } as UndiciRequestInit)
+    }) as unknown as typeof fetch,
   } satisfies Options & { url: string; body: any }
 
   const requestStartTime = Date.now()
@@ -467,9 +499,13 @@ export const executeWebhook = async (
         data: await parseResponseBody(error.response),
       }
       // With redirect:'manual' (credential-backed requests) ky throws instead of
-      // following a redirect; surface a clear reason. Under Node/undici a manual
-      // redirect usually arrives as an opaque response (type 'opaqueredirect',
-      // status 0) rather than a 3xx, so detect both shapes.
+      // following a redirect; surface a clear reason. Server-side undici
+      // deliberately deviates from the Fetch spec here and returns the raw 3xx
+      // response instead of a synthetic `opaqueredirect`
+      // (see https://github.com/nodejs/undici/issues/1193) — the `status === 0`
+      // / `type === 'opaqueredirect'` checks below are defensive for other
+      // fetch implementations, but the 3xx check is what actually fires under
+      // undici. Don't drop it: that's the SSRF guard for credentialed requests.
       const isBlockedRedirect =
         isCredentialed &&
         (error.response.status === 0 ||
