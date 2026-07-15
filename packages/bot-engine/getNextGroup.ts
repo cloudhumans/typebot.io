@@ -140,6 +140,7 @@ export const getNextGroup = async ({
             index: currentVisitedEdgeIndex as number,
             edgeId: nextEdge.id,
             resultId,
+            typebotId: state.typebotsQueue[0].typebot.typebotId ?? null,
           }
         : undefined,
   }
