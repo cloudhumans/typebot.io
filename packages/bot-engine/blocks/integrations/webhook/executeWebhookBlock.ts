@@ -16,6 +16,7 @@ import {
 import { stringify } from 'qs'
 import { isDefined, isEmpty, isNotDefined, omit } from '@typebot.io/lib'
 import ky, { HTTPError, Options, TimeoutError } from 'ky'
+import { fetch as undiciFetch, RequestInit as UndiciRequestInit } from 'undici'
 import { resumeWebhookExecution } from './resumeWebhookExecution'
 import { formatErrorWithCause } from './formatErrorWithCause'
 import { ExecuteIntegrationResponse } from '../../../types'
@@ -417,6 +418,28 @@ export const executeWebhook = async (
     body: (isFormData && body ? body : undefined) as any,
     timeout: calculateTimeout(),
     ...(isCredentialed ? { redirect: 'manual' as const } : {}),
+    // Next.js App Router replaces globalThis.fetch with an instrumented
+    // version (for cache/dedup) that intermittently throws `TypeError: fetch
+    // failed` on cross-origin redirects requiring a POST->GET downgrade
+    // (e.g. Google Apps Script's script.google.com -> script.googleusercontent.com).
+    // ky passes its internal Request object straight to a custom `fetch`, but
+    // that Request was built with Next's patched global Request class, which
+    // undici's standalone fetch doesn't recognize as valid input (it fails
+    // with "Failed to parse URL from [object Request]"). Rebuild a plain
+    // request from its parts before handing it to undici.
+    fetch: (async (request: globalThis.Request, opts?: RequestInit) => {
+      const requestBody =
+        request.method === 'GET' || request.method === 'HEAD'
+          ? undefined
+          : await request.arrayBuffer()
+      return undiciFetch(request.url, {
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        body: requestBody,
+        redirect: request.redirect,
+        ...opts,
+      } as UndiciRequestInit)
+    }) as unknown as typeof fetch,
   } satisfies Options & { url: string; body: any }
 
   const requestStartTime = Date.now()
