@@ -499,9 +499,13 @@ export const executeWebhook = async (
         data: await parseResponseBody(error.response),
       }
       // With redirect:'manual' (credential-backed requests) ky throws instead of
-      // following a redirect; surface a clear reason. Under Node/undici a manual
-      // redirect usually arrives as an opaque response (type 'opaqueredirect',
-      // status 0) rather than a 3xx, so detect both shapes.
+      // following a redirect; surface a clear reason. Server-side undici
+      // deliberately deviates from the Fetch spec here and returns the raw 3xx
+      // response instead of a synthetic `opaqueredirect`
+      // (see https://github.com/nodejs/undici/issues/1193) — the `status === 0`
+      // / `type === 'opaqueredirect'` checks below are defensive for other
+      // fetch implementations, but the 3xx check is what actually fires under
+      // undici. Don't drop it: that's the SSRF guard for credentialed requests.
       const isBlockedRedirect =
         isCredentialed &&
         (error.response.status === 0 ||

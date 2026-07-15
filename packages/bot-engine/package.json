@@ -33,7 +33,7 @@
     "openai": "4.47.1",
     "qs": "6.11.2",
     "stripe": "12.13.0",
-    "undici": "5.28.3",
+    "undici": "5.28.5",
     "isolated-vm": "4.7.2"
   },
   "devDependencies": {
