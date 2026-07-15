@@ -1,6 +1,6 @@
 import { env } from '@typebot.io/env'
 import { PrismaClient } from '@typebot.io/prisma'
-import { sanitizeNullBytes } from './sanitizeNullBytes'
+import { sanitizeForJsonb } from './sanitizeForJsonb'
 
 declare const global: { prisma: PrismaClient }
 let prisma: PrismaClient
@@ -26,7 +26,7 @@ prisma.$use(async (params, next) => {
   return result
 })
 
-const NULL_BYTE_WRITE_ACTIONS = new Set([
+const SANITIZED_WRITE_ACTIONS = new Set([
   'create',
   'createMany',
   'update',
@@ -35,8 +35,8 @@ const NULL_BYTE_WRITE_ACTIONS = new Set([
 ])
 
 prisma.$use(async (params, next) => {
-  if (params.args && NULL_BYTE_WRITE_ACTIONS.has(params.action))
-    params.args = sanitizeNullBytes(params.args)
+  if (params.args && SANITIZED_WRITE_ACTIONS.has(params.action))
+    params.args = sanitizeForJsonb(params.args)
   return next(params)
 })
 
