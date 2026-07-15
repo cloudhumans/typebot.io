@@ -12,6 +12,9 @@
     "packages/forge/blocks/*",
     "apps/*"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "prepare": "husky install",
     "docker:up": "docker compose -f docker-compose.dev.yml up -d && node scripts/wait-for-postgres.mjs",

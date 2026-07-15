@@ -22,11 +22,32 @@ const defineOwn = (
     configurable: true,
   })
 
+// String.prototype.{isWellFormed,toWellFormed} are ES2024 (present in Node 20+,
+// the runtime target) but the repo's TypeScript lib predates them, so the two
+// methods are typed locally.
+type WellFormedString = {
+  isWellFormed(): boolean
+  toWellFormed(): string
+}
+
+const sanitizeString = (value: string): string => {
+  const out = (
+    value.includes('\u0000') ? value.replace(NULL_BYTE, '') : value
+  ) as string & WellFormedString
+  // toWellFormed replaces lone/unpaired surrogates with U+FFFD but leaves the
+  // null byte alone (U+0000 is valid UTF-8), so the two passes are complementary.
+  return out.isWellFormed() ? out : out.toWellFormed()
+}
+
 /**
- * Removes U+0000 from every string in a value tree, including object keys
- * (jsonb rejects the null byte in keys too — external webhook responses are
- * merged raw into session state). PostgreSQL text/jsonb cannot store the null
- * byte (error 22P05); AI agents occasionally send one in tool-call args.
+ * Makes every string in a value tree safe to persist to jsonb/text, including
+ * object keys (external webhook responses are merged raw into session state).
+ * Two problems, same root cause — external unicode written verbatim into jsonb:
+ *   - U+0000 (null byte): PostgreSQL text/jsonb rejects it (error 22P05); AI
+ *     agents occasionally send one in tool-call args.
+ *   - Lone/unpaired UTF-16 surrogates (truncated emoji, multibyte text cut mid
+ *     codepoint): the Prisma query engine's serde_json rejects them ("unexpected
+ *     end of hex escape") when serializing the jsonb value.
  * Returns the same reference when nothing changed. Non-plain objects (Date,
  * Buffer, Prisma JsonNull/DbNull sentinels, Decimal) pass through untouched
  * by identity.
@@ -34,15 +55,12 @@ const defineOwn = (
  * Runs on every Prisma write (middleware hot path), so copies are allocated
  * lazily: a clean tree allocates nothing.
  */
-export const sanitizeNullBytes = <T>(value: T): T => {
-  if (typeof value === 'string')
-    return (
-      value.includes('\u0000') ? value.replace(NULL_BYTE, '') : value
-    ) as T
+export const sanitizeForJsonb = <T>(value: T): T => {
+  if (typeof value === 'string') return sanitizeString(value) as T
   if (Array.isArray(value)) {
     let next: unknown[] | undefined
     for (let i = 0; i < value.length; i++) {
-      const cleaned = sanitizeNullBytes(value[i])
+      const cleaned = sanitizeForJsonb(value[i])
       if (next === undefined && cleaned !== value[i]) next = value.slice(0, i)
       if (next !== undefined) next.push(cleaned)
     }
@@ -53,8 +71,8 @@ export const sanitizeNullBytes = <T>(value: T): T => {
     let next: Record<string, unknown> | undefined
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
-      const cleaned = sanitizeNullBytes(value[key])
-      const cleanedKey = sanitizeNullBytes(key)
+      const cleaned = sanitizeForJsonb(value[key])
+      const cleanedKey = sanitizeForJsonb(key)
       if (
         next === undefined &&
         (cleanedKey !== key || cleaned !== value[key])
