@@ -18,6 +18,7 @@ type ConfirmDeleteModalProps = {
   title?: string
   confirmButtonLabel: string
   confirmButtonColor?: 'blue' | 'red'
+  confirmButtonDisabled?: boolean
 }
 
 export const ConfirmModal = ({
@@ -28,6 +29,7 @@ export const ConfirmModal = ({
   confirmButtonLabel,
   onConfirm,
   confirmButtonColor = 'red',
+  confirmButtonDisabled = false,
 }: ConfirmDeleteModalProps) => {
   const { t } = useTranslate()
   const [confirmLoading, setConfirmLoading] = useState(false)
@@ -68,6 +70,7 @@ export const ConfirmModal = ({
               onClick={onConfirmClick}
               ml={3}
               isLoading={confirmLoading}
+              isDisabled={confirmButtonDisabled}
             >
               {confirmButtonLabel}
             </Button>
