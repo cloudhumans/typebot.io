@@ -81,8 +81,8 @@ export const useGoogleSheetsOAuthListener = () => {
       return true
     }
 
-    channel.onmessage = (event: MessageEvent) => {
-      const connected = parseGoogleSheetsConnectedMessage(event.data)
+    const handlePayload = (data: unknown) => {
+      const connected = parseGoogleSheetsConnectedMessage(data)
       if (connected) {
         // Only refresh the credentials list when an update actually happened.
         if (
@@ -93,13 +93,29 @@ export const useGoogleSheetsOAuthListener = () => {
           trpcContext.credentials.listCredentials.invalidate()
         return
       }
-      const picked = parseGoogleSheetsSpreadsheetPickedMessage(event.data)
-      if (picked) {
-        // Matches GoogleSheetsSettings' handleSpreadsheetIdChange: set
-        // spreadsheetId without clearing sheetId (no regression).
+      const picked = parseGoogleSheetsSpreadsheetPickedMessage(data)
+      if (picked)
+        // Set spreadsheetId without clearing sheetId (no regression).
         applyOptions(picked.blockId, { spreadsheetId: picked.spreadsheetId })
-      }
     }
-    return () => channel.close()
+
+    channel.onmessage = (event: MessageEvent) => handlePayload(event.data)
+
+    // The Picker popup keeps its opener (it never navigates cross-origin) and
+    // posts the result here too. Embedded cross-site, the builder iframe is in a
+    // different storage partition than the top-level popup, so the
+    // BroadcastChannel above never arrives; this opener path crosses that
+    // boundary. Validate the origin — window messages, unlike BroadcastChannel,
+    // are not same-origin by design.
+    const onWindowMessage = (event: MessageEvent) => {
+      if (event.origin !== globalThis.location.origin) return
+      handlePayload(event.data)
+    }
+    globalThis.addEventListener('message', onWindowMessage)
+
+    return () => {
+      channel.close()
+      globalThis.removeEventListener('message', onWindowMessage)
+    }
   }, [trpcContext])
 }
