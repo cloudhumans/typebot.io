@@ -438,6 +438,12 @@ export const executeWebhook = async (
         body: requestBody,
         redirect: request.redirect,
         ...opts,
+        // ky's timeout aborts via an AbortController whose signal it attaches
+        // to `request` itself (not `opts` — `findUnknownOptions` filters out
+        // standard Request options like `signal`). Forwarding it here lets an
+        // actual ky timeout also cancel the underlying undici request instead
+        // of leaving it running in the background.
+        signal: opts?.signal ?? request.signal,
       } as UndiciRequestInit)
     }) as unknown as typeof fetch,
   } satisfies Options & { url: string; body: any }
