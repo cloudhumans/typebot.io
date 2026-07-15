@@ -2,6 +2,7 @@ import { createBlock } from '@typebot.io/forge'
 import { ClaudiaLogo } from './logo'
 import { endFlow } from './actions/end-flow'
 import { forwardToHuman } from './actions/forward-to-human'
+import { forwardToHumanIgnoreHours } from './actions/forward-to-human-ignore-hours'
 import { closeTicket } from './actions/close-ticket'
 import { answerTicket } from './actions/answer_ticket'
 
@@ -10,5 +11,5 @@ export const claudiaBlock = createBlock({
   name: 'ClaudIA',
   tags: [],
   LightLogo: ClaudiaLogo,
-  actions: [endFlow, forwardToHuman, closeTicket, answerTicket],
+  actions: [endFlow, forwardToHuman, forwardToHumanIgnoreHours, closeTicket, answerTicket],
 })
