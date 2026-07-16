@@ -140,6 +140,10 @@ export const getNextGroup = async ({
             index: currentVisitedEdgeIndex as number,
             edgeId: nextEdge.id,
             resultId,
+            // Contract: when non-null this is a Typebot.id. Do NOT fall back to
+            // typebot.id — in prod sessions that's the PublicTypebot id (a
+            // different id space), indistinguishable from a Typebot.id once
+            // stored, which silently poisons downstream joins. null = unknown.
             typebotId: state.typebotsQueue[0].typebot.typebotId ?? null,
           }
         : undefined,
