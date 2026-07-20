@@ -21,15 +21,8 @@ export const EmbeddedAuthWrapper = ({ children }: PropsWithChildren) => {
 
   if (isLoading) {
     return (
-      <Flex
-        h="100vh"
-        justify="center"
-        align="center"
-        flexDirection="column"
-        gap={4}
-      >
+      <Flex h="100vh" justify="center" align="center" flexDirection="column">
         <Spinner size="lg" />
-        <Text>{'Authenticating...'}</Text>
       </Flex>
     )
   }
