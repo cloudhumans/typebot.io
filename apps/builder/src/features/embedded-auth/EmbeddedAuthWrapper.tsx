@@ -1,9 +1,11 @@
 import { PropsWithChildren } from 'react'
 import { Flex, Spinner, Text } from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
 import { useEmbeddedAuth } from '@/hooks/useEmbeddedAuth'
 
 export const EmbeddedAuthWrapper = ({ children }: PropsWithChildren) => {
   const { authError, isLoading } = useEmbeddedAuth()
+  const { t } = useTranslate()
 
   if (authError) {
     return (
@@ -22,7 +24,7 @@ export const EmbeddedAuthWrapper = ({ children }: PropsWithChildren) => {
   if (isLoading) {
     return (
       <Flex h="100vh" justify="center" align="center" flexDirection="column">
-        <Spinner size="lg" />
+        <Spinner size="lg" aria-label={t('embeddedAuth.loading')} />
       </Flex>
     )
   }

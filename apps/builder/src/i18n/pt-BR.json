@@ -404,6 +404,7 @@
   "editor.sidebarBlocks.sidebar.icon.unlock.label": "Desbloquear",
   "editor.sidebarBlocks.sidebar.lock.label": "Bloquear barra lateral",
   "editor.sidebarBlocks.sidebar.unlock.label": "Desbloquear barra lateral",
+  "embeddedAuth.loading": "Carregando...",
   "emojiList.categories.activities.label": "ATIVIDADES",
   "emojiList.categories.animalsAndNature.label": "ANIMAIS & NATUREZA",
   "emojiList.categories.flags.label": "BANDEIRAS",
