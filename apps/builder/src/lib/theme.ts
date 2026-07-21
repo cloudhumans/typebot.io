@@ -168,13 +168,16 @@ const Button = defineStyleConfig({
       }
       if (colorScheme === 'orange') {
         return {
-          bg: 'orange.500',
+          bg: colorMode === 'dark' ? 'orange.400' : 'orange.500',
           color: 'white',
+          // Darken on hover/active, matching the 'blue' (primary) branch above.
+          // Was 'orange.400' (lighter than base) — made hover look washed out
+          // instead of a pressed/darkened state (issue #165 follow-up).
           _hover: {
-            bg: 'orange.400',
+            bg: colorMode === 'dark' ? 'orange.500' : 'orange.600',
           },
           _active: {
-            bg: 'orange.600',
+            bg: colorMode === 'dark' ? 'orange.600' : 'orange.700',
           },
         }
       }
