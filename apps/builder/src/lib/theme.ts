@@ -26,6 +26,14 @@ const fonts = {
   body: "Open Sans, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
 }
 
+// Aligned to Claudia's radius scale (--radius: 0.625rem base).
+const radii = {
+  sm: '0.375rem', // 6px — --radius-sm
+  md: '0.5rem', // 8px — --radius-md
+  lg: '0.625rem', // 10px — --radius (base)
+  xl: '0.875rem', // 14px — --radius-xl
+}
+
 export const colors = {
   gray: {
     50: '#fafafa',
@@ -40,17 +48,19 @@ export const colors = {
     850: '#1f1f23',
     900: '#18181b',
   },
+  // Remapped to Claudia's brand orange (base #ff8638 / hover #e1580e) — this
+  // is the palette Button/Switch resolve colorScheme="blue" through.
   blue: {
-    50: '#e0edff',
-    100: '#b0caff',
-    200: '#7ea6ff',
-    300: '#4b83ff',
-    400: '#1a5fff',
-    500: '#0042da',
-    600: '#0036b4',
-    700: '#002782',
-    800: '#001751',
-    900: '#1a202c',
+    50: '#fff0e9',
+    100: '#ffe0cf',
+    200: '#ffc7a3',
+    300: '#ffab74',
+    400: '#ff9451',
+    500: '#ff8638',
+    600: '#e1580e',
+    700: '#b8480b',
+    800: '#8a3608',
+    900: '#4f1f05',
   },
   orange: {
     50: '#fff1da',
@@ -174,11 +184,16 @@ const Alert = createMultiStyleConfigHelpers(
   alertAnatomy.keys
 ).defineMultiStyleConfig({
   variants: {
+    // status="info" maps to colorScheme="blue" too, but info callouts stay
+    // Claudia cyan rather than following the orange remap above.
     subtle: ({ colorScheme, colorMode }) => {
-      if (colorScheme !== 'blue' || colorMode === 'dark') return {}
+      if (colorScheme !== 'blue') return {}
       return {
         container: {
-          bg: 'blue.50',
+          bg: colorMode === 'dark' ? 'rgba(11, 118, 183, 0.24)' : '#d0f0fd',
+        },
+        icon: {
+          color: colorMode === 'dark' ? '#63c7ee' : '#0b76b7',
         },
       }
     },
@@ -253,6 +268,7 @@ const styles = {
 export const customTheme = extendTheme({
   colors,
   fonts,
+  radii,
   components,
   config,
   styles,
