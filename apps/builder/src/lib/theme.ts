@@ -34,6 +34,22 @@ const radii = {
   xl: '0.875rem', // 14px — --radius-xl
 }
 
+// Claudia brand primary (base #ff8638 / hover #e1580e). This is the honest,
+// named token; `blue` below is kept as a back-compat alias because Typebot's
+// upstream components hardcode colorScheme="blue" as the de-facto primary.
+const primary = {
+  50: '#fff0e9',
+  100: '#ffe0cf',
+  200: '#ffc7a3',
+  300: '#ffab74',
+  400: '#ff9451',
+  500: '#ff8638',
+  600: '#e1580e',
+  700: '#b8480b',
+  800: '#8a3608',
+  900: '#4f1f05',
+}
+
 export const colors = {
   gray: {
     50: '#fafafa',
@@ -48,20 +64,13 @@ export const colors = {
     850: '#1f1f23',
     900: '#18181b',
   },
-  // Remapped to Claudia's brand orange (base #ff8638 / hover #e1580e) — this
-  // is the palette Button/Switch resolve colorScheme="blue" through.
-  blue: {
-    50: '#fff0e9',
-    100: '#ffe0cf',
-    200: '#ffc7a3',
-    300: '#ffab74',
-    400: '#ff9451',
-    500: '#ff8638',
-    600: '#e1580e',
-    700: '#b8480b',
-    800: '#8a3608',
-    900: '#4f1f05',
-  },
+  primary,
+  brand: primary,
+  // Alias to `primary` — Typebot upstream hardcodes colorScheme="blue" and
+  // blue.NNN as the primary across ~82 builder files. Aliasing here keeps the
+  // override central and avoids a fork-wide rename that would conflict with
+  // every upstream merge. New code should prefer `primary`/`brand`.
+  blue: primary,
   orange: {
     50: '#fff1da',
     100: '#ffd7ae',
