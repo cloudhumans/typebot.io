@@ -319,6 +319,7 @@
   "editor.sidebarBlocks.sidebar.icon.unlock.label": "Sblocco",
   "editor.sidebarBlocks.sidebar.lock.label": "Blocca barra laterale",
   "editor.sidebarBlocks.sidebar.unlock.label": "Sblocca barra laterale",
+  "embeddedAuth.loading": "Caricamento...",
   "emojiList.categories.activities.label": "ATTIVITÀ",
   "emojiList.categories.animalsAndNature.label": "ANIMALI E NATURA",
   "emojiList.categories.flags.label": "BANDIERE",

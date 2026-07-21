@@ -202,6 +202,7 @@
   "editor.sidebarBlocks.sidebar.icon.unlock.label": "Deblocați",
   "editor.sidebarBlocks.sidebar.lock.label": "Blocați bara laterală",
   "editor.sidebarBlocks.sidebar.unlock.label": "Deblocați bara laterală",
+  "embeddedAuth.loading": "Se încarcă...",
   "errorMessage": "A aparut o eroare",
   "folders.createFolderButton.label": "Creați un folder",
   "folders.createTypebotButton.label": "Creați un Flow",

@@ -352,6 +352,7 @@
   "editor.sidebarBlocks.sidebar.icon.unlock.label": "Ouverte",
   "editor.sidebarBlocks.sidebar.lock.label": "Fermer la barre latérale",
   "editor.sidebarBlocks.sidebar.unlock.label": "Ouvrir la barre latérale",
+  "embeddedAuth.loading": "Chargement...",
   "emojiList.categories.activities.label": "ACTIVITÉS",
   "emojiList.categories.animalsAndNature.label": "ANIMAUX & NATURE",
   "emojiList.categories.flags.label": "DRAPEAUX",
