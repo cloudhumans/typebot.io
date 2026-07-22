@@ -1,28 +1,35 @@
 import { AlertProps, Alert, useColorModeValue } from '@chakra-ui/react'
 import { InfoIcon } from '@/components/icons'
 
-// Claudia cyan, set explicitly so this component never depends on the
-// status="info" -> colorScheme="blue" -> variant -> theme-override chain
-// (which can fall through to raw Chakra blue or the blue->primary/orange
-// alias in theme.ts if any hop doesn't apply).
-//
-// Matches the claudia-app info callout (create-tool-dialog "Criar nova
-// ferramenta"): rounded-xl bg-ca-cyan-light-3 text-ca-cyan-dark
-// dark:bg-ca-cyan-dark/20 dark:text-ca-cyan-light-2, with a lucide
-// <Info size={16}> (outline, transparent fill). We use Typebot's own
-// InfoIcon (Feather-derived, same geometry as lucide's Info) instead of
-// Chakra's <AlertIcon>, whose info glyph is a SOLID filled circle.
-//   light bg:    #d0f0fd            -> --color-ca-cyan-light-3
-//   light icon:  #0b76b7            -> --color-ca-cyan-dark
-//   dark bg:     rgba(11,118,183,.2) -> --color-ca-cyan-dark @ 20% (dark:/20)
-//   dark icon:   #77d1f3            -> --color-ca-cyan-light-2
+// Mirrors the claudia-app info callout (create-tool-dialog "Criar nova
+// ferramenta"). That callout is a <FormDescription> given a cyan className
+// (text-ca-cyan-dark dark:text-ca-cyan-light-2), BUT FormDescription's own
+// base style is `text-ca-primary-text! dark:text-ca-dark-7!` (!important) —
+// which wins over the cyan. So what actually renders is GRAY text, and the
+// <Info> icon (no explicit color) inherits that gray too. Only the cyan
+// background survives. We reproduce the rendered result, not the misleading
+// className:
+//   light bg:         #d0f0fd            -> --color-ca-cyan-light-3
+//   dark bg:          rgba(11,118,183,.2) -> --color-ca-cyan-dark @ 20% (dark:/20)
+//   light text+icon:  #637381            -> --color-ca-primary-text
+//   dark text+icon:   #cdced6            -> --color-ca-dark-7
+// Icon: Typebot's outline InfoIcon (Feather geometry == lucide's <Info>),
+// size 16, top-aligned (alignItems flex-start + mt 2px == claudia items-start
+// + mt-0.5), instead of Chakra's <AlertIcon> solid glyph.
 export const AlertInfo = (props: AlertProps) => {
   const bg = useColorModeValue('#d0f0fd', 'rgba(11, 118, 183, 0.2)')
-  const iconColor = useColorModeValue('#0b76b7', '#77d1f3')
+  const fg = useColorModeValue('#637381', '#cdced6')
 
   return (
-    <Alert status="info" rounded="xl" bg={bg} {...props}>
-      <InfoIcon color={iconColor} boxSize="16px" mr={2} mt="2px" />
+    <Alert
+      status="info"
+      rounded="xl"
+      bg={bg}
+      color={fg}
+      alignItems="flex-start"
+      {...props}
+    >
+      <InfoIcon color={fg} boxSize="16px" mr={2} mt="2px" />
       {props.children}
     </Alert>
   )

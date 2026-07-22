@@ -237,15 +237,20 @@ const Alert = createMultiStyleConfigHelpers(
       if (colorScheme !== 'blue') return {}
       return {
         container: {
-          // Matches the claudia-app info callout (create-tool-dialog).
-          // dark: rgba(11,118,183,.2) -> --color-ca-cyan-dark @ 20% (dark:/20)
-          // light: #d0f0fd -> --color-ca-cyan-light-3
+          // Matches the claudia-app info callout (create-tool-dialog): cyan
+          // background, but GRAY text+icon (claudia's FormDescription base
+          // color `text-ca-primary-text!/dark:text-ca-dark-7!` overrides the
+          // cyan className), top-aligned. See AlertInfo.tsx for the full note.
+          // dark bg: rgba(11,118,183,.2) -> --color-ca-cyan-dark @ 20% (dark:/20)
+          // light bg: #d0f0fd -> --color-ca-cyan-light-3
           bg: colorMode === 'dark' ? 'rgba(11, 118, 183, 0.2)' : '#d0f0fd',
+          // dark: #cdced6 -> --color-ca-dark-7 / light: #637381 -> --color-ca-primary-text
+          color: colorMode === 'dark' ? '#cdced6' : '#637381',
+          alignItems: 'flex-start',
         },
         icon: {
-          // dark: #77d1f3 -> --color-ca-cyan-light-2
-          // light: #0b76b7 -> --color-ca-cyan-dark
-          color: colorMode === 'dark' ? '#77d1f3' : '#0b76b7',
+          // Inherits the gray text color (claudia's <Info> has no own color).
+          color: colorMode === 'dark' ? '#cdced6' : '#637381',
         },
       }
     },
