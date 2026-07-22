@@ -1,5 +1,17 @@
-const hexColorPropSelector = (container) =>
-  `JSXAttribute[name.name=/^(color|bg|background|backgroundColor|borderColor|fill|stroke)$/] > ${container}Literal[value=/^#([0-9a-fA-F]{3}){1,2}$/]`
+const hexRegex = '/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/'
+
+// Descendant combinator (not direct-child `>`) on purpose: a hex literal can
+// be nested arbitrarily deep in the attribute value — e.g.
+// bg={isDark ? '#111' : '#222'} — not just a bare string or a single
+// JSXExpressionContainer wrapper.
+const hexColorPropSelector = `JSXAttribute[name.name=/^(color|bg|background|backgroundColor|borderColor|fill|stroke)$/] Literal[value=${hexRegex}]`
+
+// useColorModeValue('#fff', '#000') is caught separately, regardless of
+// where its result is used — Chakra's light/dark helper is almost always
+// assigned to an intermediate const (e.g. `const bg = useColorModeValue(...)`)
+// and only the identifier ends up in the JSX attribute, so the selector
+// above never sees the literal (see AlertInfo.tsx / RestApiCredentialsModal.tsx).
+const hexUseColorModeValueSelector = `CallExpression[callee.name='useColorModeValue'] > Literal[value=${hexRegex}]`
 
 const hexColorPropMessage =
   'Raw hex color in a UI color prop. Use a theme token (primary/brand/red/...) instead of hex — see apps/builder/src/lib/THEME.md.'
@@ -17,11 +29,9 @@ module.exports = {
       rules: {
         'no-restricted-syntax': [
           'warn',
-          // color="#fff" (string literal directly on the attribute)
-          { selector: hexColorPropSelector(''), message: hexColorPropMessage },
-          // color={'#fff'} (string literal inside a JSX expression container)
+          { selector: hexColorPropSelector, message: hexColorPropMessage },
           {
-            selector: hexColorPropSelector('JSXExpressionContainer > '),
+            selector: hexUseColorModeValueSelector,
             message: hexColorPropMessage,
           },
         ],
@@ -42,6 +52,7 @@ module.exports = {
         'src/**/logos/**/*.tsx',
         'src/**/*Logo.tsx',
         'src/features/editor/components/BlockIcon.tsx',
+        'src/features/forge/ForgedBlockIcon.tsx',
       ],
       rules: {
         'no-restricted-syntax': 'off',

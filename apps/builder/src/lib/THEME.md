@@ -23,8 +23,17 @@ export const colors = {
 }
 ```
 
-**New code should reference `primary` or `brand`, never `blue`.** `blue` only
-exists so old/upstream call sites keep working without a rename.
+**For direct color/bg props (`bg="..."`, `color="..."`, `borderColor="..."`),
+reference `primary` or `brand`, never `blue`.** `blue` only exists so
+old/upstream call sites keep working without a rename.
+
+**For Chakra's `colorScheme` prop, keep `colorScheme="blue"`.** Do not switch
+it to `colorScheme="primary"` — the `Button`/`Alert` variant overrides in
+`theme.ts` match on `colorScheme === 'blue'` literally (it's how the alias is
+wired for Chakra's variant system), so `colorScheme="primary"` would miss
+those overrides and fall back to Chakra's generic/default styling instead of
+Claudia's primary color. `blue` as a `colorScheme` value _is_ the alias in
+practice; only the `colors.blue` object underneath is what got remapped.
 
 ## Never hardcode hex in color props — extend the theme instead
 
@@ -51,7 +60,7 @@ When you add or change a color in `theme.ts`:
    mappings do, e.g.:
 
 ```ts
-// Maps to Claudia's `--destructive` design token (shadCn.css). 500 is the
+// Maps to Claudia's `--destructive` design token (_shadCn.css). 500 is the
 // light-mode `--destructive`, 400 is the dark-mode `--destructive-foreground`.
 red: { 50: '#ffe0e2', ..., 500: '#e7000b', ... }
 ```
@@ -62,7 +71,7 @@ red: { 50: '#ffe0e2', ..., 500: '#e7000b', ... }
 ```
 
 If the closest Claudia token lives in a different stylesheet than
-`_colors.css` (e.g. `shadCn.css` for semantic tokens like `--destructive`),
+`_colors.css` (e.g. `_shadCn.css` for semantic tokens like `--destructive`),
 cite that file instead — the point is every hex value in `theme.ts` should
 be traceable back to a named source token, not invented.
 
@@ -93,6 +102,18 @@ hex → token replace:
   `GoogleLogo.tsx`, e.g. `ShopifyLogo.tsx`) — must render the real brand
   color, not Claudia's palette.
 - **Block-type semantic colors** — the per-block-type accent colors in the
-  editor (`BlockIcon.tsx` and friends) are a separate semantic system used to
-  visually distinguish block types in the flow graph; they intentionally
-  don't map 1:1 onto the primary/brand palette.
+  editor (`BlockIcon.tsx`, `ForgedBlockIcon.tsx` and friends) are a separate
+  semantic system used to visually distinguish block types in the flow
+  graph; they intentionally don't map 1:1 onto the primary/brand palette.
+
+## Known legacy debt: Claudia hex in `useColorModeValue`
+
+`AlertInfo.tsx` and `RestApiCredentialsModal.tsx` (from #266) call
+`useColorModeValue('#d0f0fd', 'rgba(11,118,183,.2)')`-style pairs with the
+Claudia-sourced hex values inlined directly, instead of going through a named
+token. This is real drift from the "always a token" rule above — it exists
+because there's no shared TS token module to import from yet, only the CSS
+custom properties in `claudia-app`. The ESLint rule (issue #174) flags these
+as `warn`, on purpose: don't add them to the allowlist. They're debt to burn
+by extracting a `claudia-tokens.ts` (or similar) that both files import from,
+not an intentional exception like illustrations/logos/block colors above.
