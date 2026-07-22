@@ -237,14 +237,15 @@ const Alert = createMultiStyleConfigHelpers(
       if (colorScheme !== 'blue') return {}
       return {
         container: {
-          // dark: rgba(1, 169, 219, 0.24) -> translucent --color-ca-cyan
+          // Matches the claudia-app info callout (create-tool-dialog).
+          // dark: rgba(11,118,183,.2) -> --color-ca-cyan-dark @ 20% (dark:/20)
           // light: #d0f0fd -> --color-ca-cyan-light-3
-          bg: colorMode === 'dark' ? 'rgba(1, 169, 219, 0.24)' : '#d0f0fd',
+          bg: colorMode === 'dark' ? 'rgba(11, 118, 183, 0.2)' : '#d0f0fd',
         },
         icon: {
           // dark: #77d1f3 -> --color-ca-cyan-light-2
-          // light: #01a9db -> --color-ca-cyan
-          color: colorMode === 'dark' ? '#77d1f3' : '#01a9db',
+          // light: #0b76b7 -> --color-ca-cyan-dark
+          color: colorMode === 'dark' ? '#77d1f3' : '#0b76b7',
         },
       }
     },
