@@ -463,7 +463,7 @@ export const RestApiCredentialsModal = ({
           >
             {isEditing && (
               <Button
-                variant="outline"
+                variant="solid"
                 colorScheme="red"
                 isLoading={isDeleting}
                 isDisabled={showLoader}
