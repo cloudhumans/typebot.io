@@ -1,9 +1,5 @@
-import {
-  AlertProps,
-  Alert,
-  AlertIcon,
-  useColorModeValue,
-} from '@chakra-ui/react'
+import { AlertProps, Alert, useColorModeValue } from '@chakra-ui/react'
+import { InfoIcon } from '@/components/icons'
 
 // Claudia cyan, set explicitly so this component never depends on the
 // status="info" -> colorScheme="blue" -> variant -> theme-override chain
@@ -12,7 +8,10 @@ import {
 //
 // Matches the claudia-app info callout (create-tool-dialog "Criar nova
 // ferramenta"): rounded-xl bg-ca-cyan-light-3 text-ca-cyan-dark
-// dark:bg-ca-cyan-dark/20 dark:text-ca-cyan-light-2.
+// dark:bg-ca-cyan-dark/20 dark:text-ca-cyan-light-2, with a lucide
+// <Info size={16}> (outline, transparent fill). We use Typebot's own
+// InfoIcon (Feather-derived, same geometry as lucide's Info) instead of
+// Chakra's <AlertIcon>, whose info glyph is a SOLID filled circle.
 //   light bg:    #d0f0fd            -> --color-ca-cyan-light-3
 //   light icon:  #0b76b7            -> --color-ca-cyan-dark
 //   dark bg:     rgba(11,118,183,.2) -> --color-ca-cyan-dark @ 20% (dark:/20)
@@ -23,7 +22,7 @@ export const AlertInfo = (props: AlertProps) => {
 
   return (
     <Alert status="info" rounded="xl" bg={bg} {...props}>
-      <AlertIcon color={iconColor} />
+      <InfoIcon color={iconColor} boxSize="16px" mr={2} mt="2px" />
       {props.children}
     </Alert>
   )
