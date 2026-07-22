@@ -229,14 +229,22 @@ const Alert = createMultiStyleConfigHelpers(
   variants: {
     // status="info" maps to colorScheme="blue" too, but info callouts stay
     // Claudia cyan rather than following the orange remap above.
+    // AlertInfo.tsx sets these same colors explicitly on itself (so it never
+    // depends on this guard), but raw <Alert status="info" /> usages
+    // elsewhere in the app still resolve through this variant, so it's kept
+    // as the shared fallback for those rather than removed.
     subtle: ({ colorScheme, colorMode }) => {
       if (colorScheme !== 'blue') return {}
       return {
         container: {
-          bg: colorMode === 'dark' ? 'rgba(11, 118, 183, 0.24)' : '#d0f0fd',
+          // dark: rgba(1, 169, 219, 0.24) -> translucent --color-ca-cyan
+          // light: #d0f0fd -> --color-ca-cyan-light-3
+          bg: colorMode === 'dark' ? 'rgba(1, 169, 219, 0.24)' : '#d0f0fd',
         },
         icon: {
-          color: colorMode === 'dark' ? '#63c7ee' : '#0b76b7',
+          // dark: #77d1f3 -> --color-ca-cyan-light-2
+          // light: #01a9db -> --color-ca-cyan
+          color: colorMode === 'dark' ? '#77d1f3' : '#01a9db',
         },
       }
     },
