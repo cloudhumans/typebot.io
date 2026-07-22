@@ -405,6 +405,7 @@
   "editor.sidebarBlocks.sidebar.icon.unlock.label": "Unlock",
   "editor.sidebarBlocks.sidebar.lock.label": "Lock sidebar",
   "editor.sidebarBlocks.sidebar.unlock.label": "Unlock sidebar",
+  "embeddedAuth.loading": "Loading...",
   "emojiList.categories.activities.label": "ACTIVITIES",
   "emojiList.categories.animalsAndNature.label": "ANIMALS & NATURE",
   "emojiList.categories.flags.label": "FLAGS",
