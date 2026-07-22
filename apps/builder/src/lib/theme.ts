@@ -95,6 +95,23 @@ export const colors = {
     800: '#4e3a00',
     900: '#1d1400',
   },
+  // Maps to Claudia's `--destructive` design token (shadCn.css). 500 is the
+  // light-mode `--destructive`, 400 is the dark-mode `--destructive-foreground`
+  // (brighter, used as the dark-mode base per the Button 'red' branch below).
+  // Chakra's `colorScheme="red"` reads these directly, so every existing
+  // destructive button retints with no call-site changes.
+  red: {
+    50: '#ffe0e2',
+    100: '#ffb8bb',
+    200: '#ff858a',
+    300: '#ff525a',
+    400: '#fb2c36',
+    500: '#e7000b',
+    600: '#cc000a',
+    700: '#990007',
+    800: '#6b0005',
+    900: '#3d0003',
+  },
 }
 
 const Modal = createMultiStyleConfigHelpers(
@@ -178,6 +195,20 @@ const Button = defineStyleConfig({
           },
           _active: {
             bg: colorMode === 'dark' ? 'orange.600' : 'orange.700',
+          },
+        }
+      }
+      if (colorScheme === 'red') {
+        // Claudia destructive color (see `red` in `colors` above). Same
+        // darken-on-hover/active pattern as 'blue'/'orange'.
+        return {
+          bg: colorMode === 'dark' ? 'red.400' : 'red.500',
+          color: 'white',
+          _hover: {
+            bg: colorMode === 'dark' ? 'red.500' : 'red.600',
+          },
+          _active: {
+            bg: colorMode === 'dark' ? 'red.600' : 'red.700',
           },
         }
       }
