@@ -14,8 +14,8 @@ import { InfoIcon } from '@/components/icons'
 //   light text+icon:  #637381            -> --color-ca-primary-text
 //   dark text+icon:   #cdced6            -> --color-ca-dark-7
 // Icon: Typebot's outline InfoIcon (Feather geometry == lucide's <Info>),
-// size 16, top-aligned (alignItems flex-start + mt 2px == claudia items-start
-// + mt-0.5), instead of Chakra's <AlertIcon> solid glyph.
+// size 16, top-aligned. alignItems flex-start pins it to the top; mt centers
+// the 16px glyph on the first text line: (24px line-height - 16px) / 2 = 4px.
 export const AlertInfo = (props: AlertProps) => {
   const bg = useColorModeValue('#d0f0fd', 'rgba(11, 118, 183, 0.2)')
   const fg = useColorModeValue('#637381', '#cdced6')
@@ -29,7 +29,7 @@ export const AlertInfo = (props: AlertProps) => {
       alignItems="flex-start"
       {...props}
     >
-      <InfoIcon color={fg} boxSize="16px" mr={2} mt="2px" />
+      <InfoIcon color={fg} boxSize="16px" mr={2} mt="4px" />
       {props.children}
     </Alert>
   )
