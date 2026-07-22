@@ -4,7 +4,7 @@ const hexRegex = '/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/'
 // be nested arbitrarily deep in the attribute value — e.g.
 // bg={isDark ? '#111' : '#222'} — not just a bare string or a single
 // JSXExpressionContainer wrapper.
-const hexColorPropSelector = `JSXAttribute[name.name=/^(color|bg|background|backgroundColor|borderColor|fill|stroke)$/] Literal[value=${hexRegex}]`
+const hexColorPropSelector = `JSXAttribute[name.name=/^(color|bg|bgColor|background|backgroundColor|borderColor|fill|stroke)$/] Literal[value=${hexRegex}]`
 
 // useColorModeValue('#fff', '#000') is caught separately, regardless of
 // where its result is used — Chakra's light/dark helper is almost always
