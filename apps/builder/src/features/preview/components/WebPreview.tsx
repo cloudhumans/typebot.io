@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
 import { DebugVariable } from './DebugVariablesPanel'
+import { useEffect, useRef } from 'react'
 
 type Props = {
   onNewVariables?: (variables: DebugVariable[]) => void
@@ -19,6 +20,21 @@ export const WebPreview = ({ onNewVariables }: Props) => {
   const { setPreviewingBlock } = useGraph()
 
   const { showToast } = useToast()
+
+  // Ignora callbacks de execuções abandonadas: ao reiniciar o preview, esta
+  // instância é desmontada, mas uma continueChatQuery em voo pode resolver
+  // depois e repopular o debug com dados da sessão antiga. O ref barra isso.
+  const isMounted = useRef(true)
+  useEffect(() => {
+    isMounted.current = true
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
+  const handleNewVariables = (variables: DebugVariable[]) => {
+    if (isMounted.current) onNewVariables?.(variables)
+  }
 
   const handleNewLogs = (logs: ContinueChatResponse['logs']) => {
     logs?.forEach((log) => {
@@ -65,7 +81,7 @@ export const WebPreview = ({ onNewVariables }: Props) => {
         })
       }
       onNewLogs={handleNewLogs}
-      onNewVariables={onNewVariables}
+      onNewVariables={handleNewVariables}
       style={{
         borderWidth: '1px',
         borderRadius: '0.25rem',
