@@ -19,6 +19,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react'
 import { ToolIcon } from '@/components/icons'
+import { useTranslate } from '@tolgee/react'
 import React, { useState, useEffect } from 'react'
 
 type Props = {
@@ -36,6 +37,7 @@ export const EditToolDescriptionModal = ({
   initialToolDescription,
   isLoading,
 }: Props) => {
+  const { t } = useTranslate()
   const [toolDescription, setToolDescription] = useState(initialToolDescription)
 
   useEffect(() => {
@@ -73,25 +75,20 @@ export const EditToolDescriptionModal = ({
             >
               <ToolIcon boxSize="20px" />
             </Flex>
-            {/* TODO(#165): hardcoded EN/PT strings below aren't wired to
-                useTranslate/t() like the rest of the credentials modals —
-                left out of the #165 pass since it needs new i18n keys
-                across locale files, not just this component. */}
-            <Text>Edit Tool Description</Text>
+            <Text>{t('editToolDescription.title')}</Text>
           </HStack>
         </ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4}>
             <FormControl isRequired>
-              <FormLabel>Tool description</FormLabel>
+              <FormLabel>{t('editToolDescription.descriptionLabel')}</FormLabel>
               <Alert status="info" mb={2} borderRadius="md">
                 <AlertIcon />
-                Extremamente importante: essa descrição será usada pelo nosso
-                agente para decidir qual tool utilizar durante o reasoning loop.
+                {t('editToolDescription.descriptionWarning')}
               </Alert>
               <Textarea
-                placeholder="Ex: 'Busca pedidos por CPF via API X e retorna status e detalhes do pedido'"
+                placeholder={t('editToolDescription.descriptionPlaceholder')}
                 value={toolDescription}
                 onChange={(e) => setToolDescription(e.target.value)}
                 rows={4}
@@ -102,7 +99,7 @@ export const EditToolDescriptionModal = ({
 
         <ModalFooter>
           <Button variant="ghost" mr={3} onClick={onClose}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             colorScheme="blue"
@@ -110,7 +107,7 @@ export const EditToolDescriptionModal = ({
             isLoading={isLoading}
             isDisabled={!isValid}
           >
-            Save
+            {t('save')}
           </Button>
         </ModalFooter>
       </ModalContent>
