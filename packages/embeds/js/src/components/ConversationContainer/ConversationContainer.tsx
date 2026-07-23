@@ -68,6 +68,9 @@ type Props = {
   onAnswer?: (answer: { message: string; blockId: string }) => void
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
+  onNewVariables?: (
+    variables: { id: string; name: string; value?: unknown }[]
+  ) => void
   onProgressUpdate?: (progress: number) => void
 }
 
@@ -202,6 +205,7 @@ export const ConversationContainer = (props: Props) => {
       ])
     }
     if (data.logs) props.onNewLogs?.(data.logs)
+    if (data.variables) props.onNewVariables?.(data.variables)
     if (data.dynamicTheme) setDynamicTheme(data.dynamicTheme)
     if (data.input && props.onNewInputBlock) {
       props.onNewInputBlock(data.input)

@@ -9,6 +9,7 @@ export const defaultBotProps: BotProps = {
   onEnd: undefined,
   onInit: undefined,
   onNewLogs: undefined,
+  onNewVariables: undefined,
   isPreview: undefined,
   startFrom: undefined,
   prefilledVariables: undefined,

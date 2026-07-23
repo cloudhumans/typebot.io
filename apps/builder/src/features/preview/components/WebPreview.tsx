@@ -6,8 +6,13 @@ import { useGraph } from '@/features/graph/providers/GraphProvider'
 import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
+import { DebugVariable } from './DebugVariablesPanel'
 
-export const WebPreview = () => {
+type Props = {
+  onNewVariables?: (variables: DebugVariable[]) => void
+}
+
+export const WebPreview = ({ onNewVariables }: Props) => {
   const { user } = useUser()
   const { typebot } = useTypebot()
   const { startPreviewAtGroup, startPreviewAtEvent } = useEditor()
@@ -60,6 +65,7 @@ export const WebPreview = () => {
         })
       }
       onNewLogs={handleNewLogs}
+      onNewVariables={onNewVariables}
       style={{
         borderWidth: '1px',
         borderRadius: '0.25rem',
