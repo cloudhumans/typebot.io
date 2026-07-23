@@ -1,7 +1,9 @@
 import {
   Button,
+  Flex,
   FormControl,
   FormLabel,
+  HStack,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -9,11 +11,14 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Text,
   Textarea,
   VStack,
   Alert,
   AlertIcon,
 } from '@chakra-ui/react'
+import { ToolIcon } from '@/components/icons'
+import { useTranslate } from '@tolgee/react'
 import React, { useState, useEffect } from 'react'
 
 type Props = {
@@ -31,6 +36,7 @@ export const EditToolDescriptionModal = ({
   initialToolDescription,
   isLoading,
 }: Props) => {
+  const { t } = useTranslate()
   const [toolDescription, setToolDescription] = useState(initialToolDescription)
 
   useEffect(() => {
@@ -48,19 +54,33 @@ export const EditToolDescriptionModal = ({
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Edit Tool Description</ModalHeader>
+        <ModalHeader>
+          <HStack spacing={3}>
+            <Flex
+              flexShrink={0}
+              boxSize="40px"
+              borderRadius="xl"
+              bg="modalHeaderIconBg"
+              color="modalHeaderIconFg"
+              align="center"
+              justify="center"
+            >
+              <ToolIcon boxSize="20px" />
+            </Flex>
+            <Text>{t('editToolDescription.title')}</Text>
+          </HStack>
+        </ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4}>
             <FormControl isRequired>
-              <FormLabel>Tool description</FormLabel>
+              <FormLabel>{t('editToolDescription.descriptionLabel')}</FormLabel>
               <Alert status="info" mb={2} borderRadius="md">
                 <AlertIcon />
-                Extremamente importante: essa descrição será usada pelo nosso
-                agente para decidir qual tool utilizar durante o reasoning loop.
+                {t('editToolDescription.descriptionWarning')}
               </Alert>
               <Textarea
-                placeholder="Ex: 'Busca pedidos por CPF via API X e retorna status e detalhes do pedido'"
+                placeholder={t('editToolDescription.descriptionPlaceholder')}
                 value={toolDescription}
                 onChange={(e) => setToolDescription(e.target.value)}
                 rows={4}
@@ -71,7 +91,7 @@ export const EditToolDescriptionModal = ({
 
         <ModalFooter>
           <Button variant="ghost" mr={3} onClick={onClose}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             colorScheme="blue"
@@ -79,7 +99,7 @@ export const EditToolDescriptionModal = ({
             isLoading={isLoading}
             isDisabled={!isValid}
           >
-            Save
+            {t('save')}
           </Button>
         </ModalFooter>
       </ModalContent>

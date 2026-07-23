@@ -6,11 +6,11 @@ import {
   Code,
   Flex,
   HStack,
-  IconButton,
   Input,
   Link,
   Modal,
   ModalBody,
+  ModalCloseButton,
   ModalContent,
   ModalFooter,
   ModalHeader,
@@ -30,7 +30,6 @@ import {
 } from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
-  CloseIcon,
   ExternalLinkIcon,
   ShieldAlertIcon,
 } from '@/components/icons'
@@ -105,14 +104,21 @@ export const CredentialInUseModal = ({
     onClose()
   }
 
-  const iconBg = useColorModeValue('orange.100', 'orange.900')
-  const iconColor = useColorModeValue('orange.500', 'orange.300')
+  // Header icon-block brand tint shared with RestApiCredentialsModal (the
+  // parent flow this modal is spawned from) and the tool modals — see the
+  // `modalHeaderIcon*` semantic tokens in theme.ts.
+  // gray.* below is the fork's redefined neutral scale (theme.ts `colors.gray`,
+  // not stock Chakra gray) — not yet 1:1 mapped to individual --color-ca-gray-N
+  // tokens, but consistent with the muted/body-text grays used across the builder.
   const subtitleColor = useColorModeValue('gray.600', 'gray.400')
   const cardBorderColor = useColorModeValue('gray.200', 'gray.700')
   const cardBg = useColorModeValue('gray.50', 'gray.800')
   const rowHoverBg = useColorModeValue('gray.100', 'gray.700')
   const slugColor = useColorModeValue('gray.500', 'gray.400')
   const mutedColor = useColorModeValue('gray.400', 'gray.500')
+  // Maps to Claudia's `--destructive` design token (theme.ts `colors.red`) —
+  // same scale Chakra's colorScheme="red" reads, used here for the inline
+  // force-delete/force-save warning banner.
   const warningBg = useColorModeValue('red.50', 'red.900')
   const warningColor = useColorModeValue('red.700', 'red.200')
 
@@ -146,19 +152,19 @@ export const CredentialInUseModal = ({
       <ModalOverlay />
       {/* Stop wheel from reaching the flow-editor canvas, which preventDefaults
           it for zoom/pan and would otherwise block scrolling inside the modal. */}
-      <ModalContent borderRadius="xl" onWheel={(e) => e.stopPropagation()}>
+      <ModalContent onWheel={(e) => e.stopPropagation()}>
         <ModalHeader pb={2}>
           <HStack spacing={4} align="flex-start">
             <Flex
               flexShrink={0}
-              boxSize="44px"
-              borderRadius="lg"
-              bg={iconBg}
-              color={iconColor}
+              boxSize="40px"
+              borderRadius="xl"
+              bg="modalHeaderIconBg"
+              color="modalHeaderIconFg"
               align="center"
               justify="center"
             >
-              <ShieldAlertIcon boxSize="22px" />
+              <ShieldAlertIcon boxSize="20px" />
             </Flex>
             <Stack spacing={1} flex={1} minW={0}>
               <Text fontSize="lg" fontWeight="bold" lineHeight="short">
@@ -174,15 +180,9 @@ export const CredentialInUseModal = ({
                 </Text>
               )}
             </Stack>
-            <IconButton
-              aria-label={t('credentialInUse.close')}
-              icon={<CloseIcon />}
-              size="sm"
-              variant="ghost"
-              onClick={onClose}
-            />
           </HStack>
         </ModalHeader>
+        <ModalCloseButton />
 
         <ModalBody
           display="flex"
@@ -315,12 +315,12 @@ export const CredentialInUseModal = ({
         </ModalBody>
 
         <ModalFooter gap={3}>
-          <Button colorScheme="orange" onClick={onClose}>
+          <Button colorScheme="blue" onClick={onClose}>
             {t('credentialInUse.acknowledge')}
           </Button>
           {onForceDelete && (
             <Button
-              colorScheme={isSave ? 'orange' : 'red'}
+              colorScheme={isSave ? 'blue' : 'red'}
               variant={isSave || isNameConfirmed ? 'solid' : 'outline'}
               onClick={onForceDelete}
               isLoading={isForceDeleting}

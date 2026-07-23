@@ -325,6 +325,25 @@ const styles = {
   }),
 }
 
+// Shared brand-tint for the rounded icon block in modal headers
+// (RestApiCredentialsModal, CredentialInUseModal, CreateToolModal,
+// EditToolDescriptionModal). Light values are exact brand-scale steps; the
+// dark values are the ca-orange design-system tints (bg = ca-orange-dark
+// #e1580e @ 20%, fg = ca-orange-light-2 #f8b490) that have no native scale
+// step, so they live here rather than being re-typed as raw hex at each site.
+const semanticTokens = {
+  colors: {
+    modalHeaderIconBg: {
+      default: 'brand.50',
+      _dark: 'rgba(225, 88, 14, 0.2)',
+    },
+    modalHeaderIconFg: {
+      default: 'brand.500',
+      _dark: '#f8b490',
+    },
+  },
+}
+
 export const customTheme = extendTheme({
   colors,
   fonts,
@@ -332,4 +351,5 @@ export const customTheme = extendTheme({
   components,
   config,
   styles,
+  semanticTokens,
 })
