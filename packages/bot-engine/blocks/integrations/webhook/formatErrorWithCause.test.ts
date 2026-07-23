@@ -60,6 +60,38 @@ describe('formatErrorWithCause', () => {
     expect(result.match(/cause:/g)?.length).toBe(2)
   })
 
+  it('falls back to top stack frames when a cause has an empty message', () => {
+    // undici's makeNetworkError() creates `new Error(undefined)` — no message,
+    // so only the stack identifies which network failure occurred.
+    const cause = new Error()
+    const error = new TypeError('fetch failed', { cause })
+    const result = formatErrorWithCause(error)
+    expect(result).toMatch(/^TypeError: fetch failed \(cause: Error \[at /)
+    expect(result).toContain('formatErrorWithCause.test.ts')
+  })
+
+  it('includes the code of an empty-message cause when present', () => {
+    const cause = Object.assign(new Error(), { code: 'UND_ERR_SOCKET' })
+    const error = new TypeError('fetch failed', { cause })
+    expect(formatErrorWithCause(error)).toContain('[code=UND_ERR_SOCKET]')
+  })
+
+  it('keeps just the name when an empty-message cause has no stack', () => {
+    const cause = new Error()
+    cause.stack = undefined
+    const error = new TypeError('fetch failed', { cause })
+    expect(formatErrorWithCause(error)).toBe(
+      'TypeError: fetch failed (cause: Error)'
+    )
+  })
+
+  it('does not append stack frames when the cause has a message', () => {
+    const error = new TypeError('fetch failed', {
+      cause: new Error('connect ECONNREFUSED 10.2.3.4:443'),
+    })
+    expect(formatErrorWithCause(error)).not.toContain('[at ')
+  })
+
   it('does not throw on AggregateErrors nested past the depth limit', () => {
     let current = new AggregateError([new Error('leaf')], 'level 0')
     for (let i = 1; i < 10; i++)
