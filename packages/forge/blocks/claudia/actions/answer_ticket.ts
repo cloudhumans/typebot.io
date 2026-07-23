@@ -22,7 +22,7 @@ export const answerTicket = createAction({
     searchTerm: option
       .enum(['lastUserMessages', 'firstUserMessage', 'userMessages'])
       .layout({
-        label: 'Termo de Pesquisa',
+        label: 'Search Term',
         accordion: 'Advanced settings',
         defaultValue: 'lastUserMessages',
       }),
