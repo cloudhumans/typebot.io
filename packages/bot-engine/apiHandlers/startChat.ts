@@ -165,7 +165,7 @@ export const startChat = async ({
     input,
     resultId,
     variables: isPreview
-      ? newSessionState.typebotsQueue[0]?.typebot.variables
+      ? (newSessionState.typebotsQueue.at(0)?.typebot.variables ?? [])
           .filter((variable) => isDefined(variable.value))
           .map((variable) => ({
             id: variable.id,

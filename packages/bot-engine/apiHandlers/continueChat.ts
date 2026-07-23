@@ -116,7 +116,7 @@ export const continueChat = async ({
     resultId: session.state.typebotsQueue.at(0)?.resultId,
     clientSideActions,
     variables: isPreview
-      ? newSessionState.typebotsQueue[0]?.typebot.variables
+      ? (newSessionState.typebotsQueue.at(0)?.typebot.variables ?? [])
           .filter((variable) => isDefined(variable.value))
           .map((variable) => ({
             id: variable.id,
