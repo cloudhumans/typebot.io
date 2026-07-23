@@ -6,11 +6,11 @@ import {
   Code,
   Flex,
   HStack,
-  IconButton,
   Input,
   Link,
   Modal,
   ModalBody,
+  ModalCloseButton,
   ModalContent,
   ModalFooter,
   ModalHeader,
@@ -30,7 +30,6 @@ import {
 } from '@/features/embedded-auth/utils'
 import {
   AlertIcon,
-  CloseIcon,
   ExternalLinkIcon,
   ShieldAlertIcon,
 } from '@/components/icons'
@@ -105,14 +104,26 @@ export const CredentialInUseModal = ({
     onClose()
   }
 
-  const iconBg = useColorModeValue('orange.100', 'orange.900')
-  const iconColor = useColorModeValue('orange.500', 'orange.300')
+  // Same header icon-block treatment as RestApiCredentialsModal (the parent
+  // flow this modal is spawned from): rounded-[0.875rem] p-2, bg-ca-orange-light-5
+  // (#fff0e9) / dark:bg-ca-orange-dark/20 (#e1580e @ 20%), icon text-ca-orange
+  // (#ff8638) / dark:text-ca-orange-light-2 (#f8b490). Kept as claudia's explicit
+  // values rather than Chakra's remapped `orange` scale for the same reason as
+  // the parent modal: the 100/900 steps diverge hardest in dark mode.
+  const iconBg = useColorModeValue('#fff0e9', 'rgba(225, 88, 14, 0.2)')
+  const iconColor = useColorModeValue('#ff8638', '#f8b490')
+  // gray.* below is the fork's redefined neutral scale (theme.ts `colors.gray`,
+  // not stock Chakra gray) — not yet 1:1 mapped to individual --color-ca-gray-N
+  // tokens, but consistent with the muted/body-text grays used across the builder.
   const subtitleColor = useColorModeValue('gray.600', 'gray.400')
   const cardBorderColor = useColorModeValue('gray.200', 'gray.700')
   const cardBg = useColorModeValue('gray.50', 'gray.800')
   const rowHoverBg = useColorModeValue('gray.100', 'gray.700')
   const slugColor = useColorModeValue('gray.500', 'gray.400')
   const mutedColor = useColorModeValue('gray.400', 'gray.500')
+  // Maps to Claudia's `--destructive` design token (theme.ts `colors.red`) —
+  // same scale Chakra's colorScheme="red" reads, used here for the inline
+  // force-delete/force-save warning banner.
   const warningBg = useColorModeValue('red.50', 'red.900')
   const warningColor = useColorModeValue('red.700', 'red.200')
 
@@ -146,19 +157,19 @@ export const CredentialInUseModal = ({
       <ModalOverlay />
       {/* Stop wheel from reaching the flow-editor canvas, which preventDefaults
           it for zoom/pan and would otherwise block scrolling inside the modal. */}
-      <ModalContent borderRadius="xl" onWheel={(e) => e.stopPropagation()}>
+      <ModalContent onWheel={(e) => e.stopPropagation()}>
         <ModalHeader pb={2}>
           <HStack spacing={4} align="flex-start">
             <Flex
               flexShrink={0}
-              boxSize="44px"
-              borderRadius="lg"
+              boxSize="40px"
+              borderRadius="xl"
               bg={iconBg}
               color={iconColor}
               align="center"
               justify="center"
             >
-              <ShieldAlertIcon boxSize="22px" />
+              <ShieldAlertIcon boxSize="20px" />
             </Flex>
             <Stack spacing={1} flex={1} minW={0}>
               <Text fontSize="lg" fontWeight="bold" lineHeight="short">
@@ -174,15 +185,9 @@ export const CredentialInUseModal = ({
                 </Text>
               )}
             </Stack>
-            <IconButton
-              aria-label={t('credentialInUse.close')}
-              icon={<CloseIcon />}
-              size="sm"
-              variant="ghost"
-              onClick={onClose}
-            />
           </HStack>
         </ModalHeader>
+        <ModalCloseButton />
 
         <ModalBody
           display="flex"
@@ -315,12 +320,12 @@ export const CredentialInUseModal = ({
         </ModalBody>
 
         <ModalFooter gap={3}>
-          <Button colorScheme="orange" onClick={onClose}>
+          <Button colorScheme="blue" onClick={onClose}>
             {t('credentialInUse.acknowledge')}
           </Button>
           {onForceDelete && (
             <Button
-              colorScheme={isSave ? 'orange' : 'red'}
+              colorScheme={isSave ? 'blue' : 'red'}
               variant={isSave || isNameConfirmed ? 'solid' : 'outline'}
               onClick={onForceDelete}
               isLoading={isForceDeleting}
