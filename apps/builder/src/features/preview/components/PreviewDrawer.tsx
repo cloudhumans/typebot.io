@@ -70,6 +70,7 @@ export const PreviewDrawer = () => {
     runtime: (typeof runtimes)[number]
   ) => {
     setSelectedRuntime(runtime)
+    setDebugVariables([])
     localStorage.setItem(preferredRuntimeKey, runtime.name)
   }
 
