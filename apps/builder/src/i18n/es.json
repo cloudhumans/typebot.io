@@ -271,7 +271,6 @@
   "createTool.descriptionWarning": "Extremadamente importante: esta descripción será utilizada por nuestro agente para decidir qué tool usar durante el reasoning loop.",
   "createTool.descriptionPlaceholder": "Ej: 'Busca pedidos por CPF a través de la API X y devuelve el estado y los detalles del pedido'",
   "credentialInUse.acknowledge": "Entendido",
-  "credentialInUse.close": "Cerrar",
   "credentialInUse.body": "Esta credencial está siendo usada por {count} flujo(s):",
   "credentialInUse.credentialName": "Credencial: {name}",
   "credentialInUse.draft": "borrador",

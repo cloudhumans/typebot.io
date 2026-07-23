@@ -19,7 +19,6 @@ import {
   VStack,
   Alert,
   AlertIcon,
-  useColorModeValue,
 } from '@chakra-ui/react'
 import { ToolIcon } from '@/components/icons'
 import { Typebot } from '@typebot.io/schemas'
@@ -120,13 +119,6 @@ export const CreateToolModal = ({
     toolDescription.trim() !== '' &&
     workspaceId !== ''
 
-  // Same header icon-block treatment as RestApiCredentialsModal /
-  // CredentialInUseModal / EditToolDescriptionModal: rounded-[0.875rem] p-2,
-  // bg-ca-orange-light-5 (#fff0e9) / dark:bg-ca-orange-dark/20 (#e1580e @
-  // 20%), icon text-ca-orange (#ff8638) / dark:text-ca-orange-light-2 (#f8b490).
-  const iconBg = useColorModeValue('#fff0e9', 'rgba(225, 88, 14, 0.2)')
-  const iconColor = useColorModeValue('#ff8638', '#f8b490')
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
@@ -137,8 +129,8 @@ export const CreateToolModal = ({
               flexShrink={0}
               boxSize="40px"
               borderRadius="xl"
-              bg={iconBg}
-              color={iconColor}
+              bg="modalHeaderIconBg"
+              color="modalHeaderIconFg"
               align="center"
               justify="center"
             >

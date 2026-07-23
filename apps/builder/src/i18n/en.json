@@ -271,7 +271,6 @@
   "createTool.descriptionWarning": "Extremely important: this description will be used by our agent to decide which tool to use during the reasoning loop.",
   "createTool.descriptionPlaceholder": "E.g. \"Looks up orders by CPF via API X and returns the order status and details\"",
   "credentialInUse.acknowledge": "Got it",
-  "credentialInUse.close": "Close",
   "credentialInUse.body": "This credential is being used by {count} flow(s):",
   "credentialInUse.credentialName": "Credential: {name}",
   "credentialInUse.draft": "draft",

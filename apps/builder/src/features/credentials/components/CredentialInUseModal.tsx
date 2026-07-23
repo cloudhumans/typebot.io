@@ -104,14 +104,9 @@ export const CredentialInUseModal = ({
     onClose()
   }
 
-  // Same header icon-block treatment as RestApiCredentialsModal (the parent
-  // flow this modal is spawned from): rounded-[0.875rem] p-2, bg-ca-orange-light-5
-  // (#fff0e9) / dark:bg-ca-orange-dark/20 (#e1580e @ 20%), icon text-ca-orange
-  // (#ff8638) / dark:text-ca-orange-light-2 (#f8b490). Kept as claudia's explicit
-  // values rather than Chakra's remapped `orange` scale for the same reason as
-  // the parent modal: the 100/900 steps diverge hardest in dark mode.
-  const iconBg = useColorModeValue('#fff0e9', 'rgba(225, 88, 14, 0.2)')
-  const iconColor = useColorModeValue('#ff8638', '#f8b490')
+  // Header icon-block brand tint shared with RestApiCredentialsModal (the
+  // parent flow this modal is spawned from) and the tool modals — see the
+  // `modalHeaderIcon*` semantic tokens in theme.ts.
   // gray.* below is the fork's redefined neutral scale (theme.ts `colors.gray`,
   // not stock Chakra gray) — not yet 1:1 mapped to individual --color-ca-gray-N
   // tokens, but consistent with the muted/body-text grays used across the builder.
@@ -164,8 +159,8 @@ export const CredentialInUseModal = ({
               flexShrink={0}
               boxSize="40px"
               borderRadius="xl"
-              bg={iconBg}
-              color={iconColor}
+              bg="modalHeaderIconBg"
+              color="modalHeaderIconFg"
               align="center"
               justify="center"
             >
