@@ -1,3 +1,4 @@
+import { isDefined, isNotDefined } from '@typebot.io/lib/utils'
 import { computeCurrentProgress } from '../computeCurrentProgress'
 import { filterPotentiallySensitiveLogs } from '../logs/filterPotentiallySensitiveLogs'
 import { restartSession } from '../queries/restartSession'
@@ -151,6 +152,8 @@ export const startChat = async ({
     (clientSideActions?.filter((c) => c.expectsDedicatedReply).length ?? 0) ===
       0
 
+  const isPreview = isNotDefined(newSessionState.typebotsQueue[0]?.resultId)
+
   return {
     sessionId: session.id,
     typebot: {
@@ -161,6 +164,15 @@ export const startChat = async ({
     messages,
     input,
     resultId,
+    variables: isPreview
+      ? (newSessionState.typebotsQueue.at(0)?.typebot.variables ?? [])
+          .filter((variable) => isDefined(variable.value))
+          .map((variable) => ({
+            id: variable.id,
+            name: variable.name,
+            value: variable.value,
+          }))
+      : undefined,
     dynamicTheme,
     logs: skipSensitiveLogFiltering
       ? logs

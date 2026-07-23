@@ -195,6 +195,9 @@ importers:
       codemirror:
         specifier: 6.0.1
         version: 6.0.1(@lezer/common@1.2.1)
+      date-fns:
+        specifier: 2.30.0
+        version: 2.30.0
       dd-trace:
         specifier: ^5.53.0
         version: 5.53.0
@@ -417,7 +420,7 @@ importers:
         version: 7.4.1
       mintlify:
         specifier: 4.0.75
-        version: 4.0.75(acorn@8.14.1)(axios@1.6.7)(openapi-types@12.1.3)
+        version: 4.0.75(acorn@8.17.0)(axios@1.6.7)(openapi-types@12.1.3)
       tsx:
         specifier: ^4.6.2
         version: 4.7.1
@@ -6943,7 +6946,6 @@ packages:
   /@fastify/busboy@2.1.1:
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
-    dev: true
 
   /@floating-ui/core@1.6.0:
     resolution: {integrity: sha512-PcF++MykgmTj3CIyOQbKA/hDzOAiqI3mhuoN44WRCopIs1sgoDoU4oty4Jtqaj/y3oDU6fnVSm4QG0a3t5i0+g==}
@@ -7811,16 +7813,16 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@mintlify/cli@4.0.75(acorn@8.14.1)(axios@1.6.7)(openapi-types@12.1.3):
+  /@mintlify/cli@4.0.75(acorn@8.17.0)(axios@1.6.7)(openapi-types@12.1.3):
     resolution: {integrity: sha512-drh+parUam4ToQpilMVpF420B6hrSqRjLpKVBaHtmlSvX7cOb+EGSGczkmqK1AVvw3fVNAlmgAFwib7kHUVMhA==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     dependencies:
       '@apidevtools/swagger-parser': 10.1.0(openapi-types@12.1.3)
-      '@mintlify/link-rot': 3.0.95(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7)
+      '@mintlify/link-rot': 3.0.95(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7)
       '@mintlify/models': 0.0.59(axios@1.6.7)(openapi-types@12.1.3)
-      '@mintlify/prebuild': 1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2)
-      '@mintlify/previewing': 4.0.74(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7)
+      '@mintlify/prebuild': 1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2)
+      '@mintlify/previewing': 4.0.74(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7)
       '@mintlify/validation': 0.1.108(@mintlify/models@0.0.59)(openapi-types@12.1.3)
       chalk: 5.3.0
       detect-port: 1.5.1
@@ -7838,12 +7840,12 @@ packages:
       - utf-8-validate
     dev: true
 
-  /@mintlify/common@1.0.29(acorn@8.14.1)(axios@1.6.7)(openapi-types@12.1.3):
+  /@mintlify/common@1.0.29(acorn@8.17.0)(axios@1.6.7)(openapi-types@12.1.3):
     resolution: {integrity: sha512-h2y7tLg4QARm0MCiFaov3JJ3+D043k4s9sqzFnhQ3EsFJElPWgK0aBofT/1kUp1Xt6OkXDikam2gQyzQ8fyesA==}
     dependencies:
       '@mintlify/models': 0.0.59(axios@1.6.7)(openapi-types@12.1.3)
       '@mintlify/validation': 0.1.108(@mintlify/models@0.0.59)(openapi-types@12.1.3)
-      acorn-jsx: 5.3.2(acorn@8.14.1)
+      acorn-jsx: 5.3.2(acorn@8.17.0)
       esast-util-from-js: 2.0.1
       estree-util-to-js: 2.0.0
       gray-matter: 4.0.3
@@ -7864,13 +7866,13 @@ packages:
       - supports-color
     dev: true
 
-  /@mintlify/link-rot@3.0.95(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7):
+  /@mintlify/link-rot@3.0.95(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7):
     resolution: {integrity: sha512-wjBRyUVTEGvYUDC5dvVT9x6USywtSfEO3l+pfqZkwJ+LygFw6Iv0aKSYvBS+GPcp7DPNi/EEuaePLqROLpuB5A==}
     engines: {node: '>=18.0.0'}
     dependencies:
       '@apidevtools/swagger-parser': 10.1.0(openapi-types@12.1.3)
-      '@mintlify/common': 1.0.29(acorn@8.14.1)(axios@1.6.7)(openapi-types@12.1.3)
-      '@mintlify/prebuild': 1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2)
+      '@mintlify/common': 1.0.29(acorn@8.17.0)(axios@1.6.7)(openapi-types@12.1.3)
+      '@mintlify/prebuild': 1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2)
       chalk: 5.3.0
       fs-extra: 11.2.0
       gray-matter: 4.0.3
@@ -7896,7 +7898,7 @@ packages:
       openapi-types: 12.1.3
     dev: true
 
-  /@mintlify/prebuild@1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2):
+  /@mintlify/prebuild@1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2):
     resolution: {integrity: sha512-dhRlBEiy1hIGXWIqGCvFh6azEBlaSBLU4hOgBl/NQCTt5nb8jU4rmAkvSxgn4rJtv6dxTyN8F6nv4MPOwl+MzQ==}
     peerDependencies:
       '@apidevtools/swagger-parser': 10.x
@@ -7908,7 +7910,7 @@ packages:
       unist-util-visit: ^4.1.1
     dependencies:
       '@apidevtools/swagger-parser': 10.1.0(openapi-types@12.1.3)
-      '@mintlify/common': 1.0.29(acorn@8.14.1)(axios@1.6.7)(openapi-types@12.1.3)
+      '@mintlify/common': 1.0.29(acorn@8.17.0)(axios@1.6.7)(openapi-types@12.1.3)
       '@mintlify/models': 0.0.59(axios@1.6.7)(openapi-types@12.1.3)
       '@mintlify/validation': 0.1.108(@mintlify/models@0.0.59)(openapi-types@12.1.3)
       favicons: 7.1.5
@@ -7922,14 +7924,14 @@ packages:
       - supports-color
     dev: true
 
-  /@mintlify/previewing@4.0.74(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7):
+  /@mintlify/previewing@4.0.74(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7):
     resolution: {integrity: sha512-t2xQJlcWQKabZmO89sKo0HYiRVOEJlxgspx+m+POzfp9778fiqVqIKxWw0njxxYk20QaU/GbUP/ghSKOEO5Urg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@mintlify/validation': '>= 0.1.48 < 1'
     dependencies:
       '@apidevtools/swagger-parser': 10.1.0(openapi-types@12.1.3)
-      '@mintlify/prebuild': 1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.14.1)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2)
+      '@mintlify/prebuild': 1.0.95(@apidevtools/swagger-parser@10.1.0)(@mintlify/models@0.0.59)(@mintlify/validation@0.1.108)(acorn@8.17.0)(axios@1.6.7)(fs-extra@11.2.0)(gray-matter@4.0.3)(openapi-types@12.1.3)(unist-util-visit@4.1.2)
       '@mintlify/validation': 0.1.108(@mintlify/models@0.0.59)(openapi-types@12.1.3)
       '@octokit/rest': 19.0.13
       chalk: 5.3.0
@@ -10298,7 +10300,6 @@ packages:
 
   /@types/estree@1.0.9:
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
-    dev: true
 
   /@types/express-serve-static-core@4.17.43:
     resolution: {integrity: sha512-oaYtiBirUOPQGSWNGPWnzyAFJ0BP3cwvN4oWZQY+zUBwpVIGsKUkpBpSztp74drYcjavs7SKFZ4DX1V2QeN8rg==}
@@ -11501,7 +11502,7 @@ packages:
       '@vue/shared': 3.4.21
       entities: 4.5.0
       estree-walker: 2.0.2
-      source-map-js: 1.0.2
+      source-map-js: 1.2.1
     dev: false
 
   /@vue/compiler-dom@3.4.21:
@@ -11521,8 +11522,8 @@ packages:
       '@vue/shared': 3.4.21
       estree-walker: 2.0.2
       magic-string: 0.30.8
-      postcss: 8.4.35
-      source-map-js: 1.0.2
+      postcss: 8.5.15
+      source-map-js: 1.2.1
     dev: false
 
   /@vue/compiler-ssr@3.4.21:
@@ -11760,12 +11761,12 @@ packages:
     dependencies:
       acorn: 8.11.3
 
-  /acorn-jsx@5.3.2(acorn@8.14.1):
+  /acorn-jsx@5.3.2(acorn@8.17.0):
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
     dependencies:
-      acorn: 8.14.1
+      acorn: 8.17.0
     dev: true
 
   /acorn-node@1.8.2:
@@ -11801,12 +11802,12 @@ packages:
     resolution: {integrity: sha512-OvQ/2pUDKmgfCg++xsTX1wGxfTaszcHVcTctW4UJB4hibJx2HXxxO5UmVgyjMa+ZDsiaf5wWLXYpRWMmBI0QHg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+    dev: false
 
   /acorn@8.17.0:
     resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
-    dev: true
 
   /address@1.2.2:
     resolution: {integrity: sha512-4B/qKCfeE/ODUaAUpSwfzazo5x29WD4r3vXiWsB7I2mSDAihwEqKO+g8GELZUQSSAo5e1XTYh3ZVfLyxBc12nA==}
@@ -13090,8 +13091,8 @@ packages:
     resolution: {integrity: sha512-7qJWqItLA8/VPVlKJlFXU+NBlo/qyfs39aJcuMT/2ere32ZqvF5OSxgdM5xOfJJ7O429gg2HM47y8v9P+9wrNw==}
     dependencies:
       '@jridgewell/sourcemap-codec': 1.4.15
-      '@types/estree': 1.0.5
-      acorn: 8.14.1
+      '@types/estree': 1.0.9
+      acorn: 8.17.0
       estree-walker: 3.0.3
       periscopic: 3.1.0
     dev: false
@@ -13527,7 +13528,7 @@ packages:
     engines: {node: ^10 || ^12.20.0 || ^14.13.0 || >=15.0.0}
     dependencies:
       mdn-data: 2.0.30
-      source-map-js: 1.0.2
+      source-map-js: 1.2.1
     dev: false
 
   /css-what@6.1.0:
@@ -19349,12 +19350,12 @@ packages:
       yallist: 4.0.0
     dev: true
 
-  /mintlify@4.0.75(acorn@8.14.1)(axios@1.6.7)(openapi-types@12.1.3):
+  /mintlify@4.0.75(acorn@8.17.0)(axios@1.6.7)(openapi-types@12.1.3):
     resolution: {integrity: sha512-euM6v7OYUfDyBlMKzjCr8EaQzJnEJSEfRDjT0GkDMU+ejhCNNPNBw0oc14PBqAB94j7PkbLW3WTS8TlVS/jjIw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     dependencies:
-      '@mintlify/cli': 4.0.75(acorn@8.14.1)(axios@1.6.7)(openapi-types@12.1.3)
+      '@mintlify/cli': 4.0.75(acorn@8.17.0)(axios@1.6.7)(openapi-types@12.1.3)
     transitivePeerDependencies:
       - acorn
       - axios
@@ -19778,7 +19779,6 @@ packages:
     resolution: {integrity: sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
-    dev: true
 
   /nanoid@3.3.6:
     resolution: {integrity: sha512-BGcqMMJuToF7i1rt+2PWSNVnWIkGCU78jBG3RxO/bZlnZPK2Cmi2QaffxGO/2RvWi9sL+FAiRiXMgsyxQ1DIDA==}
@@ -20688,7 +20688,6 @@ packages:
 
   /picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
-    dev: true
 
   /picomatch@2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
@@ -21303,7 +21302,6 @@ packages:
       nanoid: 3.3.12
       picocolors: 1.1.1
       source-map-js: 1.2.1
-    dev: true
 
   /postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
@@ -23079,7 +23077,6 @@ packages:
   /source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
-    dev: true
 
   /source-map-support@0.5.13:
     resolution: {integrity: sha512-SHSKFHadjVA5oR4PPqhtAVdcBWwRYVd6g6cAXnIbRiIwc2EhPrTuKUBdSLvlEKyIP3GCf89fltvcZiP9MMFA1w==}
@@ -23550,8 +23547,8 @@ packages:
       '@ampproject/remapping': 2.3.0
       '@jridgewell/sourcemap-codec': 1.4.15
       '@jridgewell/trace-mapping': 0.3.25
-      '@types/estree': 1.0.5
-      acorn: 8.14.1
+      '@types/estree': 1.0.9
+      acorn: 8.17.0
       aria-query: 5.3.0
       axobject-query: 4.0.0
       code-red: 1.0.4
@@ -24400,12 +24397,14 @@ packages:
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.1
+    dev: true
 
   /undici@5.29.0:
     resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.1
+    dev: false
 
   /unenv@1.9.0:
     resolution: {integrity: sha512-QKnFNznRxmbOF1hDgzpqrlIf6NC5sbZ2OJ+5Wl3OX8uM+LUJXbj4TXvLJCtwbPTmbMHCLIz6JLKNinNsMShK9g==}

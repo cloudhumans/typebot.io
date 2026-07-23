@@ -47,6 +47,9 @@ export type BotProps = {
   onInit?: () => void
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
+  onNewVariables?: (
+    variables: { id: string; name: string; value?: unknown }[]
+  ) => void
   onChatStatePersisted?: (isEnabled: boolean) => void
 }
 
@@ -168,6 +171,7 @@ export const Bot = (props: BotProps & { class?: string }) => {
       if (data.input?.id && props.onNewInputBlock)
         props.onNewInputBlock(data.input)
       if (data.logs) props.onNewLogs?.(data.logs)
+      if (data.variables) props.onNewVariables?.(data.variables)
       props.onChatStatePersisted?.(false)
     }
 
@@ -243,6 +247,7 @@ export const Bot = (props: BotProps & { class?: string }) => {
             progressBarRef={props.progressBarRef}
             onNewInputBlock={props.onNewInputBlock}
             onNewLogs={props.onNewLogs}
+            onNewVariables={props.onNewVariables}
             onAnswer={props.onAnswer}
             onEnd={props.onEnd}
           />
@@ -261,6 +266,9 @@ type BotContentProps = {
   onAnswer?: (answer: { message: string; blockId: string }) => void
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
+  onNewVariables?: (
+    variables: { id: string; name: string; value?: unknown }[]
+  ) => void
 }
 
 const BotContent = (props: BotContentProps) => {
@@ -337,6 +345,7 @@ const BotContent = (props: BotContentProps) => {
         onAnswer={props.onAnswer}
         onEnd={props.onEnd}
         onNewLogs={props.onNewLogs}
+        onNewVariables={props.onNewVariables}
         onProgressUpdate={setProgressValue}
       />
       <Show

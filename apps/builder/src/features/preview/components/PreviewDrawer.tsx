@@ -14,6 +14,7 @@ import React, { useState } from 'react'
 import { headerHeight } from '../../editor/constants'
 import { runtimes } from '../data'
 import { PreviewDrawerBody } from './PreviewDrawerBody'
+import { DebugVariable, DebugVariablesPanel } from './DebugVariablesPanel'
 import { useDrag } from '@use-gesture/react'
 import { ResizeHandle } from './ResizeHandle'
 import { useTranslate } from '@tolgee/react'
@@ -40,12 +41,14 @@ export const PreviewDrawer = () => {
   const [width, setWidth] = useState(500)
   const [isResizeHandleVisible, setIsResizeHandleVisible] = useState(false)
   const [restartKey, setRestartKey] = useState(0)
+  const [debugVariables, setDebugVariables] = useState<DebugVariable[]>([])
   const [selectedRuntime, setSelectedRuntime] = useState<
     (typeof runtimes)[number]
   >(getDefaultRuntime(typebot?.id))
 
   const handleRestartClick = async () => {
     await save()
+    setDebugVariables([])
     setRestartKey((key) => key + 1)
   }
 
@@ -67,6 +70,7 @@ export const PreviewDrawer = () => {
     runtime: (typeof runtimes)[number]
   ) => {
     setSelectedRuntime(runtime)
+    setDebugVariables([])
     localStorage.setItem(preferredRuntimeKey, runtime.name)
   }
 
@@ -95,6 +99,10 @@ export const PreviewDrawer = () => {
         />
       </Fade>
 
+      {selectedRuntime.name === 'Web' && (
+        <DebugVariablesPanel variables={debugVariables} />
+      )}
+
       <VStack w="full" spacing={4}>
         <HStack justifyContent={'space-between'} w="full">
           <HStack>
@@ -117,7 +125,11 @@ export const PreviewDrawer = () => {
 
           <CloseButton onClick={handleCloseClick} />
         </HStack>
-        <PreviewDrawerBody key={restartKey} runtime={selectedRuntime.name} />
+        <PreviewDrawerBody
+          key={restartKey}
+          runtime={selectedRuntime.name}
+          onNewVariables={setDebugVariables}
+        />
       </VStack>
     </Flex>
   )

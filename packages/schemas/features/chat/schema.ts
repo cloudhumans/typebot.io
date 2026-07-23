@@ -368,6 +368,18 @@ const chatResponseBaseSchema = z.object({
     .describe(
       'If progress bar is enabled, this field will return a number between 0 and 100 indicating the current progress based on the longest remaining path of the flow.'
     ),
+  variables: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        value: z.unknown(),
+      })
+    )
+    .optional()
+    .describe(
+      'Preview-only: snapshot of the currently filled variables, used by the builder debug panel. Not returned for live (non-preview) sessions.'
+    ),
 })
 
 export const startChatResponseSchema = z
