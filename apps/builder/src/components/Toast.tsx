@@ -4,16 +4,24 @@ import {
   AccordionIcon,
   AccordionItem,
   AccordionPanel,
+  Box,
   Flex,
   HStack,
   IconButton,
+  keyframes,
   Stack,
   Text,
   useColorModeValue,
 } from '@chakra-ui/react'
+import { useState } from 'react'
 import { AlertIcon, CloseIcon, InfoIcon, SmileIcon } from './icons'
 import { CodeEditor } from './inputs/CodeEditor'
 import { LanguageName } from '@uiw/codemirror-extensions-langs'
+
+const shrink = keyframes`
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+`
 
 export type ToastProps = {
   title?: string
@@ -26,6 +34,7 @@ export type ToastProps = {
   icon?: React.ReactNode
   primaryButton?: React.ReactNode
   secondaryButton?: React.ReactNode
+  duration?: number | null | undefined
   onClose: () => void
 }
 
@@ -37,10 +46,12 @@ export const Toast = ({
   icon,
   primaryButton,
   secondaryButton,
+  duration,
   onClose,
 }: ToastProps) => {
   const bgColor = useColorModeValue('white', 'gray.800')
   const detailsLabelColor = useColorModeValue('gray.600', 'gray.400')
+  const [isExpanded, setIsExpanded] = useState(false)
 
   return (
     <Flex
@@ -51,6 +62,7 @@ export const Toast = ({
       shadow="sm"
       fontSize="sm"
       pos="relative"
+      zIndex="toast"
       maxW={details ? '450px' : '300px'}
     >
       <HStack alignItems="flex-start" pr="7" spacing="3" w="full">
@@ -62,7 +74,16 @@ export const Toast = ({
           </Stack>
 
           {details && (
-            <Accordion allowToggle>
+            <Accordion
+              allowToggle
+              onChange={(expandedIndex) =>
+                setIsExpanded(
+                  Array.isArray(expandedIndex)
+                    ? expandedIndex.length > 0
+                    : expandedIndex !== -1
+                )
+              }
+            >
               <AccordionItem>
                 <AccordionButton
                   justifyContent="space-between"
@@ -105,6 +126,33 @@ export const Toast = ({
         top={1}
         right={1}
       />
+
+      {duration ? (
+        <Box
+          pos="absolute"
+          left={0}
+          right={0}
+          bottom={0}
+          height="3px"
+          bg="transparent"
+          overflow="hidden"
+        >
+          <Box
+            pos="absolute"
+            left={0}
+            right={0}
+            top={0}
+            bottom={0}
+            bgColor={`${parseColor(status)}.500`}
+            transformOrigin="right"
+            onAnimationEnd={onClose}
+            sx={{
+              animation: `${shrink} ${duration}ms linear forwards`,
+              animationPlayState: isExpanded ? 'paused' : 'running',
+            }}
+          />
+        </Box>
+      ) : null}
     </Flex>
   )
 }
