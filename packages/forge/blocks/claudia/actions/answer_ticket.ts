@@ -8,6 +8,7 @@ export const answerTicket = createAction({
       const log = createClaudiaResponseLog({
         action: 'ANSWER_TICKET',
         topic: options.topic,
+        searchTerm: options.searchTerm,
       })
       logs.add(log)
     },
@@ -18,5 +19,12 @@ export const answerTicket = createAction({
       placeholder: 'e.g. PAYMENT',
       accordion: 'Advanced settings',
     }),
+    searchTerm: option
+      .enum(['lastUserMessages', 'firstUserMessage', 'userMessages'])
+      .layout({
+        label: 'Termo de Pesquisa',
+        accordion: 'Advanced settings',
+        defaultValue: 'lastUserMessages',
+      }),
   }),
 })
