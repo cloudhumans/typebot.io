@@ -8,14 +8,20 @@ import {
   Flex,
   HStack,
   IconButton,
+  keyframes,
   Stack,
   Text,
   useColorModeValue,
 } from '@chakra-ui/react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { AlertIcon, CloseIcon, InfoIcon, SmileIcon } from './icons'
 import { CodeEditor } from './inputs/CodeEditor'
 import { LanguageName } from '@uiw/codemirror-extensions-langs'
+
+const shrink = keyframes`
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+`
 
 export type ToastProps = {
   title?: string
@@ -45,12 +51,7 @@ export const Toast = ({
 }: ToastProps) => {
   const bgColor = useColorModeValue('white', 'gray.800')
   const detailsLabelColor = useColorModeValue('gray.600', 'gray.400')
-  const [scale, setScale] = useState(1)
-  useEffect(() => {
-    if (!duration) return
-    const raf = requestAnimationFrame(() => setScale(0))
-    return () => cancelAnimationFrame(raf)
-  }, [duration])
+  const [isExpanded, setIsExpanded] = useState(false)
 
   return (
     <Flex
@@ -73,7 +74,16 @@ export const Toast = ({
           </Stack>
 
           {details && (
-            <Accordion allowToggle>
+            <Accordion
+              allowToggle
+              onChange={(expandedIndex) =>
+                setIsExpanded(
+                  Array.isArray(expandedIndex)
+                    ? expandedIndex.length > 0
+                    : expandedIndex !== -1
+                )
+              }
+            >
               <AccordionItem>
                 <AccordionButton
                   justifyContent="space-between"
@@ -125,6 +135,7 @@ export const Toast = ({
           bottom={0}
           height="3px"
           bg="transparent"
+          overflow="hidden"
         >
           <Box
             pos="absolute"
@@ -133,10 +144,11 @@ export const Toast = ({
             top={0}
             bottom={0}
             bgColor={`${parseColor(status)}.500`}
-            style={{
-              transformOrigin: 'right',
-              transform: `scaleX(${scale})`,
-              transition: `transform ${duration}ms linear`,
+            transformOrigin="right"
+            onAnimationEnd={onClose}
+            sx={{
+              animation: `${shrink} ${duration}ms linear forwards`,
+              animationPlayState: isExpanded ? 'paused' : 'running',
             }}
           />
         </Box>
