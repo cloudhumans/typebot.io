@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
 import { DebugVariable } from './DebugVariablesPanel'
-import { useEffect, useRef } from 'react'
+import { ComponentProps, useEffect, useRef } from 'react'
 
 type Props = {
   onNewVariables?: (variables: DebugVariable[]) => void
@@ -20,21 +20,6 @@ export const WebPreview = ({ onNewVariables }: Props) => {
   const { setPreviewingBlock } = useGraph()
 
   const { showToast } = useToast()
-
-  // Ignora callbacks de execuções abandonadas: ao reiniciar o preview, esta
-  // instância é desmontada, mas uma continueChatQuery em voo pode resolver
-  // depois e repopular o debug com dados da sessão antiga. O ref barra isso.
-  const isMounted = useRef(true)
-  useEffect(() => {
-    isMounted.current = true
-    return () => {
-      isMounted.current = false
-    }
-  }, [])
-
-  const handleNewVariables = (variables: DebugVariable[]) => {
-    if (isMounted.current) onNewVariables?.(variables)
-  }
 
   const handleNewLogs = (logs: ContinueChatResponse['logs']) => {
     logs?.forEach((log) => {
@@ -59,9 +44,15 @@ export const WebPreview = ({ onNewVariables }: Props) => {
 
   if (!typebot) return null
 
+  // `key` amarra a identidade da execução (typebot + grupo/evento de início).
+  // Quando muda, o PreviewBot remonta — o que invalida o guard de variáveis da
+  // execução anterior e limpa o painel, tanto no restart quanto ao dar play num
+  // grupo/evento específico.
   return (
-    <Standard
-      key={`web-preview${startPreviewAtGroup ?? ''}`}
+    <PreviewBot
+      key={`web-preview-${startPreviewAtGroup ?? ''}-${
+        startPreviewAtEvent ?? ''
+      }`}
       typebot={typebot}
       sessionId={user ? `${typebot.id}-${user.id}` : undefined}
       userId={user?.id}
@@ -81,7 +72,57 @@ export const WebPreview = ({ onNewVariables }: Props) => {
         })
       }
       onNewLogs={handleNewLogs}
-      onNewVariables={handleNewVariables}
+      onNewVariables={onNewVariables}
+    />
+  )
+}
+
+type PreviewBotProps = {
+  typebot: ComponentProps<typeof Standard>['typebot']
+  sessionId?: string
+  userId?: string
+  startFrom?: ComponentProps<typeof Standard>['startFrom']
+  onNewInputBlock: NonNullable<ComponentProps<typeof Standard>['onNewInputBlock']>
+  onNewLogs: NonNullable<ComponentProps<typeof Standard>['onNewLogs']>
+  onNewVariables?: (variables: DebugVariable[]) => void
+}
+
+// Uma instância por execução (remontada via `key` no pai). O ref de "montado"
+// vale só para ESTA execução: quando ela é abandonada (restart ou troca de
+// grupo), a instância desmonta e um `continueChat` em voo dela não repopula
+// mais o painel. No mount, zera as variáveis para não herdar valores da
+// execução anterior.
+const PreviewBot = ({
+  typebot,
+  sessionId,
+  userId,
+  startFrom,
+  onNewInputBlock,
+  onNewLogs,
+  onNewVariables,
+}: PreviewBotProps) => {
+  const isMounted = useRef(true)
+
+  useEffect(() => {
+    isMounted.current = true
+    onNewVariables?.([])
+    return () => {
+      isMounted.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <Standard
+      typebot={typebot}
+      sessionId={sessionId}
+      userId={userId}
+      startFrom={startFrom}
+      onNewInputBlock={onNewInputBlock}
+      onNewLogs={onNewLogs}
+      onNewVariables={(variables) => {
+        if (isMounted.current) onNewVariables?.(variables)
+      }}
       style={{
         borderWidth: '1px',
         borderRadius: '0.25rem',
