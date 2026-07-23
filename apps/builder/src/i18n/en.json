@@ -579,5 +579,5 @@
   "blocks.logic.wait.settings.toast.maxReached.title": "Maximum limit reached",
   "blocks.logic.wait.settings.toast.maxReached.description": "The maximum waiting time allowed is {max} seconds.",
   "blocks.logic.wait.validation.secondsOrVariable": "Must be a number or a variable in {{}}",
-  "editor.gettingStartedModal.editorBasics.list.faq-by-language": "https://cloudchat.cloudhumans.com/hc/claudia/en/"
+  "editor.gettingStartedModal.editorBasics.list.faq-by-language": "https://cloudchat.cloudhumans.com/hc/fluxos-controlados-e-tools/en"
 }
