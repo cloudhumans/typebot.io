@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { AppProps } from 'next/app'
 import { SessionProvider } from 'next-auth/react'
-import { ChakraProvider, useToast as useChakraToast } from '@chakra-ui/react'
+import { ChakraProvider } from '@chakra-ui/react'
 import { customTheme } from '@/lib/theme'
 import { useRouterProgressBar } from '@/lib/routerProgressBar'
 import '@/assets/styles/routerProgressBar.css'
@@ -23,24 +23,24 @@ import { TolgeeProvider, useTolgeeSSR } from '@tolgee/react'
 import { tolgee } from '@/lib/tolgee'
 import { Toaster } from '@/components/Toaster'
 import { EmbeddedAuthWrapper } from '@/features/embedded-auth'
+import { useToast } from '@/hooks/useToast'
 
 // Rendered inside ChakraProvider so it can use the toast context. Shows the
 // Stripe upgrade-success toast that used to rely on a standalone toast
 // container (which duplicated every toast — see git history).
 const StripeUpgradeToast = () => {
   const router = useRouter()
-  const toast = useChakraToast()
+  const { showToast } = useToast()
 
   useEffect(() => {
     const newPlan = router.query.stripe?.toString()
     if (newPlan === Plan.STARTER || newPlan === Plan.PRO)
-      toast({
-        position: 'top-right',
+      showToast({
         status: 'success',
         title: 'Upgrade success!',
         description: `Workspace upgraded to ${toTitleCase(newPlan)} 🎉`,
       })
-  }, [router.query.stripe, toast])
+  }, [router.query.stripe, showToast])
 
   return null
 }
