@@ -233,6 +233,7 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
               wordBreak="break-word"
               maxH="60vh"
               overflowY="auto"
+              onWheel={(e) => e.stopPropagation()}
               p={3}
               rounded="md"
               bgColor={headerBg}
