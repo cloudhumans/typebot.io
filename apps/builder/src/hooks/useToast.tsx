@@ -15,15 +15,15 @@ export const useToast = () => {
       primaryButton,
       secondaryButton,
     }: Omit<ToastProps, 'onClose'>) => {
-      // `duration` alimenta a barra de progresso e o auto-fechamento
-      // controlado pela própria Toast (via onAnimationEnd). Quando definido,
-      // passamos `null` ao Chakra para que ele não feche a toast em paralelo —
-      // assim a barra e o fechamento ficam sempre em sincronia e podem pausar
-      // enquanto o "Details" está expandido.
+      // `duration` drives the progress bar and the auto-dismiss, both handled
+      // by the Toast component itself (via onAnimationEnd). When it is set we
+      // pass `null` to Chakra so it doesn't dismiss the toast in parallel —
+      // that keeps the bar and the dismissal in sync and lets them pause while
+      // the "Details" section is expanded.
       let duration: number | null | undefined
 
       if (status === 'error' || status === 'success') {
-        duration = 30000 // 30 segundos
+        duration = 30000 // 30 seconds
       } else {
         duration = undefined // Default
       }
