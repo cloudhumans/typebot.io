@@ -1,3 +1,6 @@
+// Design-system alignment conventions (blue/primary alias, hex->token
+// mapping, what intentionally doesn't align) are documented in ./THEME.md.
+// Read it before adding a new color or "fixing" an illustration/logo.
 import {
   createMultiStyleConfigHelpers,
   defineStyleConfig,
