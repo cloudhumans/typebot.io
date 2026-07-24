@@ -41,6 +41,10 @@ const graphContext = createContext<{
   setBlockResults: Dispatch<
     SetStateAction<Record<string, 'success' | 'error'>>
   >
+  // Group ids the Test flow jumped into (loop-backs via a Jump block, which has
+  // no drawn edge). Flagged with a ↩ badge on the target group.
+  jumpTargetGroupIds: string[]
+  setJumpTargetGroupIds: Dispatch<SetStateAction<string[]>>
   openedBlockId?: string
   setOpenedBlockId: Dispatch<SetStateAction<string | undefined>>
   openedItemId?: string
@@ -78,6 +82,7 @@ export const GraphProvider = ({
   const [blockResults, setBlockResults] = useState<
     Record<string, 'success' | 'error'>
   >({})
+  const [jumpTargetGroupIds, setJumpTargetGroupIds] = useState<string[]>([])
   const [openedBlockId, setOpenedBlockId] = useState<string>()
   const [openedItemId, setOpenedItemId] = useState<string>()
   const [focusedGroupId, setFocusedGroupId] = useState<string>()
@@ -113,6 +118,8 @@ export const GraphProvider = ({
         setRunningBlockId,
         blockResults,
         setBlockResults,
+        jumpTargetGroupIds,
+        setJumpTargetGroupIds,
         openedBlockId,
         setOpenedBlockId,
         openedItemId,

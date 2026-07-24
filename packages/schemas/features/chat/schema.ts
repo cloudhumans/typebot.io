@@ -382,6 +382,12 @@ const chatResponseBaseSchema = z.object({
     .describe(
       'Preview-only: cumulative, ordered ids of every edge traversed so far in the preview run. Powers the builder execution-trail highlight. Not returned for live sessions.'
     ),
+  jumpTargetGroupIds: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Preview-only: cumulative group ids reached via a Jump block (loop-backs), so the builder can flag them since jumps have no drawn edge.'
+    ),
 })
 
 export const startChatResponseSchema = z

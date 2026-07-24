@@ -1,6 +1,12 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Edge as EdgeProps } from '@typebot.io/schemas'
-import { Portal, useColorMode, useDisclosure } from '@chakra-ui/react'
+import {
+  chakra,
+  keyframes,
+  Portal,
+  useColorMode,
+  useDisclosure,
+} from '@chakra-ui/react'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { colors } from '@/lib/theme'
 import { useEndpoints } from '../../providers/EndpointsProvider'
@@ -12,6 +18,12 @@ import { useEventsCoordinates } from '../../providers/EventsCoordinateProvider'
 import { eventWidth, groupWidth } from '../../constants'
 import { useGroupsStore } from '../../hooks/useGroupsStore'
 import { useShallow } from 'zustand/react/shallow'
+
+// "Formiguinhas" na última edge percorrida — dá sensação de avanço/direção.
+const marchingAnts = keyframes`
+  from { stroke-dashoffset: 14; }
+  to { stroke-dashoffset: 0; }
+`
 
 type Props = {
   edge: EdgeProps
@@ -51,7 +63,22 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
 
   const isPreviewing = isMouseOver || previewingEdge?.id === edge.id
   // Edge faz parte do rastro de execução do Test (caminho já percorrido).
-  const isVisited = visitedEdgeIds.includes(edge.id)
+  // `visitedEdgeIds` vem com repetições (loops), então dá pra contar passagens.
+  const visitedCount = visitedEdgeIds.reduce(
+    (count, id) => (id === edge.id ? count + 1 : count),
+    0
+  )
+  const isVisited = visitedCount > 0
+  const isLastTraversed =
+    visitedEdgeIds.length > 0 &&
+    visitedEdgeIds[visitedEdgeIds.length - 1] === edge.id
+
+  // Ponto médio da edge para posicionar o rótulo "×N" das passagens repetidas.
+  const visiblePathRef = useRef<SVGPathElement | null>(null)
+  const [labelPosition, setLabelPosition] = useState<{
+    x: number
+    y: number
+  } | null>(null)
 
   const sourceElementCoordinates =
     'eventId' in edge.from
@@ -102,6 +129,21 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
     graphPosition.scale,
   ])
 
+  useEffect(() => {
+    const pathEl = visiblePathRef.current
+    if (!pathEl || !path || visitedCount <= 1) {
+      setLabelPosition(null)
+      return
+    }
+    try {
+      const totalLength = pathEl.getTotalLength()
+      const mid = pathEl.getPointAtLength(totalLength / 2)
+      setLabelPosition({ x: mid.x, y: mid.y })
+    } catch {
+      setLabelPosition(null)
+    }
+  }, [path, visitedCount])
+
   const handleMouseEnter = () => setIsMouseOver(true)
 
   const handleMouseLeave = () => setIsMouseOver(false)
@@ -134,7 +176,8 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
         onClick={handleEdgeClick}
         onContextMenu={handleContextMenuTrigger}
       />
-      <path
+      <chakra.path
+        ref={visiblePathRef}
         data-testid="edge"
         d={path}
         stroke={
@@ -156,8 +199,34 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
         }
         fill="none"
         pointerEvents="none"
-        style={{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
+        sx={{
+          transition: 'stroke 0.2s ease, stroke-width 0.2s ease',
+          // Última edge percorrida: "formiguinhas" laranja avançando.
+          ...(isVisited && isLastTraversed
+            ? {
+                strokeDasharray: '8px 6px',
+                animation: `${marchingAnts} 0.7s linear infinite`,
+              }
+            : {}),
+        }}
       />
+      {isVisited && visitedCount > 1 && labelPosition && (
+        <text
+          x={labelPosition.x}
+          y={labelPosition.y}
+          fill={colors.orange[500]}
+          fontSize="13px"
+          fontWeight="bold"
+          textAnchor="middle"
+          dominantBaseline="central"
+          stroke={isDark ? colors.gray[900] : '#ffffff'}
+          strokeWidth="3px"
+          paintOrder="stroke"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          {`×${visitedCount}`}
+        </text>
+      )}
       <Portal>
         <EdgeMenu
           isOpen={isOpen}

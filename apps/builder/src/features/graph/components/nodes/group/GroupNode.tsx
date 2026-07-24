@@ -1,8 +1,11 @@
 import {
+  chakra,
   Editable,
   EditableInput,
   EditablePreview,
+  Flex,
   IconButton,
+  keyframes,
   SlideFade,
   Stack,
   useColorModeValue,
@@ -33,6 +36,13 @@ type Props = {
   groupIndex: number
 }
 
+// Glow pulsante em volta do card onde o fluxo do Test está AGORA — destaca a
+// "posição atual" mesmo com todo o rastro laranja (útil em loops/jumps).
+const currentGlow = keyframes`
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(230, 114, 0, 0.5); }
+  50% { opacity: 0.5; box-shadow: 0 0 12px 3px rgba(230, 114, 0, 0.4); }
+`
+
 export const GroupNode = ({ group, groupIndex }: Props) => {
   const bg = useColorModeValue('white', 'gray.900')
   const previewingBorderColor = useColorModeValue('blue.400', 'blue.300')
@@ -47,6 +57,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
     isReadOnly,
     graphPosition,
     visitedEdgeIds,
+    jumpTargetGroupIds,
   } = useGraph()
   const { typebot, updateGroup, updateGroupsCoordinates } = useTypebot()
   const { setMouseOverGroup, mouseOverGroup } = useBlockDnd()
@@ -75,6 +86,10 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
       ) ?? false,
     [typebot?.edges, visitedEdgeIds, group.id]
   )
+
+  // Posição atual do fluxo no Test (rec. 1) e alvo de um jump/loop-back (rec. 4).
+  const isCurrent = previewingBlock?.groupId === group.id
+  const isJumpTarget = jumpTargetGroupIds.includes(group.id)
 
   const groupRef = useRef<HTMLDivElement | null>(null)
   const isDraggingGraph = useGroupsStore((state) => state.isDraggingGraph)
@@ -234,6 +249,40 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
           spacing={isEmpty(group.title) ? '0' : '2'}
           pointerEvents={isDraggingGraph ? 'none' : 'auto'}
         >
+          {isCurrent && (
+            <chakra.div
+              pos="absolute"
+              inset="-3px"
+              rounded="xl"
+              borderWidth="2px"
+              borderColor={visitedBorderColor}
+              pointerEvents="none"
+              zIndex={2}
+              sx={{ animation: `${currentGlow} 1.3s ease-in-out infinite` }}
+            />
+          )}
+          {isJumpTarget && (
+            <Flex
+              pos="absolute"
+              top="-11px"
+              left="12px"
+              zIndex={3}
+              align="center"
+              px="2"
+              py="0.5"
+              rounded="full"
+              bg={visitedBorderColor}
+              color="white"
+              fontSize="10px"
+              fontWeight="bold"
+              letterSpacing="wide"
+              shadow="sm"
+              pointerEvents="none"
+              data-testid="group-jump-target"
+            >
+              ↩ jump
+            </Flex>
+          )}
           {hasError && (
             <IconButton
               onClick={handleAlertClick}

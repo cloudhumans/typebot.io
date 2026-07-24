@@ -48,6 +48,7 @@ export type BotProps = {
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
+  onJumps?: (jumpTargetGroupIds: string[]) => void
   onChatStatePersisted?: (isEnabled: boolean) => void
 }
 
@@ -170,6 +171,7 @@ export const Bot = (props: BotProps & { class?: string }) => {
         props.onNewInputBlock(data.input)
       if (data.logs) props.onNewLogs?.(data.logs)
       if (data.visitedEdgeIds) props.onVisitedEdges?.(data.visitedEdgeIds)
+      if (data.jumpTargetGroupIds) props.onJumps?.(data.jumpTargetGroupIds)
       props.onChatStatePersisted?.(false)
     }
 
@@ -246,6 +248,7 @@ export const Bot = (props: BotProps & { class?: string }) => {
             onNewInputBlock={props.onNewInputBlock}
             onNewLogs={props.onNewLogs}
             onVisitedEdges={props.onVisitedEdges}
+            onJumps={props.onJumps}
             onAnswer={props.onAnswer}
             onEnd={props.onEnd}
           />
@@ -265,6 +268,7 @@ type BotContentProps = {
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
+  onJumps?: (jumpTargetGroupIds: string[]) => void
 }
 
 const BotContent = (props: BotContentProps) => {
@@ -342,6 +346,7 @@ const BotContent = (props: BotContentProps) => {
         onEnd={props.onEnd}
         onNewLogs={props.onNewLogs}
         onVisitedEdges={props.onVisitedEdges}
+        onJumps={props.onJumps}
         onProgressUpdate={setProgressValue}
       />
       <Show

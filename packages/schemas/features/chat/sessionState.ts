@@ -100,6 +100,9 @@ const sessionStateSchemaV3 = sessionStateSchemaV2
         // execution-trail visualization. Distinct from `visitedEdges`, which
         // records only off-default branch decisions for transcript rebuilding.
         trailEdgeIds: z.array(z.string()).optional(),
+        // Preview-only: group ids the flow jumped into via a Jump block (which
+        // uses an invisible virtual edge). Lets the builder flag loop-backs.
+        jumpTargetGroupIds: z.array(z.string()).optional(),
         setVariableHistory: z
           .array(
             setVariableHistoryItemSchema.pick({

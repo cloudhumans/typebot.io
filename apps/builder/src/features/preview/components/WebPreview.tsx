@@ -30,6 +30,7 @@ export const WebPreview = () => {
     setVisitedEdgeIds,
     setRunningBlockId,
     setBlockResults,
+    setJumpTargetGroupIds,
   } = useGraph()
 
   const { showToast } = useToast()
@@ -119,6 +120,7 @@ export const WebPreview = () => {
     setVisitedEdgeIds([])
     setRunningBlockId(undefined)
     setBlockResults({})
+    setJumpTargetGroupIds([])
     setPreviewingBlock(undefined)
   }
 
@@ -157,6 +159,9 @@ export const WebPreview = () => {
       }
       onEnd={() => setRunningBlockId(undefined)}
       onVisitedEdges={(visitedEdgeIds) => setVisitedEdgeIds(visitedEdgeIds)}
+      onJumps={(jumpTargetGroupIds) =>
+        setJumpTargetGroupIds(jumpTargetGroupIds)
+      }
       resetTrail={resetTrail}
     />
   )
@@ -174,6 +179,7 @@ type PreviewBotProps = {
   onAnswer: NonNullable<ComponentProps<typeof Standard>['onAnswer']>
   onEnd: NonNullable<ComponentProps<typeof Standard>['onEnd']>
   onVisitedEdges: (visitedEdgeIds: string[]) => void
+  onJumps: (jumpTargetGroupIds: string[]) => void
   resetTrail: () => void
 }
 
@@ -190,6 +196,7 @@ const PreviewBot = ({
   onAnswer,
   onEnd,
   onVisitedEdges,
+  onJumps,
   resetTrail,
 }: PreviewBotProps) => {
   const isMounted = useRef(true)
@@ -222,6 +229,9 @@ const PreviewBot = ({
       }}
       onVisitedEdges={(visitedEdgeIds) => {
         if (isMounted.current) onVisitedEdges(visitedEdgeIds)
+      }}
+      onJumps={(jumpTargetGroupIds) => {
+        if (isMounted.current) onJumps(jumpTargetGroupIds)
       }}
       style={{
         borderWidth: '1px',
