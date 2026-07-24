@@ -28,6 +28,19 @@ const graphContext = createContext<{
   setPreviewingBlock: Dispatch<SetStateAction<PreviewingBlock | undefined>>
   previewingEdge?: Edge
   setPreviewingEdge: Dispatch<SetStateAction<Edge | undefined>>
+  // Execution trail during the Test preview: ids of every edge already
+  // traversed (cumulative), and the block the flow is currently processing
+  // from (shows a spinner). Cleared when the Test closes/restarts.
+  visitedEdgeIds: string[]
+  setVisitedEdgeIds: Dispatch<SetStateAction<string[]>>
+  runningBlockId?: string
+  setRunningBlockId: Dispatch<SetStateAction<string | undefined>>
+  // Per-block execution result during the Test (e.g., HTTP Request success or
+  // error), shown as a green/red badge on the block. Cleared with the trail.
+  blockResults: Record<string, 'success' | 'error'>
+  setBlockResults: Dispatch<
+    SetStateAction<Record<string, 'success' | 'error'>>
+  >
   openedBlockId?: string
   setOpenedBlockId: Dispatch<SetStateAction<string | undefined>>
   openedItemId?: string
@@ -60,6 +73,11 @@ export const GraphProvider = ({
   const [connectingIds, setConnectingIds] = useState<ConnectingIds | null>(null)
   const [previewingEdge, setPreviewingEdge] = useState<Edge>()
   const [previewingBlock, setPreviewingBlock] = useState<PreviewingBlock>()
+  const [visitedEdgeIds, setVisitedEdgeIds] = useState<string[]>([])
+  const [runningBlockId, setRunningBlockId] = useState<string>()
+  const [blockResults, setBlockResults] = useState<
+    Record<string, 'success' | 'error'>
+  >({})
   const [openedBlockId, setOpenedBlockId] = useState<string>()
   const [openedItemId, setOpenedItemId] = useState<string>()
   const [focusedGroupId, setFocusedGroupId] = useState<string>()
@@ -89,6 +107,12 @@ export const GraphProvider = ({
         setConnectingIds,
         previewingEdge,
         setPreviewingEdge,
+        visitedEdgeIds,
+        setVisitedEdgeIds,
+        runningBlockId,
+        setRunningBlockId,
+        blockResults,
+        setBlockResults,
         openedBlockId,
         setOpenedBlockId,
         openedItemId,

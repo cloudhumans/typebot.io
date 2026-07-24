@@ -21,8 +21,13 @@ type Props = {
 export const Edge = ({ edge, fromGroupId }: Props) => {
   const isDark = useColorMode().colorMode === 'dark'
   const { deleteEdge } = useTypebot()
-  const { previewingEdge, graphPosition, isReadOnly, setPreviewingEdge } =
-    useGraph()
+  const {
+    previewingEdge,
+    graphPosition,
+    isReadOnly,
+    setPreviewingEdge,
+    visitedEdgeIds,
+  } = useGraph()
   const { sourceEndpointYOffsets, targetEndpointYOffsets } = useEndpoints()
   const fromGroupCoordinates = useGroupsStore(
     useShallow((state) =>
@@ -45,6 +50,8 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
   const [edgeMenuPosition, setEdgeMenuPosition] = useState({ x: 0, y: 0 })
 
   const isPreviewing = isMouseOver || previewingEdge?.id === edge.id
+  // Edge faz parte do rastro de execução do Test (caminho já percorrido).
+  const isVisited = visitedEdgeIds.includes(edge.id)
 
   const sourceElementCoordinates =
     'eventId' in edge.from
@@ -131,16 +138,25 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
         data-testid="edge"
         d={path}
         stroke={
-          isPreviewing
+          isVisited
+            ? colors.orange[500]
+            : isPreviewing
             ? colors.blue[400]
             : isDark
             ? colors.gray[700]
             : colors.gray[400]
         }
-        strokeWidth="2px"
-        markerEnd={isPreviewing ? 'url(#blue-arrow)' : 'url(#arrow)'}
+        strokeWidth={isVisited ? '4px' : '2px'}
+        markerEnd={
+          isVisited
+            ? 'url(#trail-arrow)'
+            : isPreviewing
+            ? 'url(#blue-arrow)'
+            : 'url(#arrow)'
+        }
         fill="none"
         pointerEvents="none"
+        style={{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
       />
       <Portal>
         <EdgeMenu

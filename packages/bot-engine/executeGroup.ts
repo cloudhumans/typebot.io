@@ -288,7 +288,12 @@ export const executeGroup = async (
     )
       newStartTime = Date.now()
     if (executionResponse.logs)
-      logs = [...(logs ?? []), ...executionResponse.logs]
+      logs = [
+        ...(logs ?? []),
+        // Attribute each log to the block that produced it (used by the builder
+        // preview to mark per-block execution results).
+        ...executionResponse.logs.map((log) => ({ ...log, blockId: block.id })),
+      ]
     if (executionResponse.newSessionState)
       newSessionState = executionResponse.newSessionState
 

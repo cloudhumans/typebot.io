@@ -124,15 +124,21 @@ export const getNextGroup = async ({
     newSessionState: {
       ...state,
       currentVisitedEdgeIndex,
-      previewMetadata:
-        resultId || !isOffDefaultPath
-          ? state.previewMetadata
-          : {
-              ...state.previewMetadata,
-              visitedEdges: (state.previewMetadata?.visitedEdges ?? []).concat(
-                nextEdge.id
-              ),
-            },
+      // In preview (no resultId) we record the full execution trail
+      // (`trailEdgeIds`: every non-virtual edge traversed, default or not) for
+      // the builder's trail highlight, while keeping `visitedEdges` limited to
+      // off-default branch decisions (used by transcript rebuilding).
+      previewMetadata: resultId
+        ? state.previewMetadata
+        : {
+            ...state.previewMetadata,
+            visitedEdges: isOffDefaultPath
+              ? (state.previewMetadata?.visitedEdges ?? []).concat(nextEdge.id)
+              : state.previewMetadata?.visitedEdges,
+            trailEdgeIds: nextEdge.id.startsWith('virtual-')
+              ? state.previewMetadata?.trailEdgeIds
+              : (state.previewMetadata?.trailEdgeIds ?? []).concat(nextEdge.id),
+          },
     },
     visitedEdge:
       resultId && isOffDefaultPath && !nextEdge.id.startsWith('virtual-')

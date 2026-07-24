@@ -188,7 +188,15 @@ export const chatLogSchema = logSchema
     status: true,
     description: true,
   })
-  .merge(z.object({ details: z.unknown().optional() }))
+  .merge(
+    z.object({
+      details: z.unknown().optional(),
+      // Id of the block that produced this log — set for preview so the builder
+      // can show a per-block execution result (e.g., success/error on an HTTP
+      // Request block).
+      blockId: z.string().optional(),
+    })
+  )
 export type ChatLog = z.infer<typeof chatLogSchema>
 
 export const startChatInputSchema = z.object({
@@ -367,6 +375,12 @@ const chatResponseBaseSchema = z.object({
     .optional()
     .describe(
       'If progress bar is enabled, this field will return a number between 0 and 100 indicating the current progress based on the longest remaining path of the flow.'
+    ),
+  visitedEdgeIds: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Preview-only: cumulative, ordered ids of every edge traversed so far in the preview run. Powers the builder execution-trail highlight. Not returned for live sessions.'
     ),
 })
 

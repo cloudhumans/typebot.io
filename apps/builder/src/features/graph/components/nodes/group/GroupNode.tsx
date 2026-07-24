@@ -7,7 +7,7 @@ import {
   Stack,
   useColorModeValue,
 } from '@chakra-ui/react'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { GroupV6 } from '@typebot.io/schemas'
 import { BlockNodesList } from '../block/BlockNodesList'
 import { isEmpty, isNotDefined } from '@typebot.io/lib'
@@ -36,6 +36,7 @@ type Props = {
 export const GroupNode = ({ group, groupIndex }: Props) => {
   const bg = useColorModeValue('white', 'gray.900')
   const previewingBorderColor = useColorModeValue('blue.400', 'blue.300')
+  const visitedBorderColor = useColorModeValue('orange.500', 'orange.400')
   const borderColor = useColorModeValue('white', 'gray.800')
   const editableHoverBg = useColorModeValue('gray.100', 'gray.700')
   const {
@@ -45,6 +46,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
     previewingBlock,
     isReadOnly,
     graphPosition,
+    visitedEdgeIds,
   } = useGraph()
   const { typebot, updateGroup, updateGroupsCoordinates } = useTypebot()
   const { setMouseOverGroup, mouseOverGroup } = useBlockDnd()
@@ -62,6 +64,17 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
         previewingEdge.from.groupId === group.id) ||
         (previewingEdge.to.groupId === group.id &&
           isNotDefined(previewingEdge.to.blockId))))
+
+  // Grupo faz parte do caminho percorrido no Test: alguma edge visitada entra
+  // nele. Deixa o card inteiro com borda laranja/bold, como o rastro das setas.
+  const isVisited = useMemo(
+    () =>
+      typebot?.edges.some(
+        (edge) =>
+          edge.to.groupId === group.id && visitedEdgeIds.includes(edge.id)
+      ) ?? false,
+    [typebot?.edges, visitedEdgeIds, group.id]
+  )
 
   const groupRef = useRef<HTMLDivElement | null>(null)
   const isDraggingGraph = useGroupsStore((state) => state.isDraggingGraph)
@@ -195,9 +208,11 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
           p="4"
           rounded="xl"
           bg={bg}
-          borderWidth="1px"
+          borderWidth={isVisited ? '2px' : '1px'}
           borderColor={
-            isConnecting || isContextMenuOpened || isPreviewing || isFocused
+            isVisited
+              ? visitedBorderColor
+              : isConnecting || isContextMenuOpened || isPreviewing || isFocused
               ? previewingBorderColor
               : borderColor
           }

@@ -95,6 +95,11 @@ const sessionStateSchemaV3 = sessionStateSchemaV2
       .object({
         answers: z.array(answerSchema).optional(),
         visitedEdges: z.array(z.string()).optional(),
+        // Preview-only: every edge id traversed during the preview run (default
+        // and off-default), cumulative and in order — powers the builder's
+        // execution-trail visualization. Distinct from `visitedEdges`, which
+        // records only off-default branch decisions for transcript rebuilding.
+        trailEdgeIds: z.array(z.string()).optional(),
         setVariableHistory: z
           .array(
             setVariableHistoryItemSchema.pick({
