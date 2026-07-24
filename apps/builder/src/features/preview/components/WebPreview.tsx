@@ -75,43 +75,57 @@ export const WebPreview = () => {
     answeredBlockId: string
   ): string | undefined => {
     if (!typebot) return undefined
-    let group = typebot.groups.find((g) =>
-      g.blocks.some((b) => b.id === answeredBlockId)
-    )
-    if (!group) return undefined
-    let startIndex =
-      group.blocks.findIndex((b) => b.id === answeredBlockId) + 1
+    const groupOf = (blockId: string) =>
+      typebot.groups.find((g) => g.blocks.some((b) => b.id === blockId))
+    // Edges que saem de um bloco — pode ser a default (sem itemId) OU de item
+    // (Buttons/Choice/Condition). Seguimos a edge de fato tomada quando é única.
+    const edgesFrom = (blockId: string) =>
+      typebot.edges.filter(
+        (edge) => 'blockId' in edge.from && edge.from.blockId === blockId
+      )
+    const entryIndex = (group: (typeof typebot.groups)[number], blockId?: string) =>
+      blockId ? Math.max(0, group.blocks.findIndex((b) => b.id === blockId)) : 0
+
+    // Resolve para onde o fluxo vai a partir do input respondido: se o bloco tem
+    // exatamente uma edge de saída, segue por ela (mesmo de item); se tem várias
+    // (ramificação), não dá pra saber o caminho no cliente durante o round-trip
+    // server-side, então não arrisca (sem spinner). Sem edge própria, continua
+    // no mesmo grupo, no bloco seguinte.
+    const answeredGroup = groupOf(answeredBlockId)
+    if (!answeredGroup) return undefined
+    const answeredEdges = edgesFrom(answeredBlockId)
+    if (answeredEdges.length > 1) return undefined
+    let group: (typeof typebot.groups)[number] | undefined
+    let index: number
+    if (answeredEdges.length === 1) {
+      group = groupOf(answeredEdges[0].to.groupId)
+      index = group ? entryIndex(group, answeredEdges[0].to.blockId) : 0
+    } else {
+      group = answeredGroup
+      index = answeredGroup.blocks.findIndex((b) => b.id === answeredBlockId) + 1
+    }
+
     const visitedGroupIds = new Set<string>()
-    for (let hop = 0; hop < 60; hop++) {
-      if (visitedGroupIds.has(group.id)) return undefined
+    for (let hop = 0; hop < 100; hop++) {
+      if (!group || visitedGroupIds.has(group.id)) return undefined
       visitedGroupIds.add(group.id)
-      for (let i = startIndex; i < group.blocks.length; i++) {
+      let advanced = false
+      for (let i = index; i < group.blocks.length; i++) {
         const block = group.blocks[i]
         if (EXECUTION_STATUS_BLOCK_TYPES.includes(block.type)) return block.id
-        // Chegou no próximo input: qualquer request depois dele é de outro
-        // round-trip, então não é o que está rodando agora.
+        // Próximo input: o que roda depois é de outro round-trip.
         if (isInputBlock(block)) return undefined
+        const outgoing = edgesFrom(block.id)
+        if (outgoing.length === 0) continue // segue no mesmo grupo
+        if (outgoing.length > 1) return undefined // ramificação -> desconhecido
+        const nextGroup = groupOf(outgoing[0].to.groupId)
+        if (!nextGroup) return undefined
+        group = nextGroup
+        index = entryIndex(nextGroup, outgoing[0].to.blockId)
+        advanced = true
+        break
       }
-      const lastBlock = group.blocks[group.blocks.length - 1]
-      if (!lastBlock) return undefined
-      const outgoingEdge = typebot.edges.find(
-        (edge) =>
-          'blockId' in edge.from &&
-          edge.from.blockId === lastBlock.id &&
-          !edge.from.itemId
-      )
-      if (!outgoingEdge) return undefined
-      const nextGroup = typebot.groups.find(
-        (g) => g.id === outgoingEdge.to.groupId
-      )
-      if (!nextGroup) return undefined
-      group = nextGroup
-      startIndex = outgoingEdge.to.blockId
-        ? Math.max(
-            0,
-            nextGroup.blocks.findIndex((b) => b.id === outgoingEdge.to.blockId)
-          )
-        : 0
+      if (!advanced) return undefined // fim do grupo sem redirecionar
     }
     return undefined
   }
@@ -217,7 +231,9 @@ const PreviewBot = ({
       sessionId={sessionId}
       userId={userId}
       startFrom={startFrom}
-      onNewLogs={onNewLogs}
+      onNewLogs={(logs) => {
+        if (isMounted.current) onNewLogs(logs)
+      }}
       onNewInputBlock={(block) => {
         if (isMounted.current) onNewInputBlock(block)
       }}
