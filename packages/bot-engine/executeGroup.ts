@@ -291,8 +291,15 @@ export const executeGroup = async (
       logs = [
         ...(logs ?? []),
         // Attribute each log to the block that produced it (used by the builder
-        // preview to mark per-block execution results).
-        ...executionResponse.logs.map((log) => ({ ...log, blockId: block.id })),
+        // preview to mark per-block execution results). Only in preview: a
+        // published run persists these logs through `upsertResult`, and the
+        // Prisma `Log` model has no `blockId` column.
+        ...(newSessionState.typebotsQueue[0].resultId
+          ? executionResponse.logs
+          : executionResponse.logs.map((log) => ({
+              ...log,
+              blockId: block.id,
+            }))),
       ]
     if (executionResponse.newSessionState)
       newSessionState = executionResponse.newSessionState
