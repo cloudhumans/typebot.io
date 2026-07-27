@@ -8,6 +8,7 @@ import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
 import { isInputBlock } from '@typebot.io/schemas/helpers'
 import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
+import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { ComponentProps, useEffect, useRef } from 'react'
 
 // Blocos de integração server-side com resultado observável: mostram o spinner
@@ -19,6 +20,21 @@ const EXECUTION_STATUS_BLOCK_TYPES: string[] = [
   IntegrationBlockType.MAKE_COM,
   IntegrationBlockType.PABBLY_CONNECT,
   IntegrationBlockType.GOOGLE_SHEETS,
+]
+
+// Blocos que podem desviar o fluxo por uma decisão tomada server-side (condição
+// falsa cai no bloco seguinte, jump salta pra outro grupo sem edge desenhada,
+// AB test sorteia o ramo). O cliente não sabe o caminho durante o round-trip, e
+// tratá-los como fallthrough coloca o spinner num bloco que nunca rodou — então
+// a busca para aqui.
+const FLOW_BRANCHING_BLOCK_TYPES: string[] = [
+  LogicBlockType.CONDITION,
+  LogicBlockType.JUMP,
+  LogicBlockType.AB_TEST,
+  LogicBlockType.TYPEBOT_LINK,
+  LogicBlockType.REDIRECT,
+  LogicBlockType.VALIDATE_CPF,
+  LogicBlockType.VALIDATE_CNPJ,
 ]
 
 export const WebPreview = () => {
@@ -75,8 +91,12 @@ export const WebPreview = () => {
     answeredBlockId: string
   ): string | undefined => {
     if (!typebot) return undefined
-    const groupOf = (blockId: string) =>
+    // `groupOfBlock` resolve pelo bloco; `groupById` pelo id do grupo — é o que
+    // as edges carregam em `edge.to.groupId`.
+    const groupOfBlock = (blockId: string) =>
       typebot.groups.find((g) => g.blocks.some((b) => b.id === blockId))
+    const groupById = (groupId: string) =>
+      typebot.groups.find((g) => g.id === groupId)
     // Edges que saem de um bloco — pode ser a default (sem itemId) OU de item
     // (Buttons/Choice/Condition). Seguimos a edge de fato tomada quando é única.
     const edgesFrom = (blockId: string) =>
@@ -91,15 +111,16 @@ export const WebPreview = () => {
     // (ramificação), não dá pra saber o caminho no cliente durante o round-trip
     // server-side, então não arrisca (sem spinner). Sem edge própria, continua
     // no mesmo grupo, no bloco seguinte.
-    const answeredGroup = groupOf(answeredBlockId)
+    const answeredGroup = groupOfBlock(answeredBlockId)
     if (!answeredGroup) return undefined
     const answeredEdges = edgesFrom(answeredBlockId)
     if (answeredEdges.length > 1) return undefined
     let group: (typeof typebot.groups)[number] | undefined
     let index: number
     if (answeredEdges.length === 1) {
-      group = groupOf(answeredEdges[0].to.groupId)
-      index = group ? entryIndex(group, answeredEdges[0].to.blockId) : 0
+      group = groupById(answeredEdges[0].to.groupId)
+      if (!group) return undefined
+      index = entryIndex(group, answeredEdges[0].to.blockId)
     } else {
       group = answeredGroup
       index = answeredGroup.blocks.findIndex((b) => b.id === answeredBlockId) + 1
@@ -115,10 +136,12 @@ export const WebPreview = () => {
         if (EXECUTION_STATUS_BLOCK_TYPES.includes(block.type)) return block.id
         // Próximo input: o que roda depois é de outro round-trip.
         if (isInputBlock(block)) return undefined
+        // Decisão server-side (condição/jump/AB test/...): caminho desconhecido.
+        if (FLOW_BRANCHING_BLOCK_TYPES.includes(block.type)) return undefined
         const outgoing = edgesFrom(block.id)
         if (outgoing.length === 0) continue // segue no mesmo grupo
         if (outgoing.length > 1) return undefined // ramificação -> desconhecido
-        const nextGroup = groupOf(outgoing[0].to.groupId)
+        const nextGroup = groupById(outgoing[0].to.groupId)
         if (!nextGroup) return undefined
         group = nextGroup
         index = entryIndex(nextGroup, outgoing[0].to.blockId)
