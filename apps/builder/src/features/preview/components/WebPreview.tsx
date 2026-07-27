@@ -82,6 +82,11 @@ export const WebPreview = () => {
         )
       }
     })
+    // Um `continueChat` que falha só emite log de erro — sai antes de
+    // `onNewInputBlock`/`onEnd`, que são quem normalmente apaga o spinner. Sem
+    // isso o indicador de "executando" fica preso até reiniciar o preview.
+    if (logs?.some((log) => log.status === 'error'))
+      setRunningBlockId(undefined)
   }
 
   // A partir do input respondido, caminha pelo fluxo (caminho default) até achar
