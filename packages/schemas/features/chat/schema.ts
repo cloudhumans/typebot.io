@@ -199,6 +199,14 @@ export const chatLogSchema = logSchema
   )
 export type ChatLog = z.infer<typeof chatLogSchema>
 
+// Logs coming *from* the client. `blockId` is stripped on purpose: it is
+// server-produced metadata and the `Log` table has no such column, so a client
+// sending it would forward an unknown argument to Prisma and fail the insert.
+// Use this for every route that accepts logs as input; `chatLogSchema` stays the
+// shape we send back.
+export const clientChatLogSchema = chatLogSchema.omit({ blockId: true })
+export type ClientChatLog = z.infer<typeof clientChatLogSchema>
+
 export const startChatInputSchema = z.object({
   publicId: z
     .string()
