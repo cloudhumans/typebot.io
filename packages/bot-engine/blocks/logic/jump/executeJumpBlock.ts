@@ -29,18 +29,23 @@ export const executeJumpBlock = (
   })
   let newSessionState = addEdgeToTypebot(state, portalEdge)
 
-  // Preview: o jump transita por uma edge virtual (sem linha no editor).
-  // Registra o grupo alvo para o builder sinalizar o loop-back.
-  if (!newSessionState.typebotsQueue[0].resultId)
-    newSessionState = {
-      ...newSessionState,
-      previewMetadata: {
-        ...newSessionState.previewMetadata,
-        jumpTargetGroupIds: (
-          newSessionState.previewMetadata?.jumpTargetGroupIds ?? []
-        ).concat(groupId),
-      },
-    }
+  // Preview: a jump travels through a virtual edge (no line in the editor).
+  // Records the target group so the builder can flag the loop-back. Deduped on
+  // write: the builder only needs the set of targets, and a loop going through
+  // the same jump 50 times would otherwise store it 50 times — in the session
+  // state *and* in every `continueChat` response.
+  if (!newSessionState.typebotsQueue[0].resultId) {
+    const jumpTargetGroupIds =
+      newSessionState.previewMetadata?.jumpTargetGroupIds ?? []
+    if (!jumpTargetGroupIds.includes(groupId))
+      newSessionState = {
+        ...newSessionState,
+        previewMetadata: {
+          ...newSessionState.previewMetadata,
+          jumpTargetGroupIds: [...jumpTargetGroupIds, groupId],
+        },
+      }
+  }
 
   return { outgoingEdgeId: portalEdge.id, newSessionState }
 }
