@@ -1,4 +1,6 @@
-import { executionStatusBlockTypes } from '@/features/graph/constants'
+// Relative import (not the `@/` alias) so this helper stays loadable by the
+// package-level unit-test runner, which has no alias wiring.
+import { executionStatusBlockTypes } from '../../graph/constants'
 import { TypebotV6 } from '@typebot.io/schemas'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { isInputBlock } from '@typebot.io/schemas/helpers'

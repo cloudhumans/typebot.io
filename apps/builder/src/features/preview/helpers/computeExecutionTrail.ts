@@ -1,4 +1,4 @@
-import { ExecutionTrail } from '@/features/graph/types'
+import { ExecutionTrail } from '../../graph/types'
 import { Edge } from '@typebot.io/schemas'
 
 /**
