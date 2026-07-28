@@ -1,4 +1,17 @@
+import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
 import { Coordinates } from './types'
+
+// Server-side integration blocks with an observable result: the preview shows a
+// spinner while they run and a green/red badge once they are done (HTTP
+// request, the webhook family and Google Sheets). Kept here so the spinner
+// (WebPreview) and the badge (BlockNode) can never drift apart.
+export const executionStatusBlockTypes: string[] = [
+  IntegrationBlockType.WEBHOOK,
+  IntegrationBlockType.ZAPIER,
+  IntegrationBlockType.MAKE_COM,
+  IntegrationBlockType.PABBLY_CONNECT,
+  IntegrationBlockType.GOOGLE_SHEETS,
+]
 
 export const stubLength = 20
 export const groupWidth = 300

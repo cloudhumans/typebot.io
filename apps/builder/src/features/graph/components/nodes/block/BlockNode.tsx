@@ -23,7 +23,7 @@ import {
   isBubbleBlock,
   isTextBubbleBlock,
 } from '@typebot.io/schemas/helpers'
-import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
+import { executionStatusBlockTypes } from '@/features/graph/constants'
 import { CheckIcon, CloseIcon } from '@/components/icons'
 import { BlockNodeContent } from './BlockNodeContent'
 import { BlockSettings, SettingsPopoverContent } from './SettingsPopoverContent'
@@ -112,18 +112,10 @@ export const BlockNode = ({
   // dele (ex.: HTTP request rodando no servidor) -> mostra um spinner.
   const isRunning = runningBlockId === block.id
 
-  // Blocos de integração com status no Test (HTTP request / família webhook e
-  // Google Sheets): mostram selo de resultado (✓ verde / ✕ vermelho) no canto
-  // inferior direito.
-  const isExecutionStatusBlock = (
-    [
-      IntegrationBlockType.WEBHOOK,
-      IntegrationBlockType.ZAPIER,
-      IntegrationBlockType.MAKE_COM,
-      IntegrationBlockType.PABBLY_CONNECT,
-      IntegrationBlockType.GOOGLE_SHEETS,
-    ] as string[]
-  ).includes(block.type)
+  // Integration blocks with an execution status in the Test panel (HTTP request
+  // / webhook family and Google Sheets): they get a result badge (green ✓ / red
+  // ✕) in the bottom right corner.
+  const isExecutionStatusBlock = executionStatusBlockTypes.includes(block.type)
   const blockResult = isExecutionStatusBlock
     ? blockResults[block.id]
     : undefined

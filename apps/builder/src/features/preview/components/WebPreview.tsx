@@ -7,20 +7,9 @@ import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
 import { isInputBlock } from '@typebot.io/schemas/helpers'
-import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
+import { executionStatusBlockTypes } from '@/features/graph/constants'
 import { ComponentProps, useEffect, useRef } from 'react'
-
-// Blocos de integração server-side com resultado observável: mostram o spinner
-// durante a execução e o selo verde/vermelho no fim (HTTP request, família
-// webhook e Google Sheets).
-const EXECUTION_STATUS_BLOCK_TYPES: string[] = [
-  IntegrationBlockType.WEBHOOK,
-  IntegrationBlockType.ZAPIER,
-  IntegrationBlockType.MAKE_COM,
-  IntegrationBlockType.PABBLY_CONNECT,
-  IntegrationBlockType.GOOGLE_SHEETS,
-]
 
 // Blocos que podem desviar o fluxo por uma decisão tomada server-side (condição
 // falsa cai no bloco seguinte, jump salta pra outro grupo sem edge desenhada,
@@ -138,7 +127,7 @@ export const WebPreview = () => {
       let advanced = false
       for (let i = index; i < group.blocks.length; i++) {
         const block = group.blocks[i]
-        if (EXECUTION_STATUS_BLOCK_TYPES.includes(block.type)) return block.id
+        if (executionStatusBlockTypes.includes(block.type)) return block.id
         // Próximo input: o que roda depois é de outro round-trip.
         if (isInputBlock(block)) return undefined
         // Decisão server-side (condição/jump/AB test/...): caminho desconhecido.
