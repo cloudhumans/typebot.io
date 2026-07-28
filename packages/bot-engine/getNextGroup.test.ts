@@ -7,6 +7,10 @@ vi.mock('./queries/upsertResult', () => ({
   upsertResult: vi.fn(),
 }))
 
+// Belt and braces: CI runs the unit tests without `prisma generate`, so any
+// transitive import of the real client would fail to resolve.
+vi.mock('@typebot.io/lib/prisma', () => ({ default: {} }))
+
 const { getNextGroup } = await import('./getNextGroup')
 
 const targetGroup = {

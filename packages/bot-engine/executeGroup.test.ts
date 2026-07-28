@@ -2,6 +2,12 @@ import { Group, SessionState } from '@typebot.io/schemas'
 import { IntegrationBlockType } from '@typebot.io/schemas/features/blocks/integrations/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+// `executeGroup` reaches `computePaymentInputRuntimeOptions`, which imports the
+// Prisma client at load time. CI runs the unit tests without `prisma generate`,
+// so the real client fails to resolve there — and nothing here touches the
+// database anyway.
+vi.mock('@typebot.io/lib/prisma', () => ({ default: {} }))
+
 // The block execution itself is irrelevant here — we only care about how
 // `executeGroup` annotates the logs it collects.
 vi.mock('./executeIntegration', () => ({
