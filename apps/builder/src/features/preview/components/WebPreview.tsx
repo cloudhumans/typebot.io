@@ -6,25 +6,8 @@ import { useGraph } from '@/features/graph/providers/GraphProvider'
 import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
-import { isInputBlock } from '@typebot.io/schemas/helpers'
-import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
-import { executionStatusBlockTypes } from '@/features/graph/constants'
+import { findNextRunningBlockId } from '../helpers/findNextRunningBlockId'
 import { ComponentProps, useEffect, useRef } from 'react'
-
-// Blocos que podem desviar o fluxo por uma decisão tomada server-side (condição
-// falsa cai no bloco seguinte, jump salta pra outro grupo sem edge desenhada,
-// AB test sorteia o ramo). O cliente não sabe o caminho durante o round-trip, e
-// tratá-los como fallthrough coloca o spinner num bloco que nunca rodou — então
-// a busca para aqui.
-const FLOW_BRANCHING_BLOCK_TYPES: string[] = [
-  LogicBlockType.CONDITION,
-  LogicBlockType.JUMP,
-  LogicBlockType.AB_TEST,
-  LogicBlockType.TYPEBOT_LINK,
-  LogicBlockType.REDIRECT,
-  LogicBlockType.VALIDATE_CPF,
-  LogicBlockType.VALIDATE_CNPJ,
-]
 
 export const WebPreview = () => {
   const { user } = useUser()
@@ -78,75 +61,6 @@ export const WebPreview = () => {
       setRunningBlockId(undefined)
   }
 
-  // A partir do input respondido, caminha pelo fluxo (caminho default) até achar
-  // o próximo bloco de HTTP request antes do próximo input — é onde o spinner de
-  // "executando" deve ficar durante o round-trip (o request roda server-side).
-  const findNextRunningBlockId = (
-    answeredBlockId: string
-  ): string | undefined => {
-    if (!typebot) return undefined
-    // `groupOfBlock` resolve pelo bloco; `groupById` pelo id do grupo — é o que
-    // as edges carregam em `edge.to.groupId`.
-    const groupOfBlock = (blockId: string) =>
-      typebot.groups.find((g) => g.blocks.some((b) => b.id === blockId))
-    const groupById = (groupId: string) =>
-      typebot.groups.find((g) => g.id === groupId)
-    // Edges que saem de um bloco — pode ser a default (sem itemId) OU de item
-    // (Buttons/Choice/Condition). Seguimos a edge de fato tomada quando é única.
-    const edgesFrom = (blockId: string) =>
-      typebot.edges.filter(
-        (edge) => 'blockId' in edge.from && edge.from.blockId === blockId
-      )
-    const entryIndex = (group: (typeof typebot.groups)[number], blockId?: string) =>
-      blockId ? Math.max(0, group.blocks.findIndex((b) => b.id === blockId)) : 0
-
-    // Resolve para onde o fluxo vai a partir do input respondido: se o bloco tem
-    // exatamente uma edge de saída, segue por ela (mesmo de item); se tem várias
-    // (ramificação), não dá pra saber o caminho no cliente durante o round-trip
-    // server-side, então não arrisca (sem spinner). Sem edge própria, continua
-    // no mesmo grupo, no bloco seguinte.
-    const answeredGroup = groupOfBlock(answeredBlockId)
-    if (!answeredGroup) return undefined
-    const answeredEdges = edgesFrom(answeredBlockId)
-    if (answeredEdges.length > 1) return undefined
-    let group: (typeof typebot.groups)[number] | undefined
-    let index: number
-    if (answeredEdges.length === 1) {
-      group = groupById(answeredEdges[0].to.groupId)
-      if (!group) return undefined
-      index = entryIndex(group, answeredEdges[0].to.blockId)
-    } else {
-      group = answeredGroup
-      index = answeredGroup.blocks.findIndex((b) => b.id === answeredBlockId) + 1
-    }
-
-    const visitedGroupIds = new Set<string>()
-    for (let hop = 0; hop < 100; hop++) {
-      if (!group || visitedGroupIds.has(group.id)) return undefined
-      visitedGroupIds.add(group.id)
-      let advanced = false
-      for (let i = index; i < group.blocks.length; i++) {
-        const block = group.blocks[i]
-        if (executionStatusBlockTypes.includes(block.type)) return block.id
-        // Próximo input: o que roda depois é de outro round-trip.
-        if (isInputBlock(block)) return undefined
-        // Decisão server-side (condição/jump/AB test/...): caminho desconhecido.
-        if (FLOW_BRANCHING_BLOCK_TYPES.includes(block.type)) return undefined
-        const outgoing = edgesFrom(block.id)
-        if (outgoing.length === 0) continue // segue no mesmo grupo
-        if (outgoing.length > 1) return undefined // ramificação -> desconhecido
-        const nextGroup = groupById(outgoing[0].to.groupId)
-        if (!nextGroup) return undefined
-        group = nextGroup
-        index = entryIndex(nextGroup, outgoing[0].to.blockId)
-        advanced = true
-        break
-      }
-      if (!advanced) return undefined // fim do grupo sem redirecionar
-    }
-    return undefined
-  }
-
   const resetTrail = () => {
     setVisitedEdgeIds([])
     setRunningBlockId(undefined)
@@ -186,7 +100,9 @@ export const WebPreview = () => {
       // O usuário respondeu um input: o fluxo processa (server-side) até o
       // próximo input. Coloca o spinner no próximo HTTP request desse trecho.
       onAnswer={({ blockId }) =>
-        setRunningBlockId(findNextRunningBlockId(blockId))
+        setRunningBlockId(
+          findNextRunningBlockId({ typebot, answeredBlockId: blockId })
+        )
       }
       onEnd={() => setRunningBlockId(undefined)}
       onVisitedEdges={(visitedEdgeIds) => setVisitedEdgeIds(visitedEdgeIds)}
