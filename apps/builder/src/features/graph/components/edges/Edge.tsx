@@ -38,7 +38,7 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
     graphPosition,
     isReadOnly,
     setPreviewingEdge,
-    visitedEdgeIds,
+    executionTrail,
   } = useGraph()
   const { sourceEndpointYOffsets, targetEndpointYOffsets } = useEndpoints()
   const fromGroupCoordinates = useGroupsStore(
@@ -62,16 +62,11 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
   const [edgeMenuPosition, setEdgeMenuPosition] = useState({ x: 0, y: 0 })
 
   const isPreviewing = isMouseOver || previewingEdge?.id === edge.id
-  // Edge faz parte do rastro de execução do Test (caminho já percorrido).
-  // `visitedEdgeIds` vem com repetições (loops), então dá pra contar passagens.
-  const visitedCount = visitedEdgeIds.reduce(
-    (count, id) => (id === edge.id ? count + 1 : count),
-    0
-  )
+  // Edge is part of the Test execution trail (a path already traversed). Counts
+  // come pre-reduced from the trail — see `computeExecutionTrail`.
+  const visitedCount = executionTrail.edgeVisitCounts[edge.id] ?? 0
   const isVisited = visitedCount > 0
-  const isLastTraversed =
-    visitedEdgeIds.length > 0 &&
-    visitedEdgeIds[visitedEdgeIds.length - 1] === edge.id
+  const isLastTraversed = executionTrail.lastTraversedEdgeId === edge.id
 
   // Ponto médio da edge para posicionar o rótulo "×N" das passagens repetidas.
   const visiblePathRef = useRef<SVGPathElement | null>(null)

@@ -10,7 +10,7 @@ import {
   Stack,
   useColorModeValue,
 } from '@chakra-ui/react'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { GroupV6 } from '@typebot.io/schemas'
 import { BlockNodesList } from '../block/BlockNodesList'
 import { isEmpty, isNotDefined } from '@typebot.io/lib'
@@ -56,7 +56,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
     previewingBlock,
     isReadOnly,
     graphPosition,
-    visitedEdgeIds,
+    executionTrail,
     jumpTargetGroupIds,
   } = useGraph()
   const { typebot, updateGroup, updateGroupsCoordinates } = useTypebot()
@@ -76,16 +76,10 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
         (previewingEdge.to.groupId === group.id &&
           isNotDefined(previewingEdge.to.blockId))))
 
-  // Grupo faz parte do caminho percorrido no Test: alguma edge visitada entra
-  // nele. Deixa o card inteiro com borda laranja/bold, como o rastro das setas.
-  const isVisited = useMemo(
-    () =>
-      typebot?.edges.some(
-        (edge) =>
-          edge.to.groupId === group.id && visitedEdgeIds.includes(edge.id)
-      ) ?? false,
-    [typebot?.edges, visitedEdgeIds, group.id]
-  )
+  // Group is part of the path taken in the Test: a visited edge points into it.
+  // Gives the whole card an orange/bold border, matching the arrow trail. The
+  // set is derived once per response — see `computeExecutionTrail`.
+  const isVisited = executionTrail.visitedGroupIds.has(group.id)
 
   // Posição atual do fluxo no Test (rec. 1) e alvo de um jump/loop-back (rec. 4).
   const isCurrent = previewingBlock?.groupId === group.id

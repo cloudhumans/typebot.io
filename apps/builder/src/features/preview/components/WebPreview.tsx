@@ -7,6 +7,8 @@ import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
 import { findNextRunningBlockId } from '../helpers/findNextRunningBlockId'
+import { computeExecutionTrail } from '../helpers/computeExecutionTrail'
+import { createEmptyExecutionTrail } from '@/features/graph/types'
 import { ComponentProps, useEffect, useRef } from 'react'
 
 export const WebPreview = () => {
@@ -15,7 +17,7 @@ export const WebPreview = () => {
   const { startPreviewAtGroup, startPreviewAtEvent } = useEditor()
   const {
     setPreviewingBlock,
-    setVisitedEdgeIds,
+    setExecutionTrail,
     setRunningBlockId,
     setBlockResults,
     setJumpTargetGroupIds,
@@ -62,7 +64,7 @@ export const WebPreview = () => {
   }
 
   const resetTrail = () => {
-    setVisitedEdgeIds([])
+    setExecutionTrail(createEmptyExecutionTrail())
     setRunningBlockId(undefined)
     setBlockResults({})
     setJumpTargetGroupIds([])
@@ -105,7 +107,13 @@ export const WebPreview = () => {
         )
       }
       onEnd={() => setRunningBlockId(undefined)}
-      onVisitedEdges={(visitedEdgeIds) => setVisitedEdgeIds(visitedEdgeIds)}
+      // Reduce the cumulative visited-edge list to lookups once, here, instead
+      // of letting every edge and group scan it on every render.
+      onVisitedEdges={(visitedEdgeIds) =>
+        setExecutionTrail(
+          computeExecutionTrail({ visitedEdgeIds, edges: typebot.edges })
+        )
+      }
       onJumps={(jumpTargetGroupIds) =>
         setJumpTargetGroupIds(jumpTargetGroupIds)
       }

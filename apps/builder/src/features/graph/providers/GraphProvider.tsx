@@ -10,7 +10,11 @@ import {
   useState,
 } from 'react'
 import { graphPositionDefaultValue } from '../constants'
-import { ConnectingIds } from '../types'
+import {
+  ConnectingIds,
+  createEmptyExecutionTrail,
+  ExecutionTrail,
+} from '../types'
 
 type Position = Coordinates & { scale: number }
 
@@ -28,11 +32,12 @@ const graphContext = createContext<{
   setPreviewingBlock: Dispatch<SetStateAction<PreviewingBlock | undefined>>
   previewingEdge?: Edge
   setPreviewingEdge: Dispatch<SetStateAction<Edge | undefined>>
-  // Execution trail during the Test preview: ids of every edge already
-  // traversed (cumulative), and the block the flow is currently processing
-  // from (shows a spinner). Cleared when the Test closes/restarts.
-  visitedEdgeIds: string[]
-  setVisitedEdgeIds: Dispatch<SetStateAction<string[]>>
+  // Execution trail during the Test preview, already reduced to lookups (edge
+  // visit counts, last traversed edge, visited groups), plus the block the flow
+  // is currently processing from (shows a spinner). Cleared when the Test
+  // closes/restarts.
+  executionTrail: ExecutionTrail
+  setExecutionTrail: Dispatch<SetStateAction<ExecutionTrail>>
   runningBlockId?: string
   setRunningBlockId: Dispatch<SetStateAction<string | undefined>>
   // Per-block execution result during the Test (e.g., HTTP Request success or
@@ -77,7 +82,9 @@ export const GraphProvider = ({
   const [connectingIds, setConnectingIds] = useState<ConnectingIds | null>(null)
   const [previewingEdge, setPreviewingEdge] = useState<Edge>()
   const [previewingBlock, setPreviewingBlock] = useState<PreviewingBlock>()
-  const [visitedEdgeIds, setVisitedEdgeIds] = useState<string[]>([])
+  const [executionTrail, setExecutionTrail] = useState<ExecutionTrail>(
+    createEmptyExecutionTrail
+  )
   const [runningBlockId, setRunningBlockId] = useState<string>()
   const [blockResults, setBlockResults] = useState<
     Record<string, 'success' | 'error'>
@@ -112,8 +119,8 @@ export const GraphProvider = ({
         setConnectingIds,
         previewingEdge,
         setPreviewingEdge,
-        visitedEdgeIds,
-        setVisitedEdgeIds,
+        executionTrail,
+        setExecutionTrail,
         runningBlockId,
         setRunningBlockId,
         blockResults,
