@@ -43,10 +43,10 @@ export const WebPreview = () => {
           : undefined,
       })
       if (log.status === 'error') console.error(log)
-      // Resultado por bloco para o selo verde/vermelho: 'error' se houver
-      // qualquer log de erro; caso contrário, se o bloco logou algo (info ou
-      // success) conta como sucesso — o Sheets "Get row" loga 'info' no
-      // sucesso. Erro tem prioridade e persiste.
+      // Per-block result for the green/red badge: 'error' if there is any error
+      // log; otherwise a block that logged anything (info or success) counts as
+      // a success — Sheets "Get row" logs 'info' on success. Errors take
+      // priority and stick.
       if (log.blockId) {
         const blockId = log.blockId
         const status: 'success' | 'error' =
@@ -56,9 +56,10 @@ export const WebPreview = () => {
         )
       }
     })
-    // Um `continueChat` que falha só emite log de erro — sai antes de
-    // `onNewInputBlock`/`onEnd`, que são quem normalmente apaga o spinner. Sem
-    // isso o indicador de "executando" fica preso até reiniciar o preview.
+    // A failing `continueChat` only emits an error log — it returns before
+    // `onNewInputBlock`/`onEnd`, which are what normally clear the spinner.
+    // Without this the "running" indicator stays stuck until the preview is
+    // restarted.
     if (logs?.some((log) => log.status === 'error'))
       setRunningBlockId(undefined)
   }
@@ -96,11 +97,11 @@ export const WebPreview = () => {
             typebot.groups.find((g) => g.blocks.some((b) => b.id === block.id))
               ?.id ?? '',
         })
-        // Chegou num input: o fluxo parou de processar -> some o spinner.
+        // Reached an input: the flow stopped processing -> hide the spinner.
         setRunningBlockId(undefined)
       }}
-      // O usuário respondeu um input: o fluxo processa (server-side) até o
-      // próximo input. Coloca o spinner no próximo HTTP request desse trecho.
+      // The user answered an input: the flow processes (server-side) until the
+      // next input. Put the spinner on the next HTTP request in that stretch.
       onAnswer={({ blockId }) =>
         setRunningBlockId(
           findNextRunningBlockId({ typebot, answeredBlockId: blockId })
@@ -138,9 +139,9 @@ type PreviewBotProps = {
   resetTrail: () => void
 }
 
-// Uma instância por execução (remontada via `key` no restart/troca de grupo).
-// No mount limpa o rastro; o ref de "montado" impede que um callback de uma
-// execução abandonada (continueChat em voo) repopule o rastro da nova execução.
+// One instance per run (remounted through `key` on restart / group change). It
+// clears the trail on mount; the "mounted" ref keeps a callback from an
+// abandoned run (an in-flight continueChat) from repopulating the new trail.
 const PreviewBot = ({
   typebot,
   sessionId,

@@ -5,6 +5,7 @@ import {
   keyframes,
   Portal,
   useColorMode,
+  useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
@@ -19,7 +20,7 @@ import { eventWidth, groupWidth } from '../../constants'
 import { useGroupsStore } from '../../hooks/useGroupsStore'
 import { useShallow } from 'zustand/react/shallow'
 
-// "Formiguinhas" na última edge percorrida — dá sensação de avanço/direção.
+// Marching ants on the last traversed edge — conveys progress and direction.
 const marchingAnts = keyframes`
   from { stroke-dashoffset: 14; }
   to { stroke-dashoffset: 0; }
@@ -32,6 +33,9 @@ type Props = {
 
 export const Edge = ({ edge, fromGroupId }: Props) => {
   const isDark = useColorMode().colorMode === 'dark'
+  // Halo behind the "×N" label so it stays readable over the canvas: same
+  // light/dark pair the group cards use for their background.
+  const labelHaloColor = useColorModeValue('white', colors.gray[900])
   const { deleteEdge } = useTypebot()
   const {
     previewingEdge,
@@ -68,7 +72,7 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
   const isVisited = visitedCount > 0
   const isLastTraversed = executionTrail.lastTraversedEdgeId === edge.id
 
-  // Ponto médio da edge para posicionar o rótulo "×N" das passagens repetidas.
+  // Edge midpoint, where the "×N" label for repeated traversals is placed.
   const visiblePathRef = useRef<SVGPathElement | null>(null)
   const [labelPosition, setLabelPosition] = useState<{
     x: number
@@ -196,7 +200,7 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
         pointerEvents="none"
         sx={{
           transition: 'stroke 0.2s ease, stroke-width 0.2s ease',
-          // Última edge percorrida: "formiguinhas" laranja avançando.
+          // Last traversed edge: orange marching ants moving forward.
           ...(isVisited && isLastTraversed
             ? {
                 strokeDasharray: '8px 6px',
@@ -214,7 +218,7 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
           fontWeight="bold"
           textAnchor="middle"
           dominantBaseline="central"
-          stroke={isDark ? colors.gray[900] : '#ffffff'}
+          stroke={labelHaloColor}
           strokeWidth="3px"
           paintOrder="stroke"
           style={{ pointerEvents: 'none', userSelect: 'none' }}

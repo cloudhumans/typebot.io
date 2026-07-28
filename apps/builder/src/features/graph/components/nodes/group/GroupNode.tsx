@@ -36,8 +36,10 @@ type Props = {
   groupIndex: number
 }
 
-// Glow pulsante em volta do card onde o fluxo do Test está AGORA — destaca a
-// "posição atual" mesmo com todo o rastro laranja (útil em loops/jumps).
+// Pulsing glow around the card the Test flow is on right NOW — highlights the
+// "current position" even when the whole trail is orange (useful in loops and
+// jumps). The rgba below is `orange.500` (#e67200) written out by hand: theme
+// tokens can't be resolved inside `keyframes`.
 const currentGlow = keyframes`
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(230, 114, 0, 0.5); }
   50% { opacity: 0.5; box-shadow: 0 0 12px 3px rgba(230, 114, 0, 0.4); }
@@ -81,7 +83,8 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
   // set is derived once per response — see `computeExecutionTrail`.
   const isVisited = executionTrail.visitedGroupIds.has(group.id)
 
-  // Posição atual do fluxo no Test (rec. 1) e alvo de um jump/loop-back (rec. 4).
+  // Where the Test flow is right now, and whether this group is the target of a
+  // jump/loop-back.
   const isCurrent = previewingBlock?.groupId === group.id
   const isJumpTarget = jumpTargetGroupIds.includes(group.id)
 

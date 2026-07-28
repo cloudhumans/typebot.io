@@ -108,8 +108,8 @@ export const BlockNode = ({
 
   const isSearchHighlighted = highlightedBlockId === block.id
 
-  // Bloco de fronteira do rastro do Test: o fluxo está processando a partir
-  // dele (ex.: HTTP request rodando no servidor) -> mostra um spinner.
+  // Frontier block of the Test trail: the flow is processing from it (e.g. an
+  // HTTP request running server-side) -> show a spinner.
   const isRunning = runningBlockId === block.id
 
   // Integration blocks with an execution status in the Test panel (HTTP request
