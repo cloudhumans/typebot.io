@@ -6,12 +6,22 @@ import { useGraph } from '@/features/graph/providers/GraphProvider'
 import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
+import { findNextRunningBlockId } from '../helpers/findNextRunningBlockId'
+import { computeExecutionTrail } from '../helpers/computeExecutionTrail'
+import { createEmptyExecutionTrail } from '@/features/graph/types'
+import { ComponentProps, useEffect, useRef } from 'react'
 
 export const WebPreview = () => {
   const { user } = useUser()
   const { typebot } = useTypebot()
   const { startPreviewAtGroup, startPreviewAtEvent } = useEditor()
-  const { setPreviewingBlock } = useGraph()
+  const {
+    setPreviewingBlock,
+    setExecutionTrail,
+    setRunningBlockId,
+    setBlockResults,
+    setJumpTargetGroupIds,
+  } = useGraph()
 
   const { showToast } = useToast()
 
@@ -33,14 +43,42 @@ export const WebPreview = () => {
           : undefined,
       })
       if (log.status === 'error') console.error(log)
+      // Per-block result for the green/red badge: 'error' if there is any error
+      // log; otherwise a block that logged anything (info or success) counts as
+      // a success — Sheets "Get row" logs 'info' on success. Errors take
+      // priority and stick.
+      if (log.blockId) {
+        const blockId = log.blockId
+        const status: 'success' | 'error' =
+          log.status === 'error' ? 'error' : 'success'
+        setBlockResults((prev) =>
+          prev[blockId] === 'error' ? prev : { ...prev, [blockId]: status }
+        )
+      }
     })
+    // A failing `continueChat` only emits an error log — it returns before
+    // `onNewInputBlock`/`onEnd`, which are what normally clear the spinner.
+    // Without this the "running" indicator stays stuck until the preview is
+    // restarted.
+    if (logs?.some((log) => log.status === 'error'))
+      setRunningBlockId(undefined)
+  }
+
+  const resetTrail = () => {
+    setExecutionTrail(createEmptyExecutionTrail())
+    setRunningBlockId(undefined)
+    setBlockResults({})
+    setJumpTargetGroupIds([])
+    setPreviewingBlock(undefined)
   }
 
   if (!typebot) return null
 
   return (
-    <Standard
-      key={`web-preview${startPreviewAtGroup ?? ''}`}
+    <PreviewBot
+      key={`web-preview-${startPreviewAtGroup ?? ''}-${
+        startPreviewAtEvent ?? ''
+      }`}
       typebot={typebot}
       sessionId={user ? `${typebot.id}-${user.id}` : undefined}
       userId={user?.id}
@@ -51,15 +89,108 @@ export const WebPreview = () => {
           ? { type: 'event', eventId: startPreviewAtEvent }
           : undefined
       }
-      onNewInputBlock={(block) =>
+      onNewLogs={handleNewLogs}
+      onNewInputBlock={(block) => {
         setPreviewingBlock({
           id: block.id,
           groupId:
             typebot.groups.find((g) => g.blocks.some((b) => b.id === block.id))
               ?.id ?? '',
         })
+        // Reached an input: the flow stopped processing -> hide the spinner.
+        setRunningBlockId(undefined)
+      }}
+      // The user answered an input: the flow processes (server-side) until the
+      // next input. Put the spinner on the next HTTP request in that stretch.
+      onAnswer={({ blockId }) =>
+        setRunningBlockId(
+          findNextRunningBlockId({ typebot, answeredBlockId: blockId })
+        )
       }
-      onNewLogs={handleNewLogs}
+      onEnd={() => setRunningBlockId(undefined)}
+      // Reduce the cumulative visited-edge list to lookups once, here, instead
+      // of letting every edge and group scan it on every render.
+      onVisitedEdges={(visitedEdgeIds) =>
+        setExecutionTrail(
+          computeExecutionTrail({ visitedEdgeIds, edges: typebot.edges })
+        )
+      }
+      onJumps={(jumpTargetGroupIds) =>
+        setJumpTargetGroupIds(jumpTargetGroupIds)
+      }
+      resetTrail={resetTrail}
+    />
+  )
+}
+
+type PreviewBotProps = {
+  typebot: ComponentProps<typeof Standard>['typebot']
+  sessionId?: string
+  userId?: string
+  startFrom?: ComponentProps<typeof Standard>['startFrom']
+  onNewLogs: NonNullable<ComponentProps<typeof Standard>['onNewLogs']>
+  onNewInputBlock: NonNullable<
+    ComponentProps<typeof Standard>['onNewInputBlock']
+  >
+  onAnswer: NonNullable<ComponentProps<typeof Standard>['onAnswer']>
+  onEnd: NonNullable<ComponentProps<typeof Standard>['onEnd']>
+  onVisitedEdges: (visitedEdgeIds: string[]) => void
+  onJumps: (jumpTargetGroupIds: string[]) => void
+  resetTrail: () => void
+}
+
+// One instance per run (remounted through `key` on restart / group change). It
+// clears the trail on mount; the "mounted" ref keeps a callback from an
+// abandoned run (an in-flight continueChat) from repopulating the new trail.
+const PreviewBot = ({
+  typebot,
+  sessionId,
+  userId,
+  startFrom,
+  onNewLogs,
+  onNewInputBlock,
+  onAnswer,
+  onEnd,
+  onVisitedEdges,
+  onJumps,
+  resetTrail,
+}: PreviewBotProps) => {
+  const isMounted = useRef(true)
+
+  useEffect(() => {
+    isMounted.current = true
+    resetTrail()
+    return () => {
+      isMounted.current = false
+      resetTrail()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <Standard
+      typebot={typebot}
+      sessionId={sessionId}
+      userId={userId}
+      startFrom={startFrom}
+      onNewLogs={(logs) => {
+        if (isMounted.current) onNewLogs(logs)
+      }}
+      onNewInputBlock={(block) => {
+        if (isMounted.current) onNewInputBlock(block)
+      }}
+      onAnswer={(answer) => {
+        if (isMounted.current) onAnswer(answer)
+      }}
+      onEnd={() => {
+        if (isMounted.current) onEnd()
+      }}
+      onVisitedEdges={(visitedEdgeIds) => {
+        if (isMounted.current) onVisitedEdges(visitedEdgeIds)
+      }}
+      onJumps={(jumpTargetGroupIds) => {
+        if (isMounted.current) onJumps(jumpTargetGroupIds)
+      }}
       style={{
         borderWidth: '1px',
         borderRadius: '0.25rem',

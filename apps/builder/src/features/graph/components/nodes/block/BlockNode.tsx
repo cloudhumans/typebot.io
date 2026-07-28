@@ -3,6 +3,7 @@ import {
   HStack,
   Popover,
   PopoverTrigger,
+  Spinner,
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react'
@@ -22,6 +23,8 @@ import {
   isBubbleBlock,
   isTextBubbleBlock,
 } from '@typebot.io/schemas/helpers'
+import { executionStatusBlockTypes } from '@/features/graph/constants'
+import { CheckIcon, CloseIcon } from '@/components/icons'
 import { BlockNodeContent } from './BlockNodeContent'
 import { BlockSettings, SettingsPopoverContent } from './SettingsPopoverContent'
 import { BlockNodeContextMenu } from './BlockNodeContextMenu'
@@ -89,6 +92,8 @@ export const BlockNode = ({
     isReadOnly,
     isAnalytics,
     previewingBlock,
+    runningBlockId,
+    blockResults,
   } = useGraph()
   const { mouseOverBlock, setMouseOverBlock } = useBlockDnd()
   const { highlightedBlockId } = useFlowSearch()
@@ -102,6 +107,18 @@ export const BlockNode = ({
     previewingBlock?.id === block.id
 
   const isSearchHighlighted = highlightedBlockId === block.id
+
+  // Frontier block of the Test trail: the flow is processing from it (e.g. an
+  // HTTP request running server-side) -> show a spinner.
+  const isRunning = runningBlockId === block.id
+
+  // Integration blocks with an execution status in the Test panel (HTTP request
+  // / webhook family and Google Sheets): they get a result badge (green ✓ / red
+  // ✕) in the bottom right corner.
+  const isExecutionStatusBlock = executionStatusBlockTypes.includes(block.type)
+  const blockResult = isExecutionStatusBlock
+    ? blockResults[block.id]
+    : undefined
 
   const groupId = typebot?.groups.at(indices.groupIndex)?.id
 
@@ -290,6 +307,48 @@ export const BlockNode = ({
               className="prevent-group-drag"
               pointerEvents={isAnalytics || isDraggingGraph ? 'none' : 'auto'}
             >
+              {isRunning && (
+                <Flex
+                  pos="absolute"
+                  top="-9px"
+                  right="-9px"
+                  zIndex={3}
+                  bg={bg}
+                  rounded="full"
+                  p="3px"
+                  shadow="sm"
+                  borderWidth="1px"
+                  borderColor="orange.500"
+                  data-testid="block-running-spinner"
+                >
+                  <Spinner
+                    size="sm"
+                    color="orange.500"
+                    thickness="2px"
+                    speed="0.7s"
+                  />
+                </Flex>
+              )}
+              {blockResult && (
+                <Flex
+                  pos="absolute"
+                  bottom="8px"
+                  right="10px"
+                  zIndex={3}
+                  pointerEvents="none"
+                  data-testid={`block-result-${blockResult}`}
+                >
+                  {blockResult === 'success' ? (
+                    <CheckIcon
+                      boxSize="26px"
+                      color="green.400"
+                      strokeWidth={3}
+                    />
+                  ) : (
+                    <CloseIcon boxSize="24px" color="red.400" strokeWidth={3} />
+                  )}
+                </Flex>
+              )}
               <HStack
                 flex="1"
                 userSelect="none"

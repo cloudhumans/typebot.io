@@ -90,6 +90,9 @@ export const startChatPreview = async ({
     },
     messages,
     input,
+    visitedEdgeIds: newSessionState.previewMetadata?.trailEdgeIds ?? [],
+    jumpTargetGroupIds:
+      newSessionState.previewMetadata?.jumpTargetGroupIds ?? [],
     dynamicTheme,
     logs,
     clientSideActions,
