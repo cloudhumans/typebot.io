@@ -32,7 +32,7 @@ export const verifyCognitoToken = async ({
 }: {
   cognitoToken: string
   cognitoIssuerUrl: string
-  cognitoAppClientId: string
+  cognitoAppClientId: string | string[]
 }): Promise<JWTPayload & CognitoJWTPayload> => {
   if (process.env.NODE_ENV === 'development') {
     // Dev bypass: decode JWT payload without signature verification
