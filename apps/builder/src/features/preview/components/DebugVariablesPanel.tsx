@@ -136,8 +136,6 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
         </Text>
       </Flex>
 
-      {/* Painel com a tabela. Aberto: colado ao test (right 0). Peek (hover):
-          uma fresta à esquerda da aba. Fechado: largura 0. */}
       <Box
         pos="absolute"
         top="0"
