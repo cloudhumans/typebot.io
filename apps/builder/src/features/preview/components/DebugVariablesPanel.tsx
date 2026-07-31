@@ -142,7 +142,7 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
         right={isOpen ? '0' : `${HANDLE_WIDTH}px`}
         h="100%"
         bgColor={bgColor}
-        borderLeftWidth={panelWidth > 0 ? '1px' : '0'}
+        borderLeftWidth={isOpen ? '1px' : '0'}
         borderColor={borderColor}
         overflow="hidden"
         shadow={isOpen ? 'lg' : 'none'}
