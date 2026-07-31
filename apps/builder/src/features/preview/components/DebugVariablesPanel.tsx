@@ -100,6 +100,7 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
         as="button"
         type="button"
         aria-label="Alternar tabela de variáveis de debug"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
         direction="column"
         align="center"
