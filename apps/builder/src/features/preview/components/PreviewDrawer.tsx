@@ -48,7 +48,6 @@ export const PreviewDrawer = () => {
 
   const handleRestartClick = async () => {
     await save()
-    setDebugVariables([])
     setRestartKey((key) => key + 1)
   }
 
