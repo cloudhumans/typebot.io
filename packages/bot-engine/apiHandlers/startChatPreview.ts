@@ -1,4 +1,5 @@
 import { StartFrom, StartTypebot } from '@typebot.io/schemas'
+import { parseDebugVariables } from '../parseDebugVariables'
 import { restartSession } from '../queries/restartSession'
 import { saveStateToDatabase } from '../saveStateToDatabase'
 import { startSession } from '../startSession'
@@ -90,6 +91,7 @@ export const startChatPreview = async ({
     },
     messages,
     input,
+    variables: parseDebugVariables(newSessionState),
     visitedEdgeIds: newSessionState.previewMetadata?.trailEdgeIds ?? [],
     jumpTargetGroupIds:
       newSessionState.previewMetadata?.jumpTargetGroupIds ?? [],

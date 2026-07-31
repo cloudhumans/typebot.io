@@ -328,6 +328,16 @@ export const typebotInChatReply = z.preprocess(
   ])
 )
 
+// Shape of one variable in the preview-only snapshot consumed by the builder
+// debug panel. Exported so the embeds and the panel share a single definition —
+// a divergence becomes a compile error instead of a silent mismatch.
+export const debugVariableSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  value: z.unknown(),
+})
+export type DebugVariable = z.infer<typeof debugVariableSchema>
+
 const chatResponseBaseSchema = z.object({
   lastMessageNewFormat: z
     .string()
@@ -383,6 +393,12 @@ const chatResponseBaseSchema = z.object({
     .optional()
     .describe(
       'If progress bar is enabled, this field will return a number between 0 and 100 indicating the current progress based on the longest remaining path of the flow.'
+    ),
+  variables: z
+    .array(debugVariableSchema)
+    .optional()
+    .describe(
+      'Preview-only: snapshot of the currently filled variables, used by the builder debug panel. Not returned for live (non-preview) sessions.'
     ),
   visitedEdgeIds: z
     .array(z.string())

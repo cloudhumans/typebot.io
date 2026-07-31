@@ -6,12 +6,17 @@ import { useGraph } from '@/features/graph/providers/GraphProvider'
 import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
+import { DebugVariable } from './DebugVariablesPanel'
 import { findNextRunningBlockId } from '../helpers/findNextRunningBlockId'
 import { computeExecutionTrail } from '../helpers/computeExecutionTrail'
 import { createEmptyExecutionTrail } from '@/features/graph/types'
 import { ComponentProps, useEffect, useRef } from 'react'
 
-export const WebPreview = () => {
+type Props = {
+  onNewVariables?: (variables: DebugVariable[]) => void
+}
+
+export const WebPreview = ({ onNewVariables }: Props) => {
   const { user } = useUser()
   const { typebot } = useTypebot()
   const { startPreviewAtGroup, startPreviewAtEvent } = useEditor()
@@ -74,6 +79,10 @@ export const WebPreview = () => {
 
   if (!typebot) return null
 
+  // `key` amarra a identidade da execução (typebot + grupo/evento de início).
+  // Quando muda, o PreviewBot remonta — o que invalida o guard da execução
+  // anterior e limpa o painel de variáveis e a trilha de execução, tanto no
+  // restart quanto ao dar play num grupo/evento específico.
   return (
     <PreviewBot
       key={`web-preview-${startPreviewAtGroup ?? ''}-${
@@ -118,6 +127,7 @@ export const WebPreview = () => {
       onJumps={(jumpTargetGroupIds) =>
         setJumpTargetGroupIds(jumpTargetGroupIds)
       }
+      onNewVariables={onNewVariables}
       resetTrail={resetTrail}
     />
   )
@@ -136,12 +146,14 @@ type PreviewBotProps = {
   onEnd: NonNullable<ComponentProps<typeof Standard>['onEnd']>
   onVisitedEdges: (visitedEdgeIds: string[]) => void
   onJumps: (jumpTargetGroupIds: string[]) => void
+  onNewVariables?: (variables: DebugVariable[]) => void
   resetTrail: () => void
 }
 
 // One instance per run (remounted through `key` on restart / group change). It
-// clears the trail on mount; the "mounted" ref keeps a callback from an
-// abandoned run (an in-flight continueChat) from repopulating the new trail.
+// clears the trail and the variables panel on mount; the "mounted" ref keeps a
+// callback from an abandoned run (an in-flight continueChat) from repopulating
+// the new trail or panel.
 const PreviewBot = ({
   typebot,
   sessionId,
@@ -153,6 +165,7 @@ const PreviewBot = ({
   onEnd,
   onVisitedEdges,
   onJumps,
+  onNewVariables,
   resetTrail,
 }: PreviewBotProps) => {
   const isMounted = useRef(true)
@@ -160,6 +173,7 @@ const PreviewBot = ({
   useEffect(() => {
     isMounted.current = true
     resetTrail()
+    onNewVariables?.([])
     return () => {
       isMounted.current = false
       resetTrail()
@@ -190,6 +204,9 @@ const PreviewBot = ({
       }}
       onJumps={(jumpTargetGroupIds) => {
         if (isMounted.current) onJumps(jumpTargetGroupIds)
+      }}
+      onNewVariables={(variables) => {
+        if (isMounted.current) onNewVariables?.(variables)
       }}
       style={{
         borderWidth: '1px',
