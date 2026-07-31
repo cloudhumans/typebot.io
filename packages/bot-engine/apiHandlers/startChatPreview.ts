@@ -1,5 +1,5 @@
 import { StartFrom, StartTypebot } from '@typebot.io/schemas'
-import { isDefined } from '@typebot.io/lib/utils'
+import { parseDebugVariables } from '../parseDebugVariables'
 import { restartSession } from '../queries/restartSession'
 import { saveStateToDatabase } from '../saveStateToDatabase'
 import { startSession } from '../startSession'
@@ -91,13 +91,7 @@ export const startChatPreview = async ({
     },
     messages,
     input,
-    variables: (newSessionState.typebotsQueue.at(0)?.typebot.variables ?? [])
-      .filter((variable) => isDefined(variable.value))
-      .map((variable) => ({
-        id: variable.id,
-        name: variable.name,
-        value: variable.value,
-      })),
+    variables: parseDebugVariables(newSessionState),
     visitedEdgeIds: newSessionState.previewMetadata?.trailEdgeIds ?? [],
     jumpTargetGroupIds:
       newSessionState.previewMetadata?.jumpTargetGroupIds ?? [],

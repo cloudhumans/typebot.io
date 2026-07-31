@@ -3,6 +3,7 @@ import { isDefined, isNotDefined } from '@typebot.io/lib/utils'
 import { getSession } from '../queries/getSession'
 import { continueBotFlow } from '../continueBotFlow'
 import { filterPotentiallySensitiveLogs } from '../logs/filterPotentiallySensitiveLogs'
+import { parseDebugVariables } from '../parseDebugVariables'
 import { parseDynamicTheme } from '../parseDynamicTheme'
 import { saveStateToDatabase } from '../saveStateToDatabase'
 import { computeCurrentProgress } from '../computeCurrentProgress'
@@ -115,15 +116,7 @@ export const continueChat = async ({
     input,
     resultId: session.state.typebotsQueue.at(0)?.resultId,
     clientSideActions,
-    variables: isPreview
-      ? (newSessionState.typebotsQueue.at(0)?.typebot.variables ?? [])
-          .filter((variable) => isDefined(variable.value))
-          .map((variable) => ({
-            id: variable.id,
-            name: variable.name,
-            value: variable.value,
-          }))
-      : undefined,
+    variables: isPreview ? parseDebugVariables(newSessionState) : undefined,
     visitedEdgeIds: isPreview
       ? newSessionState.previewMetadata?.trailEdgeIds ?? []
       : undefined,
