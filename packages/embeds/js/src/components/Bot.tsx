@@ -15,7 +15,7 @@ import {
 } from '@/utils/storage'
 import { setCssVariablesValue } from '@/utils/setCssVariablesValue'
 import immutableCss from '../assets/immutable.css'
-import { Font, InputBlock, StartFrom } from '@typebot.io/schemas'
+import { DebugVariable, Font, InputBlock, StartFrom } from '@typebot.io/schemas'
 import { clsx } from 'clsx'
 import { HTTPError } from 'ky'
 import { injectFont } from '@/utils/injectFont'
@@ -47,9 +47,7 @@ export type BotProps = {
   onInit?: () => void
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
-  onNewVariables?: (
-    variables: { id: string; name: string; value?: unknown }[]
-  ) => void
+  onNewVariables?: (variables: DebugVariable[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
   onJumps?: (jumpTargetGroupIds: string[]) => void
   onChatStatePersisted?: (isEnabled: boolean) => void
@@ -272,9 +270,7 @@ type BotContentProps = {
   onAnswer?: (answer: { message: string; blockId: string }) => void
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
-  onNewVariables?: (
-    variables: { id: string; name: string; value?: unknown }[]
-  ) => void
+  onNewVariables?: (variables: DebugVariable[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
   onJumps?: (jumpTargetGroupIds: string[]) => void
 }

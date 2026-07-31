@@ -18,13 +18,13 @@ import {
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react'
+import { DebugVariable } from '@typebot.io/schemas'
 import { useState } from 'react'
 
-export type DebugVariable = {
-  id: string
-  name: string
-  value?: unknown
-}
+// Re-exported so consumers keep importing it from the panel, while the single
+// definition lives in the schema (`debugVariableSchema`) alongside the API
+// response that produces it.
+export type { DebugVariable }
 
 const PANEL_WIDTH = 360
 const HANDLE_WIDTH = 24

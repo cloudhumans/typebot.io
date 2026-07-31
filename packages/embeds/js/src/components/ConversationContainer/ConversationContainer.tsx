@@ -1,5 +1,6 @@
 import {
   ContinueChatResponse,
+  DebugVariable,
   InputBlock,
   Theme,
   ChatLog,
@@ -68,9 +69,7 @@ type Props = {
   onAnswer?: (answer: { message: string; blockId: string }) => void
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
-  onNewVariables?: (
-    variables: { id: string; name: string; value?: unknown }[]
-  ) => void
+  onNewVariables?: (variables: DebugVariable[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
   onJumps?: (jumpTargetGroupIds: string[]) => void
   onProgressUpdate?: (progress: number) => void
