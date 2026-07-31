@@ -1,8 +1,10 @@
 import {
   Button,
+  Flex,
   FormControl,
   FormHelperText,
   FormLabel,
+  HStack,
   Input,
   Modal,
   ModalBody,
@@ -12,12 +14,15 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Text,
   Textarea,
   VStack,
   Alert,
   AlertIcon,
 } from '@chakra-ui/react'
+import { ToolIcon } from '@/components/icons'
 import { Typebot } from '@typebot.io/schemas'
+import { useTranslate } from '@tolgee/react'
 import React, { useEffect, useState } from 'react'
 
 type WorkspaceOption = {
@@ -44,6 +49,7 @@ export const CreateToolModal = ({
   workspaces,
   currentWorkspaceId,
 }: Props) => {
+  const { t } = useTranslate()
   const [name, setName] = useState('')
   const [tenant, setTenant] = useState('')
   const [toolDescription, setToolDescription] = useState('')
@@ -117,7 +123,22 @@ export const CreateToolModal = ({
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Create new Tool</ModalHeader>
+        <ModalHeader>
+          <HStack spacing={3}>
+            <Flex
+              flexShrink={0}
+              boxSize="40px"
+              borderRadius="xl"
+              bg="modalHeaderIconBg"
+              color="modalHeaderIconFg"
+              align="center"
+              justify="center"
+            >
+              <ToolIcon boxSize="20px" />
+            </Flex>
+            <Text>{t('createTool.title')}</Text>
+          </HStack>
+        </ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4}>
@@ -156,14 +177,13 @@ export const CreateToolModal = ({
               </FormHelperText>
             </FormControl>
             <FormControl isRequired>
-              <FormLabel>Tool description</FormLabel>
+              <FormLabel>{t('createTool.descriptionLabel')}</FormLabel>
               <Alert status="info" mb={2} borderRadius="md">
                 <AlertIcon />
-                Extremamente importante: essa descrição será usada pelo nosso
-                agente para decidir qual tool utilizar durante o reasoning loop.
+                {t('createTool.descriptionWarning')}
               </Alert>
               <Textarea
-                placeholder="Ex: 'Busca pedidos por CPF via API X e retorna status e detalhes do pedido'"
+                placeholder={t('createTool.descriptionPlaceholder')}
                 value={toolDescription}
                 onChange={(e) => setToolDescription(e.target.value)}
                 rows={4}
@@ -174,7 +194,7 @@ export const CreateToolModal = ({
 
         <ModalFooter>
           <Button variant="ghost" mr={3} onClick={onClose}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             colorScheme="blue"
@@ -182,7 +202,7 @@ export const CreateToolModal = ({
             isLoading={isLoading}
             isDisabled={!isValid}
           >
-            Create
+            {t('create')}
           </Button>
         </ModalFooter>
       </ModalContent>

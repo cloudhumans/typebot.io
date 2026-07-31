@@ -7,6 +7,9 @@ import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
 import { ContinueChatResponse } from '@typebot.io/schemas'
 import { DebugVariable } from './DebugVariablesPanel'
+import { findNextRunningBlockId } from '../helpers/findNextRunningBlockId'
+import { computeExecutionTrail } from '../helpers/computeExecutionTrail'
+import { createEmptyExecutionTrail } from '@/features/graph/types'
 import { ComponentProps, useEffect, useRef } from 'react'
 
 type Props = {
@@ -17,7 +20,13 @@ export const WebPreview = ({ onNewVariables }: Props) => {
   const { user } = useUser()
   const { typebot } = useTypebot()
   const { startPreviewAtGroup, startPreviewAtEvent } = useEditor()
-  const { setPreviewingBlock } = useGraph()
+  const {
+    setPreviewingBlock,
+    setExecutionTrail,
+    setRunningBlockId,
+    setBlockResults,
+    setJumpTargetGroupIds,
+  } = useGraph()
 
   const { showToast } = useToast()
 
@@ -39,15 +48,41 @@ export const WebPreview = ({ onNewVariables }: Props) => {
           : undefined,
       })
       if (log.status === 'error') console.error(log)
+      // Per-block result for the green/red badge: 'error' if there is any error
+      // log; otherwise a block that logged anything (info or success) counts as
+      // a success — Sheets "Get row" logs 'info' on success. Errors take
+      // priority and stick.
+      if (log.blockId) {
+        const blockId = log.blockId
+        const status: 'success' | 'error' =
+          log.status === 'error' ? 'error' : 'success'
+        setBlockResults((prev) =>
+          prev[blockId] === 'error' ? prev : { ...prev, [blockId]: status }
+        )
+      }
     })
+    // A failing `continueChat` only emits an error log — it returns before
+    // `onNewInputBlock`/`onEnd`, which are what normally clear the spinner.
+    // Without this the "running" indicator stays stuck until the preview is
+    // restarted.
+    if (logs?.some((log) => log.status === 'error'))
+      setRunningBlockId(undefined)
+  }
+
+  const resetTrail = () => {
+    setExecutionTrail(createEmptyExecutionTrail())
+    setRunningBlockId(undefined)
+    setBlockResults({})
+    setJumpTargetGroupIds([])
+    setPreviewingBlock(undefined)
   }
 
   if (!typebot) return null
 
   // `key` amarra a identidade da execução (typebot + grupo/evento de início).
-  // Quando muda, o PreviewBot remonta — o que invalida o guard de variáveis da
-  // execução anterior e limpa o painel, tanto no restart quanto ao dar play num
-  // grupo/evento específico.
+  // Quando muda, o PreviewBot remonta — o que invalida o guard da execução
+  // anterior e limpa o painel de variáveis e a trilha de execução, tanto no
+  // restart quanto ao dar play num grupo/evento específico.
   return (
     <PreviewBot
       key={`web-preview-${startPreviewAtGroup ?? ''}-${
@@ -63,16 +98,37 @@ export const WebPreview = ({ onNewVariables }: Props) => {
           ? { type: 'event', eventId: startPreviewAtEvent }
           : undefined
       }
-      onNewInputBlock={(block) =>
+      onNewLogs={handleNewLogs}
+      onNewInputBlock={(block) => {
         setPreviewingBlock({
           id: block.id,
           groupId:
             typebot.groups.find((g) => g.blocks.some((b) => b.id === block.id))
               ?.id ?? '',
         })
+        // Reached an input: the flow stopped processing -> hide the spinner.
+        setRunningBlockId(undefined)
+      }}
+      // The user answered an input: the flow processes (server-side) until the
+      // next input. Put the spinner on the next HTTP request in that stretch.
+      onAnswer={({ blockId }) =>
+        setRunningBlockId(
+          findNextRunningBlockId({ typebot, answeredBlockId: blockId })
+        )
       }
-      onNewLogs={handleNewLogs}
+      onEnd={() => setRunningBlockId(undefined)}
+      // Reduce the cumulative visited-edge list to lookups once, here, instead
+      // of letting every edge and group scan it on every render.
+      onVisitedEdges={(visitedEdgeIds) =>
+        setExecutionTrail(
+          computeExecutionTrail({ visitedEdgeIds, edges: typebot.edges })
+        )
+      }
+      onJumps={(jumpTargetGroupIds) =>
+        setJumpTargetGroupIds(jumpTargetGroupIds)
+      }
       onNewVariables={onNewVariables}
+      resetTrail={resetTrail}
     />
   )
 }
@@ -82,32 +138,45 @@ type PreviewBotProps = {
   sessionId?: string
   userId?: string
   startFrom?: ComponentProps<typeof Standard>['startFrom']
-  onNewInputBlock: NonNullable<ComponentProps<typeof Standard>['onNewInputBlock']>
   onNewLogs: NonNullable<ComponentProps<typeof Standard>['onNewLogs']>
+  onNewInputBlock: NonNullable<
+    ComponentProps<typeof Standard>['onNewInputBlock']
+  >
+  onAnswer: NonNullable<ComponentProps<typeof Standard>['onAnswer']>
+  onEnd: NonNullable<ComponentProps<typeof Standard>['onEnd']>
+  onVisitedEdges: (visitedEdgeIds: string[]) => void
+  onJumps: (jumpTargetGroupIds: string[]) => void
   onNewVariables?: (variables: DebugVariable[]) => void
+  resetTrail: () => void
 }
 
-// Uma instância por execução (remontada via `key` no pai). O ref de "montado"
-// vale só para ESTA execução: quando ela é abandonada (restart ou troca de
-// grupo), a instância desmonta e um `continueChat` em voo dela não repopula
-// mais o painel. No mount, zera as variáveis para não herdar valores da
-// execução anterior.
+// One instance per run (remounted through `key` on restart / group change). It
+// clears the trail and the variables panel on mount; the "mounted" ref keeps a
+// callback from an abandoned run (an in-flight continueChat) from repopulating
+// the new trail or panel.
 const PreviewBot = ({
   typebot,
   sessionId,
   userId,
   startFrom,
-  onNewInputBlock,
   onNewLogs,
+  onNewInputBlock,
+  onAnswer,
+  onEnd,
+  onVisitedEdges,
+  onJumps,
   onNewVariables,
+  resetTrail,
 }: PreviewBotProps) => {
   const isMounted = useRef(true)
 
   useEffect(() => {
     isMounted.current = true
+    resetTrail()
     onNewVariables?.([])
     return () => {
       isMounted.current = false
+      resetTrail()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -118,8 +187,24 @@ const PreviewBot = ({
       sessionId={sessionId}
       userId={userId}
       startFrom={startFrom}
-      onNewInputBlock={onNewInputBlock}
-      onNewLogs={onNewLogs}
+      onNewLogs={(logs) => {
+        if (isMounted.current) onNewLogs(logs)
+      }}
+      onNewInputBlock={(block) => {
+        if (isMounted.current) onNewInputBlock(block)
+      }}
+      onAnswer={(answer) => {
+        if (isMounted.current) onAnswer(answer)
+      }}
+      onEnd={() => {
+        if (isMounted.current) onEnd()
+      }}
+      onVisitedEdges={(visitedEdgeIds) => {
+        if (isMounted.current) onVisitedEdges(visitedEdgeIds)
+      }}
+      onJumps={(jumpTargetGroupIds) => {
+        if (isMounted.current) onJumps(jumpTargetGroupIds)
+      }}
       onNewVariables={(variables) => {
         if (isMounted.current) onNewVariables?.(variables)
       }}

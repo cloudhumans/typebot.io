@@ -50,6 +50,8 @@ export type BotProps = {
   onNewVariables?: (
     variables: { id: string; name: string; value?: unknown }[]
   ) => void
+  onVisitedEdges?: (visitedEdgeIds: string[]) => void
+  onJumps?: (jumpTargetGroupIds: string[]) => void
   onChatStatePersisted?: (isEnabled: boolean) => void
 }
 
@@ -172,6 +174,8 @@ export const Bot = (props: BotProps & { class?: string }) => {
         props.onNewInputBlock(data.input)
       if (data.logs) props.onNewLogs?.(data.logs)
       if (data.variables) props.onNewVariables?.(data.variables)
+      if (data.visitedEdgeIds) props.onVisitedEdges?.(data.visitedEdgeIds)
+      if (data.jumpTargetGroupIds) props.onJumps?.(data.jumpTargetGroupIds)
       props.onChatStatePersisted?.(false)
     }
 
@@ -248,6 +252,8 @@ export const Bot = (props: BotProps & { class?: string }) => {
             onNewInputBlock={props.onNewInputBlock}
             onNewLogs={props.onNewLogs}
             onNewVariables={props.onNewVariables}
+            onVisitedEdges={props.onVisitedEdges}
+            onJumps={props.onJumps}
             onAnswer={props.onAnswer}
             onEnd={props.onEnd}
           />
@@ -269,6 +275,8 @@ type BotContentProps = {
   onNewVariables?: (
     variables: { id: string; name: string; value?: unknown }[]
   ) => void
+  onVisitedEdges?: (visitedEdgeIds: string[]) => void
+  onJumps?: (jumpTargetGroupIds: string[]) => void
 }
 
 const BotContent = (props: BotContentProps) => {
@@ -346,6 +354,8 @@ const BotContent = (props: BotContentProps) => {
         onEnd={props.onEnd}
         onNewLogs={props.onNewLogs}
         onNewVariables={props.onNewVariables}
+        onVisitedEdges={props.onVisitedEdges}
+        onJumps={props.onJumps}
         onProgressUpdate={setProgressValue}
       />
       <Show

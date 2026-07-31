@@ -10,6 +10,8 @@ export const defaultBotProps: BotProps = {
   onInit: undefined,
   onNewLogs: undefined,
   onNewVariables: undefined,
+  onVisitedEdges: undefined,
+  onJumps: undefined,
   isPreview: undefined,
   startFrom: undefined,
   prefilledVariables: undefined,

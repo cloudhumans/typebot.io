@@ -10,7 +10,11 @@ import {
   useState,
 } from 'react'
 import { graphPositionDefaultValue } from '../constants'
-import { ConnectingIds } from '../types'
+import {
+  ConnectingIds,
+  createEmptyExecutionTrail,
+  ExecutionTrail,
+} from '../types'
 
 type Position = Coordinates & { scale: number }
 
@@ -28,6 +32,24 @@ const graphContext = createContext<{
   setPreviewingBlock: Dispatch<SetStateAction<PreviewingBlock | undefined>>
   previewingEdge?: Edge
   setPreviewingEdge: Dispatch<SetStateAction<Edge | undefined>>
+  // Execution trail during the Test preview, already reduced to lookups (edge
+  // visit counts, last traversed edge, visited groups), plus the block the flow
+  // is currently processing from (shows a spinner). Cleared when the Test
+  // closes/restarts.
+  executionTrail: ExecutionTrail
+  setExecutionTrail: Dispatch<SetStateAction<ExecutionTrail>>
+  runningBlockId?: string
+  setRunningBlockId: Dispatch<SetStateAction<string | undefined>>
+  // Per-block execution result during the Test (e.g., HTTP Request success or
+  // error), shown as a green/red badge on the block. Cleared with the trail.
+  blockResults: Record<string, 'success' | 'error'>
+  setBlockResults: Dispatch<
+    SetStateAction<Record<string, 'success' | 'error'>>
+  >
+  // Group ids the Test flow jumped into (loop-backs via a Jump block, which has
+  // no drawn edge). Flagged with a ↩ badge on the target group.
+  jumpTargetGroupIds: string[]
+  setJumpTargetGroupIds: Dispatch<SetStateAction<string[]>>
   openedBlockId?: string
   setOpenedBlockId: Dispatch<SetStateAction<string | undefined>>
   openedItemId?: string
@@ -60,6 +82,14 @@ export const GraphProvider = ({
   const [connectingIds, setConnectingIds] = useState<ConnectingIds | null>(null)
   const [previewingEdge, setPreviewingEdge] = useState<Edge>()
   const [previewingBlock, setPreviewingBlock] = useState<PreviewingBlock>()
+  const [executionTrail, setExecutionTrail] = useState<ExecutionTrail>(
+    createEmptyExecutionTrail
+  )
+  const [runningBlockId, setRunningBlockId] = useState<string>()
+  const [blockResults, setBlockResults] = useState<
+    Record<string, 'success' | 'error'>
+  >({})
+  const [jumpTargetGroupIds, setJumpTargetGroupIds] = useState<string[]>([])
   const [openedBlockId, setOpenedBlockId] = useState<string>()
   const [openedItemId, setOpenedItemId] = useState<string>()
   const [focusedGroupId, setFocusedGroupId] = useState<string>()
@@ -89,6 +119,14 @@ export const GraphProvider = ({
         setConnectingIds,
         previewingEdge,
         setPreviewingEdge,
+        executionTrail,
+        setExecutionTrail,
+        runningBlockId,
+        setRunningBlockId,
+        blockResults,
+        setBlockResults,
+        jumpTargetGroupIds,
+        setJumpTargetGroupIds,
         openedBlockId,
         setOpenedBlockId,
         openedItemId,
