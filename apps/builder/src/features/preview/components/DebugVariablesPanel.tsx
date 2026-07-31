@@ -18,6 +18,7 @@ import {
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react'
+import { useTranslate } from '@tolgee/react'
 import { DebugVariable } from '@typebot.io/schemas'
 import { useState } from 'react'
 
@@ -63,6 +64,7 @@ type Props = {
 }
 
 export const DebugVariablesPanel = ({ variables }: Props) => {
+  const { t } = useTranslate()
   const [isOpen, setIsOpen] = useState(false)
   const [modalVariable, setModalVariable] = useState<DebugVariable | null>(null)
   const {
@@ -99,7 +101,7 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
       <Flex
         as="button"
         type="button"
-        aria-label="Alternar tabela de variáveis de debug"
+        aria-label={t('preview.debugVariables.toggle.ariaLabel')}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
         direction="column"
@@ -161,20 +163,20 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
             borderColor={borderColor}
             flexShrink={0}
           >
-            Variáveis (debug)
+            {t('preview.debugVariables.title')}
           </Text>
           <Box overflowY="auto" flex="1">
             {variables.length === 0 ? (
               <Text px={3} py={3} fontSize="sm" color={mutedColor}>
-                Nenhuma variável preenchida ainda.
+                {t('preview.debugVariables.empty')}
               </Text>
             ) : (
               <Table size="sm" variant="simple">
                 <Thead pos="sticky" top={0} bgColor={headerBg} zIndex={1}>
                   <Tr>
-                    <Th>Nome</Th>
-                    <Th>Valor</Th>
-                    <Th>Tipo</Th>
+                    <Th>{t('preview.debugVariables.columns.name')}</Th>
+                    <Th>{t('preview.debugVariables.columns.value')}</Th>
+                    <Th>{t('preview.debugVariables.columns.type')}</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
@@ -200,7 +202,7 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
                               mt={1}
                               onClick={() => openFullValue(variable)}
                             >
-                              Ver tudo
+                              {t('preview.debugVariables.viewFullValue')}
                             </Button>
                           )}
                         </Td>
