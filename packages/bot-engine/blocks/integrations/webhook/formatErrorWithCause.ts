@@ -16,6 +16,25 @@ export const formatErrorWithCause = (error: unknown, maxDepth = 5): string => {
         .join('; ')
       return `${String(value)} [${inner}]`
     }
+    // undici network errors can carry no message at all (makeNetworkError()
+    // called with no reason yields `new Error(undefined)`), so String() gives
+    // just "Error". The code and top stack frames are then the only thing
+    // identifying which failure occurred — surface them.
+    if (value instanceof Error && value.message === '') {
+      const code = (value as { code?: unknown }).code
+      const frames = value.stack
+        ?.split('\n')
+        .slice(1, 4)
+        .map((line) => line.trim().replace(/^at /, ''))
+        .filter(Boolean)
+      return [
+        String(value),
+        code == null ? undefined : `[code=${String(code)}]`,
+        frames && frames.length > 0 ? `[at ${frames.join(' <- ')}]` : undefined,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    }
     return String(value)
   }
 
