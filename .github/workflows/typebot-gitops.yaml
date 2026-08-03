@@ -38,6 +38,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client
+        run: pnpm --filter @typebot.io/prisma exec prisma generate --schema postgresql/schema.prisma
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/test
+
       - name: Run unit tests
         run: pnpm test
 
