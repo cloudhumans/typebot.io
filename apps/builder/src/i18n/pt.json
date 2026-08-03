@@ -215,6 +215,7 @@
   "editor.sidebarBlocks.sidebar.icon.unlock.label": "Desbloquear",
   "editor.sidebarBlocks.sidebar.lock.label": "Bloquear barra lateral",
   "editor.sidebarBlocks.sidebar.unlock.label": "Desbloquear barra lateral",
+  "embeddedAuth.loading": "A carregar...",
   "errorMessage": "Ocorreu um erro",
   "folders.createFolderButton.label": "Criar uma pasta",
   "folders.createTypebotButton.label": "Criar um Flow",

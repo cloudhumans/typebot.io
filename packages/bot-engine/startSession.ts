@@ -112,7 +112,12 @@ export const startSession = async ({
     typebot,
     startVariables,
     workspaceName,
-    typebotHistoryId
+    typebotHistoryId,
+    // The headless TOOL contract (never pause, fail loudly on a missing required
+    // param) assumes an agent on the other end. The builder preview runs the same
+    // flow with a human in front of it, so it keeps the interactive Declare
+    // Variables prompt instead.
+    typebot.settings?.general?.type === 'TOOL' && startParams.type !== 'preview'
   )
 
   const initialState: SessionState = {
@@ -520,8 +525,9 @@ const removeLiteBadgeCss = (code: string) => {
 const convertStartTypebotToTypebotInSession = (
   typebot: StartTypebot,
   startVariables: Variable[],
-  workspaceName?: string,
-  typebotHistoryId?: string
+  workspaceName: string | undefined,
+  typebotHistoryId: string | undefined,
+  isToolWorkflow: boolean
 ): TypebotInSession =>
   typebot.version === '6'
     ? {
@@ -536,7 +542,7 @@ const convertStartTypebotToTypebotInSession = (
         variables: startVariables,
         events: typebot.events,
         typebotId: typebot.id,
-        isToolWorkflow: typebot.settings?.general?.type === 'TOOL',
+        isToolWorkflow,
       }
     : {
         version: typebot.version,
@@ -550,7 +556,7 @@ const convertStartTypebotToTypebotInSession = (
         variables: startVariables,
         events: typebot.events,
         typebotId: typebot.id,
-        isToolWorkflow: typebot.settings?.general?.type === 'TOOL',
+        isToolWorkflow,
       }
 
 const extractVariableIdsUsedForTranscript = (

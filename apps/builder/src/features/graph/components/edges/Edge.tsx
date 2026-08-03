@@ -1,6 +1,13 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Edge as EdgeProps } from '@typebot.io/schemas'
-import { Portal, useColorMode, useDisclosure } from '@chakra-ui/react'
+import {
+  chakra,
+  keyframes,
+  Portal,
+  useColorMode,
+  useColorModeValue,
+  useDisclosure,
+} from '@chakra-ui/react'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { colors } from '@/lib/theme'
 import { useEndpoints } from '../../providers/EndpointsProvider'
@@ -13,6 +20,12 @@ import { eventWidth, groupWidth } from '../../constants'
 import { useGroupsStore } from '../../hooks/useGroupsStore'
 import { useShallow } from 'zustand/react/shallow'
 
+// Marching ants on the last traversed edge — conveys progress and direction.
+const marchingAnts = keyframes`
+  from { stroke-dashoffset: 14; }
+  to { stroke-dashoffset: 0; }
+`
+
 type Props = {
   edge: EdgeProps
   fromGroupId: string | undefined
@@ -20,9 +33,17 @@ type Props = {
 
 export const Edge = ({ edge, fromGroupId }: Props) => {
   const isDark = useColorMode().colorMode === 'dark'
+  // Halo behind the "×N" label so it stays readable over the canvas: same
+  // light/dark pair the group cards use for their background.
+  const labelHaloColor = useColorModeValue('white', colors.gray[900])
   const { deleteEdge } = useTypebot()
-  const { previewingEdge, graphPosition, isReadOnly, setPreviewingEdge } =
-    useGraph()
+  const {
+    previewingEdge,
+    graphPosition,
+    isReadOnly,
+    setPreviewingEdge,
+    executionTrail,
+  } = useGraph()
   const { sourceEndpointYOffsets, targetEndpointYOffsets } = useEndpoints()
   const fromGroupCoordinates = useGroupsStore(
     useShallow((state) =>
@@ -45,6 +66,18 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
   const [edgeMenuPosition, setEdgeMenuPosition] = useState({ x: 0, y: 0 })
 
   const isPreviewing = isMouseOver || previewingEdge?.id === edge.id
+  // Edge is part of the Test execution trail (a path already traversed). Counts
+  // come pre-reduced from the trail — see `computeExecutionTrail`.
+  const visitedCount = executionTrail.edgeVisitCounts[edge.id] ?? 0
+  const isVisited = visitedCount > 0
+  const isLastTraversed = executionTrail.lastTraversedEdgeId === edge.id
+
+  // Edge midpoint, where the "×N" label for repeated traversals is placed.
+  const visiblePathRef = useRef<SVGPathElement | null>(null)
+  const [labelPosition, setLabelPosition] = useState<{
+    x: number
+    y: number
+  } | null>(null)
 
   const sourceElementCoordinates =
     'eventId' in edge.from
@@ -95,6 +128,21 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
     graphPosition.scale,
   ])
 
+  useEffect(() => {
+    const pathEl = visiblePathRef.current
+    if (!pathEl || !path || visitedCount <= 1) {
+      setLabelPosition(null)
+      return
+    }
+    try {
+      const totalLength = pathEl.getTotalLength()
+      const mid = pathEl.getPointAtLength(totalLength / 2)
+      setLabelPosition({ x: mid.x, y: mid.y })
+    } catch {
+      setLabelPosition(null)
+    }
+  }, [path, visitedCount])
+
   const handleMouseEnter = () => setIsMouseOver(true)
 
   const handleMouseLeave = () => setIsMouseOver(false)
@@ -127,21 +175,57 @@ export const Edge = ({ edge, fromGroupId }: Props) => {
         onClick={handleEdgeClick}
         onContextMenu={handleContextMenuTrigger}
       />
-      <path
+      <chakra.path
+        ref={visiblePathRef}
         data-testid="edge"
         d={path}
         stroke={
-          isPreviewing
+          isVisited
+            ? colors.orange[500]
+            : isPreviewing
             ? colors.blue[400]
             : isDark
             ? colors.gray[700]
             : colors.gray[400]
         }
-        strokeWidth="2px"
-        markerEnd={isPreviewing ? 'url(#blue-arrow)' : 'url(#arrow)'}
+        strokeWidth={isVisited ? '4px' : '2px'}
+        markerEnd={
+          isVisited
+            ? 'url(#trail-arrow)'
+            : isPreviewing
+            ? 'url(#blue-arrow)'
+            : 'url(#arrow)'
+        }
         fill="none"
         pointerEvents="none"
+        sx={{
+          transition: 'stroke 0.2s ease, stroke-width 0.2s ease',
+          // Last traversed edge: orange marching ants moving forward.
+          ...(isVisited && isLastTraversed
+            ? {
+                strokeDasharray: '8px 6px',
+                animation: `${marchingAnts} 0.7s linear infinite`,
+              }
+            : {}),
+        }}
       />
+      {isVisited && visitedCount > 1 && labelPosition && (
+        <text
+          x={labelPosition.x}
+          y={labelPosition.y}
+          fill={colors.orange[500]}
+          fontSize="13px"
+          fontWeight="bold"
+          textAnchor="middle"
+          dominantBaseline="central"
+          stroke={labelHaloColor}
+          strokeWidth="3px"
+          paintOrder="stroke"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          {`×${visitedCount}`}
+        </text>
+      )}
       <Portal>
         <EdgeMenu
           isOpen={isOpen}

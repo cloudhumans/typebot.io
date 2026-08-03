@@ -201,6 +201,7 @@
   "editor.sidebarBlocks.sidebar.icon.unlock.label": "Entsperren",
   "editor.sidebarBlocks.sidebar.lock.label": "Seitenleiste sperren",
   "editor.sidebarBlocks.sidebar.unlock.label": "Seitenleiste entsperren",
+  "embeddedAuth.loading": "Wird geladen...",
   "errorMessage": "Ein Fehler ist aufgetreten",
   "folders.createFolderButton.label": "Ordner erstellen",
   "folders.createTypebotButton.label": "Flow erstellen",

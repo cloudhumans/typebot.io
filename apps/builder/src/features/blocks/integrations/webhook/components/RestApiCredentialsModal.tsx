@@ -196,8 +196,14 @@ export const RestApiCredentialsModal = ({
     },
   })
 
-  const iconBg = useColorModeValue('orange.100', 'orange.900')
-  const iconColor = useColorModeValue('orange.500', 'orange.300')
+  // Matches the claudia-app modal header icon block (create-tool-dialog "Criar
+  // nova ferramenta"): rounded-[0.875rem] p-2, bg-ca-orange-light-5 (#fff0e9) /
+  // dark:bg-ca-orange-dark/20 (#e1580e @ 20%), icon text-ca-orange (#ff8638) /
+  // dark:text-ca-orange-light-2 (#f8b490). The Chakra orange.100/900 scale
+  // (peach / near-black) diverged hardest in dark mode, so set claudia's values
+  // explicitly rather than via the remapped orange scale.
+  const iconBg = useColorModeValue('#fff0e9', 'rgba(225, 88, 14, 0.2)')
+  const iconColor = useColorModeValue('#ff8638', '#f8b490')
 
   const isBaseUrlInvalid = baseUrl.trim() !== '' && !isSafeBaseUrl(baseUrl)
 
@@ -318,7 +324,7 @@ export const RestApiCredentialsModal = ({
             <Flex
               flexShrink={0}
               boxSize="40px"
-              borderRadius="lg"
+              borderRadius="xl"
               bg={iconBg}
               color={iconColor}
               align="center"
@@ -463,7 +469,7 @@ export const RestApiCredentialsModal = ({
           >
             {isEditing && (
               <Button
-                variant="outline"
+                variant="solid"
                 colorScheme="red"
                 isLoading={isDeleting}
                 isDisabled={showLoader}

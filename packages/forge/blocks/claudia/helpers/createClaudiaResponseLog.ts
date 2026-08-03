@@ -10,6 +10,7 @@ type ClaudiaAction =
 type ClaudiaResponse = {
   action: ClaudiaAction
   topic?: string
+  searchTerm?: string
 }
 
 type TypebotLog = Extract<

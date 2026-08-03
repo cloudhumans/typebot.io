@@ -14,10 +14,13 @@ export default defineConfig({
   test: {
     // Scope to package-level tests: pure logic / schema validation that run
     // without a database or the builder's `@/` path alias. App-level
-    // (apps/builder) tests need that extra wiring and are out of scope here.
+    // (apps/builder) tests need that extra wiring and are out of scope here —
+    // except `features/preview/helpers`, whose helpers are deliberately kept
+    // alias-free so they can be unit tested here.
     include: [
       'packages/**/*.test.ts',
       'apps/builder/src/features/auth/**/*.test.ts',
+      'apps/builder/src/features/preview/helpers/*.test.ts',
     ],
     exclude: [
       '**/node_modules/**',

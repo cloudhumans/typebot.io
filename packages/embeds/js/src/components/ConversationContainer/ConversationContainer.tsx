@@ -1,5 +1,6 @@
 import {
   ContinueChatResponse,
+  DebugVariable,
   InputBlock,
   Theme,
   ChatLog,
@@ -68,6 +69,9 @@ type Props = {
   onAnswer?: (answer: { message: string; blockId: string }) => void
   onEnd?: () => void
   onNewLogs?: (logs: OutgoingLog[]) => void
+  onNewVariables?: (variables: DebugVariable[]) => void
+  onVisitedEdges?: (visitedEdgeIds: string[]) => void
+  onJumps?: (jumpTargetGroupIds: string[]) => void
   onProgressUpdate?: (progress: number) => void
 }
 
@@ -202,6 +206,9 @@ export const ConversationContainer = (props: Props) => {
       ])
     }
     if (data.logs) props.onNewLogs?.(data.logs)
+    if (data.variables) props.onNewVariables?.(data.variables)
+    if (data.visitedEdgeIds) props.onVisitedEdges?.(data.visitedEdgeIds)
+    if (data.jumpTargetGroupIds) props.onJumps?.(data.jumpTargetGroupIds)
     if (data.dynamicTheme) setDynamicTheme(data.dynamicTheme)
     if (data.input && props.onNewInputBlock) {
       props.onNewInputBlock(data.input)
