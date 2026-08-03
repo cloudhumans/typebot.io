@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'url'
 import { defineConfig } from 'vitest/config'
 
 // Minimal unit-test runner. Targets fast, dependency-free tests (pure logic and
@@ -5,11 +6,19 @@ import { defineConfig } from 'vitest/config'
 // reliably in CI. Integration tests requiring Postgres/Redis/etc. are out of
 // scope here.
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./apps/builder/src', import.meta.url)),
+    },
+  },
   test: {
     // Scope to package-level tests: pure logic / schema validation that run
     // without a database or the builder's `@/` path alias. App-level
     // (apps/builder) tests need that extra wiring and are out of scope here.
-    include: ['packages/**/*.test.ts'],
+    include: [
+      'packages/**/*.test.ts',
+      'apps/builder/src/features/auth/**/*.test.ts',
+    ],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
