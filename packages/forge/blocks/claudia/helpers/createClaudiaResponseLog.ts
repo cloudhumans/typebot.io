@@ -11,6 +11,7 @@ type ClaudiaResponse = {
   action: ClaudiaAction
   topic?: string
   searchTerm?: string
+  tag?: string
 }
 
 type TypebotLog = Extract<

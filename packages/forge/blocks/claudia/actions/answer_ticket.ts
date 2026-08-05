@@ -9,6 +9,7 @@ export const answerTicket = createAction({
         action: 'ANSWER_TICKET',
         topic: options.topic,
         searchTerm: options.searchTerm,
+        tag: options.tag,
       })
       logs.add(log)
     },
@@ -26,5 +27,10 @@ export const answerTicket = createAction({
         accordion: 'Advanced settings',
         defaultValue: 'lastUserMessages',
       }),
+    tag: option.string.layout({
+      label: 'Tag',
+      placeholder: 'e.g. caso_proativo_mat',
+      accordion: 'Advanced settings',
+    }),
   }),
 })

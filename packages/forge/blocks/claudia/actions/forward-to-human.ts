@@ -8,6 +8,7 @@ export const forwardToHuman = createAction({
       const log = createClaudiaResponseLog({
         action: 'FORWARD_TO_HUMAN',
         topic: options.topic,
+        tag: options.tag,
       })
       logs.add(log)
     },
@@ -16,6 +17,11 @@ export const forwardToHuman = createAction({
     topic: option.string.layout({
       label: 'Topic',
       placeholder: 'e.g. PAYMENT',
+      accordion: 'Advanced settings',
+    }),
+    tag: option.string.layout({
+      label: 'Tag',
+      placeholder: 'e.g. caso_proativo_mat',
       accordion: 'Advanced settings',
     }),
   }),
