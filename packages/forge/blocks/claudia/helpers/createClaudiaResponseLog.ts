@@ -24,5 +24,8 @@ export const createClaudiaResponseLog = (
 ): TypebotLog => ({
   status: 'success',
   description: 'Claudia Response',
-  details: response,
+  // The tag is matched downstream by exact string, so authoring whitespace
+  // would silently mistag the conversation. A blank tag is dropped rather than
+  // sent as an empty string.
+  details: { ...response, tag: response.tag?.trim() || undefined },
 })

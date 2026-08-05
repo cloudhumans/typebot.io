@@ -31,6 +31,8 @@ export const answerTicket = createAction({
       label: 'Tag',
       placeholder: 'e.g. caso_proativo_mat',
       accordion: 'Advanced settings',
+      moreInfoTooltip:
+        'Pins the ClaudIA conversation tag. Matched by exact string, so a value that is not configured for the project is ignored silently. Accepts {{variables}}.',
     }),
   }),
 })

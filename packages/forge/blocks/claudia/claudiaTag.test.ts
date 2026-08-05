@@ -18,13 +18,25 @@ const actions = [
     action: forwardToHumanIgnoreHours,
     expectedAction: 'FORWARD_TO_HUMAN_IGNORE_HOURS',
   },
-  { name: closeTicket.name, action: closeTicket, expectedAction: 'CLOSE_TICKET' },
-  { name: answerTicket.name, action: answerTicket, expectedAction: 'ANSWER_TICKET' },
+  {
+    name: closeTicket.name,
+    action: closeTicket,
+    expectedAction: 'CLOSE_TICKET',
+  },
+  {
+    name: answerTicket.name,
+    action: answerTicket,
+    expectedAction: 'ANSWER_TICKET',
+  },
 ]
 
 /**
- * Runs an action's server handler with a stub logs store and returns the logs
- * it emitted. Mirrors what `executeForgedBlock` does at runtime.
+ * Calls an action's server handler directly with already-parsed options and
+ * returns the logs it emitted. `executeForgedBlock` additionally runs the
+ * options through `deepParseVariables` (`{{variable}}` interpolation, and
+ * dropping empty strings) and passes credentials/variables — none of which is
+ * exercised here, since importing that path pulls in the isolated-vm sandbox
+ * that this test runner deliberately excludes.
  */
 const runServer = (action: any, options: Record<string, unknown>) => {
   const emitted: any[] = []
@@ -54,6 +66,19 @@ describe.each(actions)('$name', ({ action, expectedAction }) => {
     expect(logs).toHaveLength(1)
     expect(logs[0].details.action).toBe(expectedAction)
     expect(logs[0].details.tag).toBeUndefined()
+  })
+
+  test('trims authoring whitespace around the tag', () => {
+    const logs = runServer(action, { tag: '  caso_proativo_mat\n' })
+
+    expect(logs[0].details.tag).toBe('caso_proativo_mat')
+  })
+
+  test('drops a blank tag instead of sending an empty string', () => {
+    const logs = runServer(action, { tag: '   ' })
+
+    expect(logs[0].details.tag).toBeUndefined()
+    expect(JSON.stringify(logs[0].details)).not.toContain('tag')
   })
 
   test('declares an optional Tag field under Advanced settings', () => {
