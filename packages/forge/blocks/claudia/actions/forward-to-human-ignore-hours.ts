@@ -8,6 +8,7 @@ export const forwardToHumanIgnoreHours = createAction({
       const log = createClaudiaResponseLog({
         action: 'FORWARD_TO_HUMAN_IGNORE_HOURS',
         topic: options.topic,
+        tag: options.tag,
       })
       logs.add(log)
     },
@@ -17,6 +18,13 @@ export const forwardToHumanIgnoreHours = createAction({
       label: 'Topic',
       placeholder: 'e.g. PAYMENT',
       accordion: 'Advanced settings',
+    }),
+    tag: option.string.layout({
+      label: 'Tag',
+      placeholder: 'e.g. caso_proativo_mat',
+      accordion: 'Advanced settings',
+      moreInfoTooltip:
+        'Pins the ClaudIA conversation tag. On most channels it is written to the helpdesk as-is, so spelling matters — a typo creates a new tag rather than being ignored. Cannot contain commas. Accepts {{variables}}.',
     }),
   }),
 })

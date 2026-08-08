@@ -9,6 +9,7 @@ export const answerTicket = createAction({
         action: 'ANSWER_TICKET',
         topic: options.topic,
         searchTerm: options.searchTerm,
+        tag: options.tag,
       })
       logs.add(log)
     },
@@ -26,5 +27,12 @@ export const answerTicket = createAction({
         accordion: 'Advanced settings',
         defaultValue: 'lastUserMessages',
       }),
+    tag: option.string.layout({
+      label: 'Tag',
+      placeholder: 'e.g. caso_proativo_mat',
+      accordion: 'Advanced settings',
+      moreInfoTooltip:
+        'Pins the ClaudIA conversation tag. On most channels it is written to the helpdesk as-is, so spelling matters — a typo creates a new tag rather than being ignored. Cannot contain commas. Accepts {{variables}}.',
+    }),
   }),
 })
