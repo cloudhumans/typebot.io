@@ -32,7 +32,7 @@ export const answerTicket = createAction({
       placeholder: 'e.g. caso_proativo_mat',
       accordion: 'Advanced settings',
       moreInfoTooltip:
-        'Pins the ClaudIA conversation tag. Matched by exact string, so a value that is not configured for the project is ignored silently. Accepts {{variables}}.',
+        'Pins the ClaudIA conversation tag. On most channels it is written to the helpdesk as-is, so spelling matters — a typo creates a new tag rather than being ignored. Cannot contain commas. Accepts {{variables}}.',
     }),
   }),
 })
