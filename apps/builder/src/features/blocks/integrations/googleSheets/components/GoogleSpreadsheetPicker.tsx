@@ -1,33 +1,36 @@
 import { FileIcon } from '@/components/icons'
 import { trpc } from '@/lib/trpc'
 import { Button, Flex, HStack, IconButton, Text } from '@chakra-ui/react'
-import { env } from '@typebot.io/env'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const window: any
+import { useToast } from '@/hooks/useToast'
+import {
+  appendEmbeddedAuthParams,
+  readEmbeddedAuthParams,
+} from '../helpers/embeddedPopupParams'
 
 type Props = {
   spreadsheetId?: string
   credentialsId: string
   workspaceId: string
-  onSpreadsheetIdSelect: (spreadsheetId: string) => void
+  blockId: string
 }
 
+// This component only opens the picker popup and renders the current
+// spreadsheet's label. The picked result is applied by the durable
+// useGoogleSheetsOAuthListener (mounted at the editor root), which survives this
+// panel unmounting while the popup is open — so there's no onSelect callback or
+// message listener here.
 export const GoogleSpreadsheetPicker = ({
   spreadsheetId,
   workspaceId,
   credentialsId,
-  onSpreadsheetIdSelect,
+  blockId,
 }: Props) => {
-  const [isPickerInitialized, setIsPickerInitialized] = useState(false)
-
-  const { data } = trpc.sheets.getAccessToken.useQuery({
-    workspaceId,
-    credentialsId,
-  })
+  const searchParams = useSearchParams()
+  const { showToast } = useToast()
   const { data: spreadsheetData, status } =
     trpc.sheets.getSpreadsheetName.useQuery(
       {
@@ -38,55 +41,25 @@ export const GoogleSpreadsheetPicker = ({
       { enabled: !!spreadsheetId }
     )
 
-  useEffect(() => {
-    loadScript('gapi', 'https://apis.google.com/js/api.js', () => {
-      window.gapi.load('picker', () => {
-        setIsPickerInitialized(true)
+  // Embedded: forward embedded=true&jwt so the picker popup (top-level on
+  // eddie, no first-party session) can authenticate itself before fetching the
+  // access token. Standalone: open without them.
+  const openPicker = useCallback(() => {
+    const params = appendEmbeddedAuthParams(
+      new URLSearchParams({ workspaceId, credentialsId, blockId }),
+      readEmbeddedAuthParams(searchParams)
+    )
+    const popup = globalThis.open(
+      `/google-picker?${params.toString()}`,
+      'gs-picker',
+      'popup,width=720,height=600'
+    )
+    // A null handle means the browser blocked the popup; warn the user.
+    if (!popup)
+      showToast({
+        description: 'Please allow popups for this site to pick a spreadsheet.',
       })
-    })
-  }, [])
-
-  const loadScript = (
-    id: string,
-    src: string,
-    callback: { (): void; (): void; (): void }
-  ) => {
-    const existingScript = document.getElementById(id)
-    if (existingScript) {
-      callback()
-      return
-    }
-    const script = document.createElement('script')
-    script.type = 'text/javascript'
-
-    script.onload = function () {
-      callback()
-    }
-
-    script.src = src
-    document.head.appendChild(script)
-  }
-
-  const createPicker = () => {
-    if (!data) return
-    if (!isPickerInitialized) throw new Error('Google Picker not inited')
-
-    const picker = new window.google.picker.PickerBuilder()
-      .addView(window.google.picker.ViewId.SPREADSHEETS)
-      .setOAuthToken(data.accessToken)
-      .setDeveloperKey(env.NEXT_PUBLIC_GOOGLE_API_KEY)
-      .setCallback(pickerCallback)
-      .build()
-
-    picker.setVisible(true)
-  }
-
-  const pickerCallback = (data: { action: string; docs: { id: string }[] }) => {
-    if (data.action !== 'picked') return
-    const spreadsheetId = data.docs[0]?.id
-    if (!spreadsheetId) return
-    onSpreadsheetIdSelect(spreadsheetId)
-  }
+  }, [workspaceId, credentialsId, blockId, searchParams, showToast])
 
   if (spreadsheetData && spreadsheetData.name !== '')
     return (
@@ -98,19 +71,15 @@ export const GoogleSpreadsheetPicker = ({
         <IconButton
           size="sm"
           icon={<FileIcon />}
-          onClick={createPicker}
-          isLoading={!isPickerInitialized}
+          onClick={openPicker}
           aria-label={'Pick another spreadsheet'}
         />
       </Flex>
     )
   return (
     <Button
-      onClick={createPicker}
-      isLoading={
-        !isPickerInitialized ||
-        (isDefined(spreadsheetId) && status === 'loading')
-      }
+      onClick={openPicker}
+      isLoading={isDefined(spreadsheetId) && status === 'loading'}
     >
       Pick a spreadsheet
     </Button>

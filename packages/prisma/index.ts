@@ -21,4 +21,7 @@ const prismaInstance =
 
 if (process.env.NODE_ENV !== 'production') global.prisma = prismaInstance
 
+// Script/test-only client (packages/scripts, Playwright fixtures). Unlike
+// @typebot.io/lib/prisma, it has NO null-byte sanitizer middleware — runtime
+// code must import the client from @typebot.io/lib/prisma instead.
 export const prisma: PrismaClient = prismaInstance

@@ -5,15 +5,25 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { env } from '@typebot.io/env'
 import { mockedUser } from '@typebot.io/lib/mockedUser'
+import { emailIsCloudhumans } from '@typebot.io/lib'
 import { DatabaseUserWithCognito } from '../types/cognito'
+import { verifyCognitoToken } from './verifyCognitoToken'
+import { findOrCreateCloudChatEmbeddedUser } from './findOrCreateCloudChatEmbeddedUser'
+import { patchSetCookieForPartitioned } from './cookiePartitioning'
+import logger from '@/helpers/logger'
 
 export const getAuthenticatedUser = async (
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<DatabaseUserWithCognito | undefined> => {
   const bearerToken = extractBearerToken(req)
+
+  if (req.query.apiGateway === 'true' && bearerToken)
+    return authenticateByEmbeddedToken(bearerToken)
+
   if (bearerToken) return authenticateByToken(bearerToken)
 
+  if (!env.NEXT_PUBLIC_E2E_TEST) patchSetCookieForPartitioned(res)
   const session = env.NEXT_PUBLIC_E2E_TEST
     ? { user: mockedUser }
     : await getServerSession(req, res, getAuthOptions({}))
@@ -24,14 +34,54 @@ export const getAuthenticatedUser = async (
   return user
 }
 
+const authenticateByEmbeddedToken = async (
+  token: string
+): Promise<DatabaseUserWithCognito | undefined> => {
+  try {
+    const payload = await verifyCognitoToken({
+      cognitoAppClientId: [
+        env.CLOUDCHAT_COGNITO_APP_CLIENT_ID,
+        env.MCP_COGNITO_APP_CLIENT_ID,
+      ].filter((audience): audience is string => Boolean(audience)),
+      cognitoIssuerUrl: env.COGNITO_ISSUER_URL,
+      cognitoToken: token,
+    })
+
+    const user = await findOrCreateCloudChatEmbeddedUser(prisma, payload)
+
+    if (!user) return
+
+    return {
+      ...user,
+      cognitoClaims: {
+        'custom:hub_role': payload['custom:hub_role'],
+        'custom:eddie_workspaces': payload['custom:eddie_workspaces'],
+      },
+    }
+  } catch (error) {
+    logger.error('Error in verify cognito token', { error })
+  }
+}
+
 const authenticateByToken = async (
   apiToken: string
 ): Promise<DatabaseUserWithCognito | undefined> => {
   if (typeof window !== 'undefined') return
   const user = (await prisma.user.findFirst({
     where: { apiTokens: { some: { token: apiToken } } },
-  })) as DatabaseUserWithCognito
+  })) as DatabaseUserWithCognito | null
+  if (!user) return
   Sentry.setUser({ id: user.id })
+
+  // Populate cognitoClaims for admin users so that API token auth
+  // gets the same workspace access as session-based auth.
+  if (emailIsCloudhumans(user.email)) {
+    user.cognitoClaims = {
+      'custom:hub_role': 'ADMIN',
+      'custom:eddie_workspaces': '',
+    }
+  }
+
   return user
 }
 

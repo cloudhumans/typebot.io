@@ -156,17 +156,29 @@ const startTypebotPick = {
   settings: true,
   theme: true,
 } as const
+
+const startTypebotOptionalFields = z.object({
+  name: z.string().optional(),
+  workspaceId: z.string().optional(),
+})
+
 export const startTypebotSchema = z.preprocess(
   preprocessTypebot,
   z.discriminatedUnion('version', [
-    typebotV5Schema._def.schema.pick(startTypebotPick).openapi({
-      title: 'Typebot V5',
-      ref: 'typebotV5',
-    }),
-    typebotV6Schema.pick(startTypebotPick).openapi({
-      title: 'Typebot V6',
-      ref: 'typebotV6',
-    }),
+    typebotV5Schema._def.schema
+      .pick(startTypebotPick)
+      .merge(startTypebotOptionalFields)
+      .openapi({
+        title: 'Typebot V5',
+        ref: 'typebotV5',
+      }),
+    typebotV6Schema
+      .pick(startTypebotPick)
+      .merge(startTypebotOptionalFields)
+      .openapi({
+        title: 'Typebot V6',
+        ref: 'typebotV6',
+      }),
   ])
 )
 export type StartTypebot = z.infer<typeof startTypebotSchema>
@@ -176,8 +188,24 @@ export const chatLogSchema = logSchema
     status: true,
     description: true,
   })
-  .merge(z.object({ details: z.unknown().optional() }))
+  .merge(
+    z.object({
+      details: z.unknown().optional(),
+      // Id of the block that produced this log — set for preview so the builder
+      // can show a per-block execution result (e.g., success/error on an HTTP
+      // Request block).
+      blockId: z.string().optional(),
+    })
+  )
 export type ChatLog = z.infer<typeof chatLogSchema>
+
+// Logs coming *from* the client. `blockId` is stripped on purpose: it is
+// server-produced metadata and the `Log` table has no such column, so a client
+// sending it would forward an unknown argument to Prisma and fail the insert.
+// Use this for every route that accepts logs as input; `chatLogSchema` stays the
+// shape we send back.
+export const clientChatLogSchema = chatLogSchema.omit({ blockId: true })
+export type ClientChatLog = z.infer<typeof clientChatLogSchema>
 
 export const startChatInputSchema = z.object({
   publicId: z
@@ -300,6 +328,16 @@ export const typebotInChatReply = z.preprocess(
   ])
 )
 
+// Shape of one variable in the preview-only snapshot consumed by the builder
+// debug panel. Exported so the embeds and the panel share a single definition —
+// a divergence becomes a compile error instead of a silent mismatch.
+export const debugVariableSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  value: z.unknown(),
+})
+export type DebugVariable = z.infer<typeof debugVariableSchema>
+
 const chatResponseBaseSchema = z.object({
   lastMessageNewFormat: z
     .string()
@@ -356,6 +394,24 @@ const chatResponseBaseSchema = z.object({
     .describe(
       'If progress bar is enabled, this field will return a number between 0 and 100 indicating the current progress based on the longest remaining path of the flow.'
     ),
+  variables: z
+    .array(debugVariableSchema)
+    .optional()
+    .describe(
+      'Preview-only: snapshot of the currently filled variables, used by the builder debug panel. Not returned for live (non-preview) sessions.'
+    ),
+  visitedEdgeIds: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Preview-only: cumulative, ordered ids of every edge traversed so far in the preview run. Powers the builder execution-trail highlight. Not returned for live sessions.'
+    ),
+  jumpTargetGroupIds: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Preview-only: cumulative group ids reached via a Jump block (loop-backs), so the builder can flag them since jumps have no drawn edge.'
+    ),
 })
 
 export const startChatResponseSchema = z
@@ -380,6 +436,10 @@ export const startPreviewChatResponseSchema = startChatResponseSchema.omit({
 })
 
 export const continueChatResponseSchema = chatResponseBaseSchema.extend({
-  toolOutput: z.unknown().optional().describe('Final output of the workflow if ended'),
+  resultId: z.string().optional(),
+  toolOutput: z
+    .unknown()
+    .optional()
+    .describe('Final output of the workflow if ended'),
 })
 export type ContinueChatResponse = z.infer<typeof continueChatResponseSchema>

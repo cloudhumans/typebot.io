@@ -56,7 +56,7 @@ export function corsMiddleware(request: NextRequest, response: NextResponse) {
   response.headers.set('Access-Control-Allow-Credentials', 'true')
   response.headers.set(
     'Access-Control-Allow-Methods',
-    'GET, POST, PUT, DELETE, OPTIONS'
+    'GET, POST, PUT, PATCH, DELETE, OPTIONS'
   )
   response.headers.set(
     'Access-Control-Allow-Headers',

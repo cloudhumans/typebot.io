@@ -3,6 +3,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { isWriteWorkspaceForbidden } from '@/features/workspace/helpers/isWriteWorkspaceForbidden'
+import { findCredentialsUsages } from '@typebot.io/lib/credentials/findCredentialsUsages'
 
 export const deleteCredentials = authenticatedProcedure
   .input(
@@ -13,12 +14,9 @@ export const deleteCredentials = authenticatedProcedure
   )
   .mutation(
     async ({ input: { credentialsId, workspaceId }, ctx: { user } }) => {
-      const workspace = await prisma.workspace.findFirst({
+      const workspace = await prisma.workspace.findUnique({
         where: {
           id: workspaceId,
-          members: {
-            some: { userId: user.id, role: { in: ['ADMIN', 'MEMBER'] } },
-          },
         },
         select: { id: true, members: true },
       })
@@ -28,11 +26,38 @@ export const deleteCredentials = authenticatedProcedure
           message: 'Workspace not found',
         })
 
-      await prisma.credentials.delete({
-        where: {
-          id: credentialsId,
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const usages = await findCredentialsUsages(
+            credentialsId,
+            workspaceId,
+            tx
+          )
+
+          if (usages.length > 0) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `Credential in use by ${usages.length} flow(s). Detach it from every flow before deleting.`,
+              cause: { _credentialInUse: true, usages },
+            })
+          }
+
+          const deletedCount = await tx.credentials.deleteMany({
+            where: {
+              id: credentialsId,
+              workspaceId,
+            },
+          })
+          return { deletedCount: deletedCount.count }
         },
-      })
+        { isolationLevel: 'RepeatableRead' }
+      )
+
+      if (result.deletedCount === 0)
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Credentials not found',
+        })
       return { credentialsId }
     }
   )

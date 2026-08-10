@@ -1,6 +1,30 @@
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose'
 import { CognitoJWTPayload } from '../types/cognito'
 
+// Cache one JWKS instance per issuer for the lifetime of the process so that
+// jose's internal key cache survives across requests. Recreating per call
+// triggers a JWKS fetch on every auth callback, which compounds with CPU
+// throttling on the builder pods.
+const jwksByIssuer = new Map<string, ReturnType<typeof createRemoteJWKSet>>()
+
+const getJwks = (cognitoIssuerUrl: string) => {
+  let jwks = jwksByIssuer.get(cognitoIssuerUrl)
+  if (!jwks) {
+    jwks = createRemoteJWKSet(
+      new URL(`${cognitoIssuerUrl}/.well-known/jwks.json`)
+    )
+    jwksByIssuer.set(cognitoIssuerUrl, jwks)
+  }
+  return jwks
+}
+
+/**
+ * In development, skip real JWKS verification and decode the JWT payload directly.
+ * The token is expected to be a standard JWT (header.payload.signature) where the
+ * payload contains at least { email, ... }. Signature is not verified.
+ *
+ * In production, full Cognito JWKS verification is performed.
+ */
 export const verifyCognitoToken = async ({
   cognitoAppClientId,
   cognitoIssuerUrl,
@@ -8,16 +32,36 @@ export const verifyCognitoToken = async ({
 }: {
   cognitoToken: string
   cognitoIssuerUrl: string
-  cognitoAppClientId: string
+  cognitoAppClientId: string | string[]
 }): Promise<JWTPayload & CognitoJWTPayload> => {
-  const jwks = createRemoteJWKSet(
-    new URL(`${cognitoIssuerUrl}/.well-known/jwks.json`)
-  )
+  if (process.env.NODE_ENV === 'development') {
+    // Dev bypass: decode JWT payload without signature verification
+    try {
+      const parts = cognitoToken.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64url').toString('utf-8')
+        )
+        return payload as JWTPayload & CognitoJWTPayload
+      }
+      // Fallback: treat the whole token as a base64-encoded JSON payload
+      const payload = JSON.parse(
+        Buffer.from(cognitoToken, 'base64url').toString('utf-8')
+      )
+      return payload as JWTPayload & CognitoJWTPayload
+    } catch (e) {
+      throw new Error(`[dev] Failed to decode token payload: ${e}`)
+    }
+  }
 
-  const { payload } = await jwtVerify<CognitoJWTPayload>(cognitoToken, jwks, {
-    issuer: cognitoIssuerUrl,
-    audience: cognitoAppClientId,
-  })
+  const { payload } = await jwtVerify<CognitoJWTPayload>(
+    cognitoToken,
+    getJwks(cognitoIssuerUrl),
+    {
+      issuer: cognitoIssuerUrl,
+      audience: cognitoAppClientId,
+    }
+  )
 
   return payload
 }

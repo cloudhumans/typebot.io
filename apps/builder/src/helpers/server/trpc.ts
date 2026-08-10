@@ -5,8 +5,19 @@ import superjson from 'superjson'
 import * as Sentry from '@sentry/nextjs'
 import { ZodError } from 'zod'
 import { createDatadogLoggerMiddleware } from '@typebot.io/lib/trpc/createDatadogLoggerMiddleware'
-import { beginRequest } from '@typebot.io/lib'
 import { User } from '@typebot.io/prisma'
+
+// Discriminates a TRPCError cause produced by the credential-in-use guard,
+// so the errorFormatter only forwards `usages` for that intentional code path
+// and stays safe when other procedures pass primitives or unrelated objects as
+// cause (e.g. custom domain procedures pass a string).
+const isCredentialInUseCause = (
+  cause: unknown
+): cause is { _credentialInUse: true; usages: unknown } =>
+  typeof cause === 'object' &&
+  cause !== null &&
+  '_credentialInUse' in cause &&
+  (cause as { _credentialInUse: unknown })._credentialInUse === true
 
 const t = initTRPC
   .context<Context>()
@@ -20,22 +31,13 @@ const t = initTRPC
           ...shape.data,
           zodError:
             error.cause instanceof ZodError ? error.cause.flatten() : null,
+          usages: isCredentialInUseCause(error.cause)
+            ? error.cause.usages
+            : null,
         },
       }
     },
   })
-
-// Tracks active tRPC procedure execution only (business logic time).
-// It does not cover raw HTTP socket duration or long-lived streams.
-// Good enough for graceful drain decisions; extend at HTTP layer if full request lifecycle is needed.
-const gracefulActiveRequestsMiddleware = t.middleware(async ({ next }) => {
-  const end = beginRequest()
-  try {
-    return await next()
-  } finally {
-    end()
-  }
-})
 
 const datadogLoggerMiddleware = createDatadogLoggerMiddleware(t, {
   service: 'typebot-builder',
@@ -64,14 +66,12 @@ const isAuthed = t.middleware(({ next, ctx }) => {
   })
 })
 
-// Ordem: começa a contagem, depois logger/datadog, depois sentry, depois auth/user
-const finalMiddleware = gracefulActiveRequestsMiddleware
-  .unstable_pipe(datadogLoggerMiddleware)
+// Ordem: logger/datadog, depois sentry, depois auth/user
+const finalMiddleware = datadogLoggerMiddleware
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(injectUser)
 
-const authenticatedMiddleware = gracefulActiveRequestsMiddleware
-  .unstable_pipe(datadogLoggerMiddleware)
+const authenticatedMiddleware = datadogLoggerMiddleware
   .unstable_pipe(sentryMiddleware)
   .unstable_pipe(isAuthed)
 

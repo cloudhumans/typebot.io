@@ -40,3 +40,5 @@ snapshots
 .env
 .typebot-build
 .pnpm-store
+.antigravitycli
+.serena/

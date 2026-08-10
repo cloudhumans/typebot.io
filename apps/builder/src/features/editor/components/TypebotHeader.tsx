@@ -205,6 +205,7 @@ const LeftElements = ({
             key={`typebot-name-${typebot?.name ?? ''}`}
             defaultName={typebot?.name ?? ''}
             onNewName={handleNameSubmit}
+            isReadOnly={typebot?.settings?.general?.type === 'TOOL'}
           />
           )
         </HStack>
@@ -441,6 +442,19 @@ const TypebotNav = ({
           size="sm"
         >
           {t('editor.header.resultsButton.label')}
+        </Button>
+      )}
+      {router.query.embedded !== 'true' && (
+        <Button
+          as={Link}
+          href={t(
+            'editor.gettingStartedModal.editorBasics.list.faq-by-language'
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          size="sm"
+        >
+          {t('FAQ')}
         </Button>
       )}
     </HStack>

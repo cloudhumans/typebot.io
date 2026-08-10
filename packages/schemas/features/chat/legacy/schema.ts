@@ -2,6 +2,7 @@ import { z } from '../../../zod'
 import {
   chatLogSchema,
   chatMessageSchema,
+  clientChatLogSchema,
   runtimeOptionsSchema,
   startTypebotSchema,
 } from '../schema'
@@ -84,7 +85,7 @@ export const sendMessageInputSchema = z.object({
     ),
   startParams: startParamsSchema.optional(),
   clientLogs: z
-    .array(chatLogSchema)
+    .array(clientChatLogSchema)
     .optional()
     .describe('Logs while executing client side actions'),
 })

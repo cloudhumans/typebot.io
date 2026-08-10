@@ -16,6 +16,7 @@ import {
 } from '@typebot.io/schemas/helpers'
 import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
 import { getNextGroup } from './getNextGroup'
+import { workspaceLogLabel } from './workspaceLogLabel'
 import { executeLogic } from './executeLogic'
 import { executeIntegration } from './executeIntegration'
 import { computePaymentInputRuntimeOptions } from './blocks/inputs/payment/computePaymentInputRuntimeOptions'
@@ -40,6 +41,7 @@ import {
   parseBubbleBlock,
 } from './parseBubbleBlock'
 import logger from '@typebot.io/lib/logger'
+import { enforceBlockVisitLimit } from './enforceBlockVisitLimit'
 
 type ContextProps = {
   version: 1 | 2
@@ -107,6 +109,29 @@ export const executeGroup = async (
     // Skip NOTE blocks during execution
     if (block.type === BubbleBlockType.NOTE) continue
 
+    const willSkipBubble =
+      isBubbleBlock(block) &&
+      (!block.content || (firstBubbleWasStreamed === true && index === 0))
+
+    const visitLimitOutcome = enforceBlockVisitLimit({
+      state: newSessionState,
+      block,
+      group,
+      sessionId,
+      willSkipBubble,
+    })
+    newSessionState = visitLimitOutcome.state
+    if (visitLimitOutcome.kind === 'terminate') {
+      return {
+        messages,
+        newSessionState,
+        clientSideActions,
+        logs,
+        visitedEdges,
+        setVariableHistory,
+      }
+    }
+
     if (isBubbleBlock(block)) {
       if (!block.content || (firstBubbleWasStreamed && index === 0)) {
         continue
@@ -120,6 +145,33 @@ export const executeGroup = async (
         })
       )
       lastBubbleBlockId = block.id
+
+      const bubbleTypebot = newSessionState.typebotsQueue[0].typebot
+      const bubbleWorkspaceName = bubbleTypebot.workspaceName ?? 'unknown'
+      logger.info(
+        `${workspaceLogLabel({
+          id: bubbleTypebot.workspaceId,
+          name: bubbleTypebot.workspaceName,
+        })} - Block Executed`,
+        {
+          workspace: {
+            id: bubbleTypebot.workspaceId ?? 'unknown',
+            name: bubbleWorkspaceName,
+          },
+          workflow: {
+            id: bubbleTypebot.id,
+            name: bubbleTypebot.name ?? 'unknown',
+            schema_version: String(bubbleTypebot.version ?? 'unknown'),
+            execution_id: sessionId ?? 'preview',
+            version_id: bubbleTypebot.typebotHistoryId ?? 'unknown',
+          },
+          typebot_block: {
+            id: block.id,
+            type: block.type,
+          },
+        }
+      )
+
       continue
     }
 
@@ -167,7 +219,10 @@ export const executeGroup = async (
 
     const executionResponse = (
       isLogicBlock(block)
-        ? await executeLogic(newSessionState)(block)
+        ? await executeLogic(newSessionState, sessionId, {
+            id: group.id,
+            title: group.title,
+          })(block)
         : isIntegrationBlock(block)
         ? await executeIntegration(newSessionState, sessionId)(block)
         : null
@@ -176,6 +231,33 @@ export const executeGroup = async (
     if (!executionResponse) {
       continue
     }
+
+    const typebot = newSessionState.typebotsQueue[0].typebot
+    const workspaceName = typebot.workspaceName ?? 'unknown'
+
+    logger.info(
+      `${workspaceLogLabel({
+        id: typebot.workspaceId,
+        name: typebot.workspaceName,
+      })} - Block Executed`,
+      {
+        workspace: {
+          id: typebot.workspaceId ?? 'unknown',
+          name: workspaceName,
+        },
+        workflow: {
+          id: typebot.id,
+          name: typebot.name ?? 'unknown',
+          schema_version: String(typebot.version ?? 'unknown'),
+          execution_id: sessionId ?? 'preview',
+          version_id: typebot.typebotHistoryId ?? 'unknown',
+        },
+        typebot_block: {
+          id: block.id,
+          type: block.type,
+        },
+      }
+    )
 
     if (
       executionResponse.newSetVariableHistory &&
@@ -206,7 +288,19 @@ export const executeGroup = async (
     )
       newStartTime = Date.now()
     if (executionResponse.logs)
-      logs = [...(logs ?? []), ...executionResponse.logs]
+      logs = [
+        ...(logs ?? []),
+        // Attribute each log to the block that produced it (used by the builder
+        // preview to mark per-block execution results). Only in preview: a
+        // published run persists these logs through `upsertResult`, and the
+        // Prisma `Log` model has no `blockId` column.
+        ...(newSessionState.typebotsQueue[0].resultId
+          ? executionResponse.logs
+          : executionResponse.logs.map((log) => ({
+              ...log,
+              blockId: block.id,
+            }))),
+      ]
     if (executionResponse.newSessionState)
       newSessionState = executionResponse.newSessionState
 

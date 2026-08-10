@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server'
-import { ChatLog } from '@typebot.io/schemas'
+import { ClientChatLog } from '@typebot.io/schemas'
 import { formatLogDetails } from '../logs/helpers/formatLogDetails'
 import { getSession } from '../queries/getSession'
 import { saveLogs } from '../queries/saveLogs'
@@ -7,7 +7,9 @@ import logger from '@typebot.io/lib/logger'
 
 type Props = {
   sessionId: string
-  clientLogs: ChatLog[]
+  // Not `ChatLog`: these logs are spread straight into `prisma.log.createMany`,
+  // so `blockId` must not be reachable from here.
+  clientLogs: ClientChatLog[]
 }
 
 export const saveClientLogs = async ({ sessionId, clientLogs }: Props) => {

@@ -15,14 +15,24 @@ import {
   executeWebhook,
   parseWebhookAttributes,
 } from '@typebot.io/bot-engine/blocks/integrations/webhook/executeWebhookBlock'
+import { isResolvedUrlSafe } from '@typebot.io/bot-engine/blocks/integrations/webhook/restApiCredential'
+import { resolveRestApiCredentialData } from '@typebot.io/bot-engine/blocks/integrations/webhook/resolveRestApiCredential'
 import { fetchLinkedChildTypebots } from '@typebot.io/bot-engine/blocks/logic/typebotLink/fetchLinkedChildTypebots'
 import { parseSampleResult } from '@typebot.io/bot-engine/blocks/integrations/webhook/parseSampleResult'
 import { saveLog } from '@typebot.io/bot-engine/logs/saveLog'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
+import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     const user = await getAuthenticatedUser(req, res)
+    // This builder endpoint issues a server-side HTTP request, so it must not be
+    // callable anonymously (the credential path additionally checks membership).
+    if (!user)
+      return res
+        .status(401)
+        .send({ statusCode: 401, data: { message: 'Unauthorized' } })
     const typebotId = req.query.typebotId as string
     const blockId = req.query.blockId as string
     const resultId = req.query.resultId as string | undefined
@@ -36,6 +46,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       include: { webhooks: true },
     })) as unknown as (Typebot & { webhooks: HttpRequest[] }) | null
     if (!typebot) return notFound(res)
+    // This endpoint issues a server-side HTTP request to a (variable-influenced)
+    // URL, so the caller must belong to the typebot's workspace. Without this an
+    // authenticated user could pass another workspace's typebotId and turn the
+    // builder into a cross-workspace SSRF proxy (and, with a credential, leak its
+    // secrets). Runs for every request, credentialed or not.
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: typebot.workspaceId },
+      select: { id: true, members: true },
+    })
+    if (!workspace || isReadWorkspaceFobidden(workspace, user))
+      return res
+        .status(403)
+        .send({ statusCode: 403, data: { message: 'Forbidden' } })
     const block = typebot.groups
       .flatMap<Block>((g) => g.blocks)
       .find(byId(blockId))
@@ -63,6 +86,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       await parseSampleResult(typebot, linkedTypebots)(group.id, variables)
     )
 
+    const credentialsId = normalizeCredentialsId(
+      'options' in block ? block.options?.credentialsId : undefined
+    )
+    let credentialData
+    if (credentialsId) {
+      credentialData = await resolveRestApiCredentialData({
+        credentialsId,
+        workspaceId: typebot.workspaceId,
+      })
+      if (!credentialData)
+        return res.status(404).send({
+          statusCode: 404,
+          data: { message: `Referenced credential could not be resolved` },
+        })
+    }
+
     const parsedWebhook = await parseWebhookAttributes({
       webhook,
       isCustomBody: block.options?.isCustomBody,
@@ -76,12 +115,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }),
       },
       answers,
+      credentialData: credentialData ?? undefined,
     })
 
     if (!parsedWebhook)
       return res.status(500).send({
         statusCode: 500,
         data: { message: `Couldn't parse webhook attributes` },
+      })
+
+    const urlSafety = isResolvedUrlSafe(parsedWebhook.url, {
+      baseUrl: credentialData?.baseUrl,
+    })
+    if (
+      !urlSafety.safe &&
+      (credentialData || urlSafety.reason !== 'Invalid URL')
+    )
+      return res.status(400).send({
+        statusCode: 400,
+        data: { message: `Request URL rejected: ${urlSafety.reason}` },
       })
 
     const { response, logs } = await executeWebhook(parsedWebhook, {

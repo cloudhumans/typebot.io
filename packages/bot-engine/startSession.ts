@@ -24,6 +24,7 @@ import parse, { NodeType } from 'node-html-parser'
 import { parseDynamicTheme } from './parseDynamicTheme'
 import { findTypebot } from './queries/findTypebot'
 import { findPublicTypebot } from './queries/findPublicTypebot'
+import { findLatestTypebotHistory } from './queries/findLatestTypebotHistory'
 import { findResult } from './queries/findResult'
 import { startBotFlow } from './startBotFlow'
 import { prefillVariables } from '@typebot.io/variables/prefillVariables'
@@ -79,7 +80,7 @@ export const startSession = async ({
     resultId?: string
   }
 > => {
-  const typebot = await getTypebot(startParams)
+  const { workspaceName, ...typebot } = await getTypebot(startParams)
 
   const prefilledVariables = startParams.prefilledVariables
     ? prefillVariables(typebot.variables, startParams.prefilledVariables)
@@ -102,9 +103,21 @@ export const startSession = async ({
       ? injectVariablesFromExistingResult(prefilledVariables, result.variables)
       : prefilledVariables
 
+  const typebotHistoryId =
+    startParams.type !== 'preview'
+      ? await findLatestTypebotHistory({ typebotId: typebot.id })
+      : undefined
+
   const typebotInSession = convertStartTypebotToTypebotInSession(
     typebot,
-    startVariables
+    startVariables,
+    workspaceName,
+    typebotHistoryId,
+    // The headless TOOL contract (never pause, fail loudly on a missing required
+    // param) assumes an agent on the other end. The builder preview runs the same
+    // flow with a human in front of it, so it keeps the interactive Declare
+    // Variables prompt instead.
+    typebot.settings?.general?.type === 'TOOL' && startParams.type !== 'preview'
   )
 
   const initialState: SessionState = {
@@ -157,6 +170,7 @@ export const startSession = async ({
       : undefined,
     setVariableIdsForHistory:
       extractVariableIdsUsedForTranscript(typebotInSession),
+    visitedBlockCounts: {},
     ...initialSessionState,
   }
 
@@ -187,6 +201,7 @@ export const startSession = async ({
       startParams.type === 'preview' ? startParams.startFrom : undefined,
     startTime: Date.now(),
     textBubbleContentFormat: startParams.textBubbleContentFormat,
+    sessionId: result?.id,
   })
 
   // If params has message and first block is an input block, we can directly continue the bot flow
@@ -315,7 +330,9 @@ export const startSession = async ({
   }
 }
 
-const getTypebot = async (startParams: StartParams): Promise<StartTypebot> => {
+const getTypebot = async (
+  startParams: StartParams
+): Promise<StartTypebot & { workspaceName?: string }> => {
   if (startParams.type === 'preview' && startParams.typebot)
     return startParams.typebot
 
@@ -367,7 +384,14 @@ const getTypebot = async (startParams: StartParams): Promise<StartTypebot> => {
       message: 'Typebot is closed',
     })
 
-  return startTypebotSchema.parse(parsedTypebot)
+  const workspaceName =
+    typebotQuery && 'typebot' in typebotQuery
+      ? typebotQuery.typebot.workspace.name
+      : typebotQuery && 'workspace' in typebotQuery
+      ? (typebotQuery as { workspace?: { name?: string } }).workspace?.name
+      : undefined
+
+  return { ...startTypebotSchema.parse(parsedTypebot), workspaceName }
 }
 
 const getResult = async ({
@@ -500,26 +524,39 @@ const removeLiteBadgeCss = (code: string) => {
 
 const convertStartTypebotToTypebotInSession = (
   typebot: StartTypebot,
-  startVariables: Variable[]
+  startVariables: Variable[],
+  workspaceName: string | undefined,
+  typebotHistoryId: string | undefined,
+  isToolWorkflow: boolean
 ): TypebotInSession =>
   typebot.version === '6'
     ? {
         version: typebot.version,
         id: typebot.id,
+        name: typebot.name,
+        workspaceId: typebot.workspaceId,
+        workspaceName,
+        typebotHistoryId,
         groups: typebot.groups,
         edges: typebot.edges,
         variables: startVariables,
         events: typebot.events,
         typebotId: typebot.id,
+        isToolWorkflow,
       }
     : {
         version: typebot.version,
         id: typebot.id,
+        name: typebot.name,
+        workspaceId: typebot.workspaceId,
+        workspaceName,
+        typebotHistoryId,
         groups: typebot.groups,
         edges: typebot.edges,
         variables: startVariables,
         events: typebot.events,
         typebotId: typebot.id,
+        isToolWorkflow,
       }
 
 const extractVariableIdsUsedForTranscript = (

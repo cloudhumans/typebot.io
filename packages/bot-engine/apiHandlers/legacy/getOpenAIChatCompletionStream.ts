@@ -20,7 +20,13 @@ export const getOpenAIChatCompletionStream = async (
   if (!options.credentialsId) return
   const credentials = await getCredentials(options.credentialsId)
   if (!credentials) {
-    logger.error('Could not find credentials in database')
+    logger.error('Could not find credentials in database', {
+      code: 'credential_not_found',
+      credentialsId: options.credentialsId,
+      typebotId: state.typebotsQueue[0]?.typebot.id,
+      workspaceId: state.typebotsQueue[0]?.typebot.workspaceId,
+      integration: 'openai-legacy-handler-stream',
+    })
     return
   }
   const { apiKey } = (await decryptV2(

@@ -9,7 +9,7 @@ If you’re looking to self-host Typebot in production, follow the [Self-hosting
 You need to have the following tools installed on your machine:
 
 - [pnpm](https://pnpm.io/installation) (v8 or higher)
-- [Node.js](https://nodejs.org/en/download/) (v18 or higher)
+- [Node.js](https://nodejs.org/en/download/) (v20 or higher)
 - [PostgreSQL](https://www.postgresql.org/download/) (v14 or higher)
 - [Docker](https://www.docker.com/products/docker-desktop) + [Docker Compose](https://docs.docker.com/compose/install/)
 - [Redis](https://redis.io/docs/getting-started/installation/)
@@ -32,7 +32,7 @@ cd typebot
 ## Install dependencies
 
 ```bash
-nvm install 18 && nvm use 18
+nvm install 20 && nvm use 20
 npm --global install pnpm@8
 pnpm install
 ```

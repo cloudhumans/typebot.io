@@ -64,6 +64,10 @@ const baseEnv = {
       .url()
       .refine((url) => url.startsWith('postgres') || url.startsWith('mysql')),
     ENCRYPTION_SECRET: z.string().length(32),
+    // Bearer token guarding the MCP tools endpoint (`/api/mcp` on the viewer).
+    // Optional at the schema level so the app still boots without it, but the
+    // route fails closed (401) when it is unset — see packages/mcp-tools.
+    TYPEBOT_TOOLS_API_TOKEN: z.string().min(1).optional(),
     NEXTAUTH_URL: z.preprocess(
       guessNextAuthUrlForVercelPreview,
       z.string().url()
@@ -82,6 +86,22 @@ const baseEnv = {
       .default('FREE'),
     DEBUG: boolean.optional().default('false'),
     CHAT_API_TIMEOUT: z.coerce.number().optional(),
+    MAX_BLOCK_VISITS_PER_SESSION: z.coerce.number().int().min(1).default(500),
+    MAX_LLM_BLOCK_VISITS_PER_SESSION: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .default(100),
+    BLOCK_VISIT_WARN_THRESHOLD: z.coerce.number().int().min(1).default(100),
+    LLM_BLOCK_VISIT_WARN_THRESHOLD: z.coerce.number().int().min(1).default(10),
+    BLOCK_VISIT_LIMIT_ENABLED: boolean.optional().default('true'),
+    // Datadog logging configuration
+    DD_LOGS_ENABLED: boolean.optional().default('false'),
+    LOG_LEVEL: z
+      .enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'])
+      .optional()
+      .default('info'),
+    DD_SERVICE: z.string().min(1).optional(),
     RADAR_HIGH_RISK_KEYWORDS: z
       .string()
       .min(1)
@@ -106,6 +126,7 @@ const baseEnv = {
     AWS_COGNITO_REGION: z.string().min(1).optional(),
     COGNITO_ISSUER_URL: z.string().min(1),
     CLOUDCHAT_COGNITO_APP_CLIENT_ID: z.string().min(1),
+    MCP_COGNITO_APP_CLIENT_ID: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_E2E_TEST: boolean.optional(),

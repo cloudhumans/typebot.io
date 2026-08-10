@@ -37,6 +37,12 @@ export type TextInputProps = {
   isDisabled?: boolean
   direction?: 'row' | 'column'
   width?: 'full'
+  // When false, a pending debounced change is cancelled (not flushed) on
+  // unmount. Use for inputs that remount on context switches (e.g. keyed by a
+  // selected credential), where flushing a stale value would pair it with the
+  // new context. Defaults to true to preserve "don't lose the last edit".
+  flushOnUnmount?: boolean
+  'aria-label'?: string
 } & Pick<
   InputProps,
   | 'autoComplete'
@@ -72,6 +78,8 @@ export const TextInput = forwardRef(function TextInput(
     direction = 'column',
     width,
     flexShrink,
+    flushOnUnmount = true,
+    'aria-label': ariaLabel,
   }: TextInputProps,
   ref
 ) {
@@ -96,9 +104,10 @@ export const TextInput = forwardRef(function TextInput(
 
   useEffect(
     () => () => {
-      onChange.flush()
+      if (flushOnUnmount) onChange.flush()
+      else onChange.cancel()
     },
-    [onChange]
+    [onChange, flushOnUnmount]
   )
 
   const changeValue = (value: string) => {
@@ -129,6 +138,7 @@ export const TextInput = forwardRef(function TextInput(
       type={type}
       ref={inputRef}
       value={localValue}
+      aria-label={ariaLabel}
       autoComplete={autoComplete}
       placeholder={placeholder}
       isDisabled={isDisabled}

@@ -66,8 +66,12 @@ export const GoogleSheetsSettings = ({
       ...options,
       credentialsId,
     })
-  const handleSpreadsheetIdChange = (spreadsheetId: string | undefined) =>
-    onOptionsChange({ ...options, spreadsheetId })
+
+  // Both popup results (connect credentialsId, picked spreadsheetId) are applied
+  // by a durable listener mounted at the editor root
+  // (useGoogleSheetsOAuthListener), which targets the block by id even if this
+  // settings panel has unmounted. When mounted, the panel re-renders from the
+  // updated typebot state.
   const handleSheetIdChange = (sheetId: string | undefined) =>
     onOptionsChange({ ...options, sheetId })
 
@@ -109,7 +113,7 @@ export const GoogleSheetsSettings = ({
           spreadsheetId={options.spreadsheetId}
           workspaceId={workspace.id}
           credentialsId={options.credentialsId}
-          onSpreadsheetIdSelect={handleSpreadsheetIdChange}
+          blockId={blockId}
         />
       )}
       {options?.spreadsheetId && options.credentialsId && (

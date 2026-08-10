@@ -1,0 +1,21 @@
+name: gitleaks
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    uses: cloudhumans/ci-workflows/.github/workflows/gitleaks.yml@v1
+    secrets: inherit

@@ -117,7 +117,7 @@ export const SignInForm = ({
     } catch (e) {
       showToast({
         status: 'info',
-        description: 'An error occured while signing in',
+        description: 'An error occurred while signing in',
       })
     }
     setAuthLoading(false)

@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo, useState, useEffect } from 'react'
 import {
   Alert,
   AlertIcon,
@@ -10,6 +10,9 @@ import {
   Tag,
   Text,
   useDisclosure,
+  Input,
+  FormControl,
+  FormLabel,
   VStack,
   WrapItem,
 } from '@chakra-ui/react'
@@ -53,6 +56,7 @@ const TypebotButton = ({
     onOpen: onDeleteOpen,
     onClose: onDeleteClose,
   } = useDisclosure()
+  const [confirmInput, setConfirmInput] = useState('')
   const buttonRef = React.useRef<HTMLDivElement>(null)
 
   useDragDistance({
@@ -128,11 +132,21 @@ const TypebotButton = ({
     onDeleteOpen()
   }
 
+  useEffect(() => {
+    if (!isDeleteOpen) setConfirmInput('')
+  }, [isDeleteOpen])
+
   const handleUnpublishClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!typebot.publishedTypebotId) return
     unpublishTypebot({ typebotId: typebot.id })
   }
+
+  // Texto que o usuário precisa digitar para confirmar a exclusão. Quando o
+  // Flow não tem nome (vazio ou só espaços), usamos o nome padrão como alvo,
+  // garantindo que a confirmação continue possível sem abrir brecha de bypass.
+  const deleteConfirmationTarget =
+    typebot.name.trim().length > 0 ? typebot.name : t('typebots.defaultName')
 
   return (
     <Button
@@ -215,7 +229,7 @@ const TypebotButton = ({
                 <T
                   keyName="folders.typebotButton.deleteConfirmationMessage"
                   params={{
-                    strong: <strong>{typebot.name}</strong>,
+                    strong: <strong>{deleteConfirmationTarget}</strong>,
                   }}
                 />
               </Text>
@@ -223,9 +237,24 @@ const TypebotButton = ({
                 <AlertIcon />
                 {t('folders.typebotButton.deleteConfirmationMessageWarning')}
               </Alert>
+              <FormControl>
+                <FormLabel>
+                  {t('folders.typebotButton.deleteConfirmationLabel')}
+                </FormLabel>
+                <Input
+                  autoFocus
+                  value={confirmInput}
+                  onChange={(e) => setConfirmInput(e.target.value)}
+                  placeholder={deleteConfirmationTarget}
+                />
+              </FormControl>
             </Stack>
           }
           confirmButtonLabel={t('delete')}
+          confirmButtonDisabled={
+            confirmInput.trim().toLowerCase() !==
+            deleteConfirmationTarget.trim().toLowerCase()
+          }
           onConfirm={handleDeleteTypebotClick}
           isOpen={isDeleteOpen}
           onClose={onDeleteClose}

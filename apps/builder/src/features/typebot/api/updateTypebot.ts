@@ -43,6 +43,7 @@ const typebotUpdateSchemaPick = {
   updatedAt: true,
   tenant: true,
   toolDescription: true,
+  isArchived: true,
 } as const
 
 export const updateTypebot = authenticatedProcedure
@@ -88,6 +89,7 @@ export const updateTypebot = authenticatedProcedure
       select: {
         version: true,
         id: true,
+        name: true,
         customDomain: true,
         publicId: true,
         settings: true,
@@ -163,17 +165,34 @@ export const updateTypebot = authenticatedProcedure
         })
     }
 
-    if (
-      existingTypebot.settings &&
-      (existingTypebot.settings as unknown as Settings).general?.type ===
-        'TOOL' &&
-      ((typebot.tenant !== undefined && !typebot.tenant) ||
-        (typebot.toolDescription !== undefined && !typebot.toolDescription))
-    )
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Tenant and Tool description are mandatory for Tool workflows',
-      })
+    const isExistingTool =
+      !!existingTypebot.settings &&
+      (existingTypebot.settings as unknown as Settings).general?.type === 'TOOL'
+
+    if (isExistingTool) {
+      if (typebot.name !== undefined && typebot.name !== existingTypebot.name)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Tool name is immutable: it is the identity agents reference. Rename is not allowed.',
+        })
+
+      if (typebot.isArchived === true)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Tools cannot be archived',
+        })
+
+      if (
+        (typebot.tenant !== undefined && !typebot.tenant) ||
+        (typebot.toolDescription !== undefined && !typebot.toolDescription)
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Tenant and Tool description are mandatory for Tool workflows',
+        })
+    }
 
     const groups = typebot.groups
       ? await sanitizeGroups(existingTypebot.workspace.id)(typebot.groups)
@@ -244,6 +263,7 @@ export const updateTypebot = authenticatedProcedure
           workspaceId: existingTypebot.workspace.id,
         }),
         isClosed: typebot.isClosed,
+        isArchived: typebot.isArchived,
         isSecondaryFlow: typebot.isSecondaryFlow ?? false,
         whatsAppCredentialsId: typebot.whatsAppCredentialsId ?? undefined,
         tenant: typebot.tenant,

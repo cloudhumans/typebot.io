@@ -14,7 +14,11 @@ import {
   AccordionPanel,
   Button,
   Text,
+  Tag,
+  TagLeftIcon,
 } from '@chakra-ui/react'
+import { LockedIcon } from '@/components/icons'
+import { useTranslate } from '@tolgee/react'
 import {
   KeyValue,
   VariableForTest,
@@ -35,11 +39,41 @@ import {
   defaultWebhookAttributes,
   defaultWebhookBlockOptions,
 } from '@typebot.io/schemas/features/blocks/integrations/webhook/constants'
+import { normalizeCredentialsId } from '@typebot.io/schemas/features/blocks/integrations/webhook/credentialsId'
+
+type InheritedKeyValue = { key: string; value: string }
+
+const InheritedEntries = ({
+  items,
+  label,
+}: {
+  items?: InheritedKeyValue[]
+  label: string
+}) => {
+  if (!items || items.length === 0) return null
+  return (
+    <Stack spacing="1">
+      <Text fontSize="xs" color="gray.500">
+        {label}
+      </Text>
+      {items.map((item, idx) => (
+        <Tag key={`${item.key}-${idx}`} size="md" colorScheme="gray">
+          <TagLeftIcon as={LockedIcon} />
+          <Text>
+            {item.key}: {item.value}
+          </Text>
+        </Tag>
+      ))}
+    </Stack>
+  )
+}
 
 type Props = {
   blockId: string
   webhook: HttpRequest | undefined
   options: HttpRequestBlock['options']
+  inheritedHeaders?: InheritedKeyValue[]
+  inheritedQueryParams?: InheritedKeyValue[]
   onWebhookChange: (webhook: HttpRequest) => void
   onOptionsChange: (options: HttpRequestBlock['options']) => void
 }
@@ -48,9 +82,12 @@ export const HttpRequestAdvancedConfigForm = ({
   blockId,
   webhook,
   options,
+  inheritedHeaders,
+  inheritedQueryParams,
   onWebhookChange,
   onOptionsChange,
 }: Props) => {
+  const { t } = useTranslate()
   const { typebot, save } = useTypebot()
   const [isTestResponseLoading, setIsTestResponseLoading] = useState(false)
   const [testResponse, setTestResponse] = useState<string>()
@@ -81,31 +118,32 @@ export const HttpRequestAdvancedConfigForm = ({
   const updateIsCustomBody = (isCustomBody: boolean) =>
     onOptionsChange({ ...options, isCustomBody })
 
-  // const updateTimeout = (timeout: number | undefined) =>
-  //   onOptionsChange({ ...options, timeout })
-
   const executeTestRequest = async () => {
     if (!typebot) return
     setIsTestResponseLoading(true)
-    if (!options?.webhook) await save()
-    else await save()
-    const { data, error } = await executeWebhook(
-      typebot.id,
-      convertVariablesForTestToVariables(
-        options?.variablesForTest ?? [],
-        typebot.variables
-      ),
-      { blockId }
-    )
-    if (error)
-      return showToast({ title: error.name, description: error.message })
-    setTestResponse(JSON.stringify(data, undefined, 2))
-    setResponseKeys(getDeepKeys(data))
-    setIsTestResponseLoading(false)
+    // finally: always clear the spinner. The early return on `error` (and any
+    // throw from save/executeWebhook) previously left it stuck spinning, now
+    // that the credential-backed flow lets the test run with an empty suffix.
+    try {
+      await save()
+      const { data, error } = await executeWebhook(
+        typebot.id,
+        convertVariablesForTestToVariables(
+          options?.variablesForTest ?? [],
+          typebot.variables
+        ),
+        { blockId }
+      )
+      if (error) {
+        showToast({ title: error.name, description: error.message })
+        return
+      }
+      setTestResponse(JSON.stringify(data, undefined, 2))
+      setResponseKeys(getDeepKeys(data))
+    } finally {
+      setIsTestResponseLoading(false)
+    }
   }
-
-  // const updateIsExecutedOnClient = (isExecutedOnClient: boolean) =>
-  //   onOptionsChange({ ...options, isExecutedOnClient })
 
   const ResponseMappingInputs = useMemo(
     () =>
@@ -128,15 +166,6 @@ export const HttpRequestAdvancedConfigForm = ({
         }
         onCheckChange={updateAdvancedConfig}
       >
-        {/* <SwitchWithLabel
-          label="Execute on client"
-          moreInfoContent="If enabled, the webhook will be executed on the client. It means it will be executed in the browser of your visitor. Make sure to enable CORS and do not expose sensitive data."
-          initialValue={
-            options?.isExecutedOnClient ??
-            defaultWebhookBlockOptions.isExecutedOnClient
-          }
-          onCheckChange={updateIsExecutedOnClient}
-        /> */}
         <HStack justify="space-between">
           <Text>Method:</Text>
           <DropdownList
@@ -153,7 +182,13 @@ export const HttpRequestAdvancedConfigForm = ({
               Query params
               <AccordionIcon />
             </AccordionButton>
-            <AccordionPanel pt="4">
+            <AccordionPanel pt="4" as={Stack} spacing="3">
+              <InheritedEntries
+                items={inheritedQueryParams}
+                label={t(
+                  'blocks.integrations.httpRequest.inheritedEntries.label'
+                )}
+              />
               <TableList<KeyValue>
                 initialItems={webhook?.queryParams}
                 onItemsChange={updateQueryParams}
@@ -168,7 +203,13 @@ export const HttpRequestAdvancedConfigForm = ({
               Headers
               <AccordionIcon />
             </AccordionButton>
-            <AccordionPanel pt="4">
+            <AccordionPanel pt="4" as={Stack} spacing="3">
+              <InheritedEntries
+                items={inheritedHeaders}
+                label={t(
+                  'blocks.integrations.httpRequest.inheritedEntries.label'
+                )}
+              />
               <TableList<KeyValue>
                 initialItems={webhook?.headers}
                 onItemsChange={updateHeaders}
@@ -199,22 +240,6 @@ export const HttpRequestAdvancedConfigForm = ({
               )}
             </AccordionPanel>
           </AccordionItem>
-          {/* <AccordionItem>
-            <AccordionButton justifyContent="space-between">
-              Advanced parameters
-              <AccordionIcon />
-            </AccordionButton>
-            <AccordionPanel pt="4">
-              <NumberInput
-                label="Timeout (s)"
-                defaultValue={options?.timeout ?? defaultTimeout}
-                min={1}
-                max={maxTimeout}
-                onValueChange={updateTimeout}
-                withVariableButton={false}
-              />
-            </AccordionPanel>
-          </AccordionItem> */}
           <AccordionItem>
             <AccordionButton justifyContent="space-between">
               Variable values for test
@@ -232,7 +257,7 @@ export const HttpRequestAdvancedConfigForm = ({
           </AccordionItem>
         </Accordion>
       </SwitchWithRelatedSettings>
-      {webhook?.url && (
+      {(webhook?.url || normalizeCredentialsId(options?.credentialsId)) && (
         <Button
           onClick={executeTestRequest}
           colorScheme="blue"

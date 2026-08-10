@@ -6,6 +6,7 @@ import { smtpCredentialsSchema } from '@typebot.io/schemas/features/blocks/integ
 import { encrypt } from '@typebot.io/lib/api/encryption/encrypt'
 import { z } from 'zod'
 import { whatsAppCredentialsSchema } from '@typebot.io/schemas/features/whatsapp'
+import { restApiCredentialsSchema } from '@typebot.io/schemas/features/blocks/integrations/webhook/schema'
 import {
   Credentials,
   googleSheetsCredentialsSchema,
@@ -14,6 +15,7 @@ import {
 } from '@typebot.io/schemas'
 import { isDefined } from '@typebot.io/lib/utils'
 import { isWriteWorkspaceForbidden } from '@/features/workspace/helpers/isWriteWorkspaceForbidden'
+import { isAdminWriteWorkspaceForbidden } from '@/features/workspace/helpers/isAdminWriteWorkspaceForbidden'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 
 const inputShape = {
@@ -43,6 +45,7 @@ export const createCredentials = authenticatedProcedure
           openAICredentialsSchema.pick(inputShape),
           whatsAppCredentialsSchema.pick(inputShape),
           zemanticAiCredentialsSchema.pick(inputShape),
+          restApiCredentialsSchema.pick(inputShape),
         ])
         .and(z.object({ id: z.string().cuid2().optional() })),
     })
@@ -67,12 +70,24 @@ export const createCredentials = authenticatedProcedure
     if (!workspace || isWriteWorkspaceForbidden(workspace, user))
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' })
 
+    // REST API credentials hold secrets that control network destinations,
+    // so their creation is restricted to workspace admins.
+    if (
+      credentials.type === 'rest-api' &&
+      isAdminWriteWorkspaceForbidden(workspace, user)
+    )
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only workspace admins can create REST API credentials',
+      })
+
     const { encryptedData, iv } = await encrypt(credentials.data)
     const createdCredentials = await prisma.credentials.create({
       data: {
         ...credentials,
         data: encryptedData,
         iv,
+        createdById: user.id,
       },
       select: {
         id: true,
