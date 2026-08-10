@@ -1,4 +1,3 @@
-````chatagent
 ---
 description: 'Tradutor de textos do aplicativo Typebot'
 tools: ['codebase', 'changes', 'editFiles', 'runCommands']
@@ -75,5 +74,3 @@ Critérios de qualidade:
 - Emojis devem ser preservados.
 
 Prossiga diretamente com as edições necessárias sem pedir confirmação.
-
-````

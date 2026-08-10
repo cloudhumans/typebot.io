@@ -91,7 +91,7 @@ export const GettingStartedModal = () => {
   const cardBorder = useColorModeValue('blackAlpha.100', 'whiteAlpha.100')
   const cardTitleColor = useColorModeValue(brand.ink, 'gray.100')
   const cardTextColor = useColorModeValue('gray.600', 'gray.400')
-  const iconBg = useColorModeValue('#fff1e3', 'whiteAlpha.100')
+  const iconBg = useColorModeValue('primary.50', 'whiteAlpha.100')
   const dialogBorder = useColorModeValue('blackAlpha.50', 'whiteAlpha.200')
 
   useEffect(() => {
@@ -113,6 +113,9 @@ export const GettingStartedModal = () => {
     >
       <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(6px)" />
       <ModalContent
+        // The flow-editor canvas listens for wheel events to pan/zoom; without
+        // this the three stacked cards can't be scrolled on short viewports.
+        onWheel={(e) => e.stopPropagation()}
         overflow="hidden"
         rounded="3xl"
         bg={bodyBg}
