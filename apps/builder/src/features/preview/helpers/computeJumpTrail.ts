@@ -5,21 +5,22 @@ import { PreviewJump } from '@typebot.io/schemas'
 
 /**
  * Splits the cumulative list of jumps taken in the Test into the two lookups the
- * graph renders from: for each block a jump left from, where it went (the origin
- * badge names it), and which groups a jump landed in.
+ * graph renders from: which blocks a jump left from, and — for each group a jump
+ * landed in — which blocks jumped into it, so the target badge can name where
+ * the flow came from.
  *
  * Runs once per chat response, like `computeExecutionTrail` — every block and
  * every group asks about this, so the answer has to be O(1) at render time.
  */
 export const computeJumpTrail = (jumps: PreviewJump[]): JumpTrail => {
-  const targetGroupIdsByOriginBlockId = new Map<string, string[]>()
-  const targetGroupIds = new Set<string>()
+  const originBlockIds = new Set<string>()
+  const originBlockIdsByTargetGroupId = new Map<string, string[]>()
   for (const jump of jumps) {
-    const targets = targetGroupIdsByOriginBlockId.get(jump.fromBlockId)
-    if (!targets)
-      targetGroupIdsByOriginBlockId.set(jump.fromBlockId, [jump.toGroupId])
-    else if (!targets.includes(jump.toGroupId)) targets.push(jump.toGroupId)
-    targetGroupIds.add(jump.toGroupId)
+    originBlockIds.add(jump.fromBlockId)
+    const origins = originBlockIdsByTargetGroupId.get(jump.toGroupId)
+    if (!origins)
+      originBlockIdsByTargetGroupId.set(jump.toGroupId, [jump.fromBlockId])
+    else if (!origins.includes(jump.fromBlockId)) origins.push(jump.fromBlockId)
   }
-  return { targetGroupIdsByOriginBlockId, targetGroupIds }
+  return { originBlockIds, originBlockIdsByTargetGroupId }
 }

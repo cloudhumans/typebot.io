@@ -4,7 +4,6 @@ import {
   Popover,
   PopoverTrigger,
   Spinner,
-  Tooltip,
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react'
@@ -18,7 +17,7 @@ import {
   BlockV6,
 } from '@typebot.io/schemas'
 import { NoteBubbleBlock } from '@typebot.io/schemas/features/blocks/bubbles/note/schema'
-import { isDefined, isEmpty } from '@typebot.io/lib'
+import { isDefined } from '@typebot.io/lib'
 import {
   isInputBlock,
   isBubbleBlock,
@@ -125,20 +124,10 @@ export const BlockNode = ({
     ? blockResults[block.id]
     : undefined
 
-  // The Test flow left the flow from this block through a Jump. There is no edge
-  // drawn for it, so without this badge the trail just stops here with nothing
-  // saying where it went — the ↩ badge on the target group is the other half.
-  const jumpTargetGroupIds = jumpTrail.targetGroupIdsByOriginBlockId.get(
-    block.id
-  )
-  // Group titles for the badge tooltip, resolved here instead of in
-  // `computeJumpTrail` so renaming a group mid-Test updates the tooltip without
-  // waiting for the next chat response. Only runs for the handful of blocks that
-  // are jump origins, since the lookup above returns undefined for the rest.
-  const jumpTargetTitles = jumpTargetGroupIds?.map((groupId) => {
-    const title = typebot?.groups.find((group) => group.id === groupId)?.title
-    return isEmpty(title) ? 'untitled group' : title
-  })
+  // The Test flow jumped away from this block. A jump has no drawn edge, so
+  // without this badge the trail just stops here. The other half is the ↩ badge
+  // on the target card, whose tooltip names this card as the origin.
+  const isJumpOrigin = jumpTrail.originBlockIds.has(block.id)
 
   const groupId = typebot?.groups.at(indices.groupIndex)?.id
 
@@ -349,37 +338,28 @@ export const BlockNode = ({
                   />
                 </Flex>
               )}
-              {jumpTargetTitles?.length ? (
-                <Tooltip
-                  label={`Jumped to "${jumpTargetTitles.join('", "')}"`}
-                  placement="top"
+              {isJumpOrigin && (
+                <Flex
+                  pos="absolute"
+                  top="-9px"
+                  right="-9px"
+                  zIndex={3}
+                  align="center"
+                  px="2"
+                  py="0.5"
+                  rounded="full"
+                  bg={jumpBadgeBg}
+                  color="white"
+                  fontSize="10px"
+                  fontWeight="bold"
+                  letterSpacing="wide"
+                  shadow="sm"
+                  pointerEvents="none"
+                  data-testid="block-jump-origin"
                 >
-                  <Flex
-                    pos="absolute"
-                    top="-9px"
-                    right="-9px"
-                    zIndex={3}
-                    align="center"
-                    px="2"
-                    py="0.5"
-                    rounded="full"
-                    bg={jumpBadgeBg}
-                    color="white"
-                    fontSize="10px"
-                    fontWeight="bold"
-                    letterSpacing="wide"
-                    shadow="sm"
-                    // Not `pointerEvents="none"` like the other badges: the
-                    // tooltip needs the hover. `cursor` keeps it from reading as
-                    // clickable, and the group-drag guard already covers it
-                    // through the block's `prevent-group-drag` ancestor.
-                    cursor="default"
-                    data-testid="block-jump-origin"
-                  >
-                    jump ↪
-                  </Flex>
-                </Tooltip>
-              ) : null}
+                  jump ↪
+                </Flex>
+              )}
               {blockResult && (
                 <Flex
                   pos="absolute"
