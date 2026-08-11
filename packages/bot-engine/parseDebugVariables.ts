@@ -1,29 +1,34 @@
 import { DebugVariable, SessionState, Variable } from '@typebot.io/schemas'
-import { isDefined, isNotDefined } from '@typebot.io/lib/utils'
+import { isDefined } from '@typebot.io/lib/utils'
 import { parseGuessedTypeFromString } from '@typebot.io/variables/parseGuessedTypeFromString'
 
-// Variable values are text by the time they reach the session: every write goes
-// through `safeStringify` in `updateVariablesInSession`, and the session schema
-// only allows `string | (string | null)[]`. So `5`, `true` and `{ a: 1 }` are all
-// stored as strings.
+// Values reach the session as text (`safeStringify` in `updateVariablesInSession`)
+// and the type is captured separately, so nothing here needs to guess a type —
+// see `previewMetadata.variableTypes`.
 //
-// Restoring them with `parseGuessedTypeFromString` is the same rule the engine
-// applies wherever it needs a typed value (`deepParseVariables` with
-// `guessCorrectTypes`). This is for *display*: it lets the panel show `{"a":1}`
-// pretty-printed and a list as `["a", 4]` instead of `["a", "4"]`. The type
-// reported in the table does not come from here — see `variableTypes` below,
-// because guessing cannot tell a text input holding "5" from the number 5.
-//
-// Strings JSON can't parse stay strings, which keeps `007` and `+5511999999999`
-// intact.
-const restoreGuessedType = (value: Variable['value']): unknown => {
-  if (isNotDefined(value)) return value
-  if (Array.isArray(value))
-    return value.map((item) =>
-      isNotDefined(item) ? item : parseGuessedTypeFromString(item)
-    )
-  return parseGuessedTypeFromString(value)
-}
+// The one thing worth undoing is `JSON.stringify` on an object: parsing that back
+// is its exact inverse, and it is what lets the panel pretty-print the value in
+// the "view all" modal instead of dumping raw JSON. Everything else is shown
+// exactly as stored, so the value can never contradict the reported type:
+//   - numbers and booleans render identically either way (`String(5)` ===
+//     `String('5')`), so parsing them buys nothing
+//   - a list is stored item-wise as text, and that is also what a Code block
+//     reading it back receives, so `["a", "4"]` is the truthful display
+//   - a string stays a string, so text that happens to be valid JSON — `null`,
+//     `undefined`, `5`, `{"a":1}` — is shown as typed instead of being silently
+//     converted into a different value (or into a blank one)
+const parseForDisplay = (value: Variable['value'], type: string): unknown =>
+  type === 'object' && typeof value === 'string'
+    ? parseGuessedTypeFromString(value)
+    : value
+
+// `typeof` of the value as stored, for variables this run never wrote: prefilled
+// ones, a resumed session, or a linked typebot's own variables. The session only
+// ever holds text or a list of text, so this answers 'string' or 'object' — which
+// is all that is actually known about them. Deriving it from a reinterpreted
+// value instead would report `number` for a text input holding "5".
+const storedValueType = (value: Variable['value']): string =>
+  Array.isArray(value) ? 'object' : typeof value
 
 // Snapshot of the filled variables for the builder debug panel. The
 // `isDefined(value)` filter is the panel's contract — it only ever lists
@@ -37,15 +42,13 @@ export const parseDebugVariables = (state: SessionState): DebugVariable[] => {
   return (state.typebotsQueue.at(0)?.typebot.variables ?? [])
     .filter((variable) => isDefined(variable.value))
     .map((variable) => {
-      const value = restoreGuessedType(variable.value)
+      const type =
+        capturedTypes?.[variable.id] ?? storedValueType(variable.value)
       return {
         id: variable.id,
         name: variable.name,
-        value,
-        // Falls back to the restored value's own type for variables this run
-        // never wrote — prefilled ones, a resumed session, or a linked typebot's
-        // own variables.
-        type: capturedTypes?.[variable.id] ?? typeof value,
+        value: parseForDisplay(variable.value, type),
+        type,
       }
     })
 }
