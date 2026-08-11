@@ -83,6 +83,35 @@ export const getNextGroup = async ({
             state.progressMetadata.totalAnswers +
             state.typebotsQueue[0].answers.length,
         }
+      // The merge above hands the parent's variables the linked typebot's values,
+      // matched by *name* while each side keeps its own id. The captured value
+      // type is keyed by id, so it has to follow the same path or the debug panel
+      // would describe the parent's stale value — or fall back to the stored text
+      // type — for a value the linked typebot actually wrote. Only reached in
+      // preview: `variableTypes` is only ever recorded when there is no resultId.
+      const capturedTypes = newSessionState.previewMetadata?.variableTypes
+      if (isMergingWithParent && capturedTypes)
+        newSessionState.previewMetadata = {
+          ...newSessionState.previewMetadata,
+          variableTypes: {
+            ...capturedTypes,
+            ...Object.fromEntries(
+              newSessionState.typebotsQueue[0].typebot.variables.flatMap(
+                (parentVariable) => {
+                  const mergedFrom =
+                    state.typebotsQueue[0].typebot.variables.find(
+                      (v) => v.name === parentVariable.name
+                    )
+                  // Mirrors the `?? variable.value` above: with no value on the
+                  // linked side the parent keeps its own, so its type stays too.
+                  if (!mergedFrom || isNotDefined(mergedFrom.value)) return []
+                  const mergedType = capturedTypes[mergedFrom.id]
+                  return mergedType ? [[parentVariable.id, mergedType]] : []
+                }
+              )
+            ),
+          },
+        }
       const nextGroup = await getNextGroup({
         state: newSessionState,
         edgeId: nextEdgeId,

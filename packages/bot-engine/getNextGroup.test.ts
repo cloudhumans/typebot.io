@@ -118,3 +118,120 @@ describe('getNextGroup trail recording in preview', () => {
     expect(newSessionState.previewMetadata?.trailEdgeIds).toEqual(['edge_3'])
   })
 })
+
+// Returning from a linked typebot merges variable *values* by name while each
+// side keeps its own variable id. The captured value type is keyed by id, so it
+// has to be carried over the same way or the debug panel describes the wrong
+// value.
+const linkedState = ({
+  isMergingWithParent,
+  childValue = '5',
+  variableTypes,
+}: {
+  isMergingWithParent: boolean
+  childValue?: string | null
+  variableTypes: Record<string, string>
+}) =>
+  ({
+    version: '3',
+    previewMetadata: { variableTypes },
+    typebotsQueue: [
+      {
+        // The linked typebot, about to be popped: no edges left and nothing to
+        // trigger when done, so the pop ends the run.
+        answers: [],
+        isMergingWithParent,
+        edgeIdToTriggerWhenDone: undefined,
+        typebot: {
+          id: 'typebot_child',
+          version: '6',
+          groups: [targetGroup],
+          edges: [],
+          variables: [{ id: 'child_foo', name: 'foo', value: childValue }],
+        },
+      },
+      {
+        answers: [],
+        typebot: {
+          id: 'typebot_parent',
+          version: '6',
+          groups: [targetGroup],
+          edges: [],
+          variables: [{ id: 'parent_foo', name: 'foo', value: 'text' }],
+        },
+      },
+    ],
+  } as unknown as SessionState)
+
+describe('getNextGroup value types across a linked typebot', () => {
+  it("carries the linked typebot's type onto the parent's variable id", async () => {
+    // The parent's own stale type is the dangerous case: it answers with
+    // authority and describes a value that is no longer there.
+    const { newSessionState } = await getNextGroup({
+      state: linkedState({
+        isMergingWithParent: true,
+        variableTypes: { child_foo: 'number', parent_foo: 'string' },
+      }),
+      edgeId: undefined,
+      isOffDefaultPath: false,
+    })
+
+    expect(newSessionState.typebotsQueue[0].typebot.variables).toEqual([
+      { id: 'parent_foo', name: 'foo', value: '5' },
+    ])
+    expect(newSessionState.previewMetadata?.variableTypes).toMatchObject({
+      parent_foo: 'number',
+    })
+  })
+
+  it('leaves the parent type alone when the link does not merge', async () => {
+    // Without merging, the parent keeps its own value, so it must keep its type.
+    const { newSessionState } = await getNextGroup({
+      state: linkedState({
+        isMergingWithParent: false,
+        variableTypes: { child_foo: 'number', parent_foo: 'string' },
+      }),
+      edgeId: undefined,
+      isOffDefaultPath: false,
+    })
+
+    expect(newSessionState.typebotsQueue[0].typebot.variables).toEqual([
+      { id: 'parent_foo', name: 'foo', value: 'text' },
+    ])
+    expect(newSessionState.previewMetadata?.variableTypes).toMatchObject({
+      parent_foo: 'string',
+    })
+  })
+
+  it('leaves the parent type alone when the linked variable has no value', async () => {
+    // Mirrors the `?? variable.value` in the merge: the parent keeps its value,
+    // so the type it already had still describes it.
+    const { newSessionState } = await getNextGroup({
+      state: linkedState({
+        isMergingWithParent: true,
+        childValue: null,
+        variableTypes: { child_foo: 'number', parent_foo: 'string' },
+      }),
+      edgeId: undefined,
+      isOffDefaultPath: false,
+    })
+
+    expect(newSessionState.typebotsQueue[0].typebot.variables).toEqual([
+      { id: 'parent_foo', name: 'foo', value: 'text' },
+    ])
+    expect(newSessionState.previewMetadata?.variableTypes).toMatchObject({
+      parent_foo: 'string',
+    })
+  })
+
+  it('does nothing when no type was ever captured', async () => {
+    // Published runs never record types; the merge must still work.
+    const { newSessionState } = await getNextGroup({
+      state: linkedState({ isMergingWithParent: true, variableTypes: {} }),
+      edgeId: undefined,
+      isOffDefaultPath: false,
+    })
+
+    expect(newSessionState.previewMetadata?.variableTypes).toEqual({})
+  })
+})
