@@ -33,8 +33,12 @@ const HANDLE_HEIGHT = 120
 const VALUE_MAX_CHARS = 40
 
 const getVariableType = (value: unknown): string => {
+  // `Null` is the one deliberate departure from `typeof`, which answers 'object'
+  // for null. Everything else mirrors it — including arrays, which are 'object'
+  // in JS: there is no separate list type to report, and the value column
+  // already shows the brackets. `null` and `undefined` are folded together
+  // because the engine stores both as an absent value.
   if (value === null || value === undefined) return 'Null'
-  if (Array.isArray(value)) return 'List'
   switch (typeof value) {
     case 'number':
       return 'Number'
