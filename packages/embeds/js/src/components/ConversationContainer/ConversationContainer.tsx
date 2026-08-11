@@ -2,6 +2,7 @@ import {
   ContinueChatResponse,
   DebugVariable,
   InputBlock,
+  PreviewJump,
   Theme,
   ChatLog,
 } from '@typebot.io/schemas'
@@ -71,7 +72,7 @@ type Props = {
   onNewLogs?: (logs: OutgoingLog[]) => void
   onNewVariables?: (variables: DebugVariable[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
-  onJumps?: (jumpTargetGroupIds: string[]) => void
+  onJumps?: (jumps: PreviewJump[]) => void
   onProgressUpdate?: (progress: number) => void
 }
 
@@ -208,7 +209,7 @@ export const ConversationContainer = (props: Props) => {
     if (data.logs) props.onNewLogs?.(data.logs)
     if (data.variables) props.onNewVariables?.(data.variables)
     if (data.visitedEdgeIds) props.onVisitedEdges?.(data.visitedEdgeIds)
-    if (data.jumpTargetGroupIds) props.onJumps?.(data.jumpTargetGroupIds)
+    if (data.jumps) props.onJumps?.(data.jumps)
     if (data.dynamicTheme) setDynamicTheme(data.dynamicTheme)
     if (data.input && props.onNewInputBlock) {
       props.onNewInputBlock(data.input)

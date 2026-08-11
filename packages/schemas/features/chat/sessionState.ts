@@ -83,6 +83,16 @@ const sessionStateSchemaV2 = z.object({
     .optional(),
 })
 
+// A jump taken during a preview run: a Jump block hands the flow to another
+// group through a virtual edge, so the editor has no line to highlight. Keeping
+// both ends lets the builder mark the block the flow left from and the group it
+// landed in.
+export const previewJumpSchema = z.object({
+  fromBlockId: z.string(),
+  toGroupId: z.string(),
+})
+export type PreviewJump = z.infer<typeof previewJumpSchema>
+
 const sessionStateSchemaV3 = sessionStateSchemaV2
   .omit({ currentBlock: true })
   .extend({
@@ -100,9 +110,10 @@ const sessionStateSchemaV3 = sessionStateSchemaV2
         // execution-trail visualization. Distinct from `visitedEdges`, which
         // records only off-default branch decisions for transcript rebuilding.
         trailEdgeIds: z.array(z.string()).optional(),
-        // Preview-only: group ids the flow jumped into via a Jump block (which
-        // uses an invisible virtual edge). Lets the builder flag loop-backs.
-        jumpTargetGroupIds: z.array(z.string()).optional(),
+        // Preview-only: jumps taken through a Jump block (which travels on an
+        // invisible virtual edge). Both ends are recorded so the builder can
+        // flag the block the flow left from and the group it landed in.
+        jumps: z.array(previewJumpSchema).optional(),
         setVariableHistory: z
           .array(
             setVariableHistoryItemSchema.pick({

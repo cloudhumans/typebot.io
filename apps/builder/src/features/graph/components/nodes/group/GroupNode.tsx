@@ -59,7 +59,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
     isReadOnly,
     graphPosition,
     executionTrail,
-    jumpTargetGroupIds,
+    jumpTrail,
   } = useGraph()
   const { typebot, updateGroup, updateGroupsCoordinates } = useTypebot()
   const { setMouseOverGroup, mouseOverGroup } = useBlockDnd()
@@ -78,15 +78,19 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
         (previewingEdge.to.groupId === group.id &&
           isNotDefined(previewingEdge.to.blockId))))
 
-  // Group is part of the path taken in the Test: a visited edge points into it.
-  // Gives the whole card an orange/bold border, matching the arrow trail. The
-  // set is derived once per response — see `computeExecutionTrail`.
-  const isVisited = executionTrail.visitedGroupIds.has(group.id)
-
   // Where the Test flow is right now, and whether this group is the target of a
   // jump/loop-back.
   const isCurrent = previewingBlock?.groupId === group.id
-  const isJumpTarget = jumpTargetGroupIds.includes(group.id)
+  const isJumpTarget = jumpTrail.targetGroupIds.has(group.id)
+
+  // Group is part of the path taken in the Test: a visited edge points into it,
+  // or the flow jumped into it. A jump arrives through a virtual edge that the
+  // editor never draws, so it leaves no trace in `visitedGroupIds` — without the
+  // second half, a group only ever reached by a jump kept the default border and
+  // the trail looked like it stopped at the Jump block. Gives the whole card an
+  // orange/bold border, matching the arrow trail. Both sets are derived once per
+  // response — see `computeExecutionTrail` and `computeJumpTrail`.
+  const isVisited = executionTrail.visitedGroupIds.has(group.id) || isJumpTarget
 
   const groupRef = useRef<HTMLDivElement | null>(null)
   const isDraggingGraph = useGroupsStore((state) => state.isDraggingGraph)

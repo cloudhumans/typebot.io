@@ -120,9 +120,7 @@ export const continueChat = async ({
     visitedEdgeIds: isPreview
       ? newSessionState.previewMetadata?.trailEdgeIds ?? []
       : undefined,
-    jumpTargetGroupIds: isPreview
-      ? newSessionState.previewMetadata?.jumpTargetGroupIds ?? []
-      : undefined,
+    jumps: isPreview ? newSessionState.previewMetadata?.jumps ?? [] : undefined,
     dynamicTheme: parseDynamicTheme(newSessionState),
     logs: isPreview ? logs : logs?.filter(filterPotentiallySensitiveLogs),
     lastMessageNewFormat,
