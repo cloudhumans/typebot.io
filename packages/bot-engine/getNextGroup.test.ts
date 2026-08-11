@@ -234,4 +234,109 @@ describe('getNextGroup value types across a linked typebot', () => {
 
     expect(newSessionState.previewMetadata?.variableTypes).toEqual({})
   })
+
+  it('drops the popped typebot own entries, so they cannot rot', async () => {
+    // `fillVariablesWithExistingValues` refills a linked typebot's variables by
+    // name on a second visit without recording a type. A leftover entry from the
+    // first visit would then be inherited by the parent on the next pop and
+    // describe a value the link never wrote.
+    const { newSessionState } = await getNextGroup({
+      state: linkedState({
+        isMergingWithParent: true,
+        variableTypes: { child_foo: 'number', parent_foo: 'string' },
+      }),
+      edgeId: undefined,
+      isOffDefaultPath: false,
+    })
+
+    expect(newSessionState.previewMetadata?.variableTypes).toEqual({
+      parent_foo: 'number',
+    })
+  })
+})
+
+// Queue shapes the pruning has to survive: a variable only the linked typebot
+// declares (carried over with its own id) and a grandparent still sitting in the
+// queue behind the parent.
+const nestedLinkState = ({
+  variableTypes,
+}: {
+  variableTypes: Record<string, string>
+}) =>
+  ({
+    version: '3',
+    previewMetadata: { variableTypes },
+    typebotsQueue: [
+      {
+        answers: [],
+        isMergingWithParent: true,
+        // Resumes on an edge the parent owns, so the pop stops here. Without it
+        // the parent has nothing left to walk either and gets popped in the same
+        // recursion, taking the grandparent's turn.
+        edgeIdToTriggerWhenDone: 'edge_parent',
+        typebot: {
+          id: 'typebot_child',
+          version: '6',
+          groups: [targetGroup],
+          edges: [],
+          // `childOnly` has no counterpart in the parent, so the merge appends it
+          // keeping this id.
+          variables: [{ id: 'child_only', name: 'childOnly', value: '7' }],
+        },
+      },
+      {
+        answers: [],
+        typebot: {
+          id: 'typebot_parent',
+          version: '6',
+          groups: [targetGroup],
+          edges: [edge('edge_parent')],
+          variables: [{ id: 'parent_foo', name: 'foo', value: 'text' }],
+        },
+      },
+      {
+        answers: [],
+        typebot: {
+          id: 'typebot_grandparent',
+          version: '6',
+          groups: [targetGroup],
+          edges: [],
+          variables: [{ id: 'grandparent_bar', name: 'bar', value: 'text' }],
+        },
+      },
+    ],
+  } as unknown as SessionState)
+
+describe('getNextGroup pruning of captured types', () => {
+  it('keeps the type of a variable only the linked typebot declared', async () => {
+    // The merge appends it under its own id, so the id is still in the session.
+    const { newSessionState } = await getNextGroup({
+      state: nestedLinkState({
+        variableTypes: { child_only: 'number', parent_foo: 'string' },
+      }),
+      edgeId: undefined,
+      isOffDefaultPath: false,
+    })
+
+    expect(newSessionState.previewMetadata?.variableTypes).toEqual({
+      child_only: 'number',
+      parent_foo: 'string',
+    })
+  })
+
+  it("keeps a grandparent's type through a nested link", async () => {
+    // Pruning against the whole queue, not just its head: the grandparent is
+    // still there behind the parent and its variables will be read again.
+    const { newSessionState } = await getNextGroup({
+      state: nestedLinkState({
+        variableTypes: { grandparent_bar: 'boolean', parent_foo: 'string' },
+      }),
+      edgeId: undefined,
+      isOffDefaultPath: false,
+    })
+
+    expect(newSessionState.previewMetadata?.variableTypes).toMatchObject({
+      grandparent_bar: 'boolean',
+    })
+  })
 })

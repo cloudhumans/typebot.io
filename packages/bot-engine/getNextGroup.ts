@@ -90,12 +90,9 @@ export const getNextGroup = async ({
       // type — for a value the linked typebot actually wrote. Only reached in
       // preview: `variableTypes` is only ever recorded when there is no resultId.
       const capturedTypes = newSessionState.previewMetadata?.variableTypes
-      if (isMergingWithParent && capturedTypes)
-        newSessionState.previewMetadata = {
-          ...newSessionState.previewMetadata,
-          variableTypes: {
-            ...capturedTypes,
-            ...Object.fromEntries(
+      if (capturedTypes) {
+        const inheritedTypes = isMergingWithParent
+          ? Object.fromEntries(
               newSessionState.typebotsQueue[0].typebot.variables.flatMap(
                 (parentVariable) => {
                   const mergedFrom =
@@ -109,9 +106,30 @@ export const getNextGroup = async ({
                   return mergedType ? [[parentVariable.id, mergedType]] : []
                 }
               )
-            ),
-          },
+            )
+          : {}
+        // Then drop entries for variables the session no longer holds — the
+        // popped typebot's own ids, except the ones the merge carried over as
+        // they were. Leaving them would rot: `fillVariablesWithExistingValues`
+        // refills a linked typebot's variables by name on a second visit without
+        // recording a type, so a leftover entry would be inherited by the parent
+        // on the next pop and describe a value the link never wrote. Pruning
+        // against the whole queue, not just the head, keeps a grandparent's
+        // types alive through nested links.
+        const idsStillInSession = new Set(
+          newSessionState.typebotsQueue.flatMap((typebotInQueue) =>
+            typebotInQueue.typebot.variables.map((variable) => variable.id)
+          )
+        )
+        newSessionState.previewMetadata = {
+          ...newSessionState.previewMetadata,
+          variableTypes: Object.fromEntries(
+            Object.entries({ ...capturedTypes, ...inheritedTypes }).filter(
+              ([variableId]) => idsStillInSession.has(variableId)
+            )
+          ),
         }
+      }
       const nextGroup = await getNextGroup({
         state: newSessionState,
         edgeId: nextEdgeId,
