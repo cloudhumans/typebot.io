@@ -23,8 +23,10 @@ export const endFlow = createAction({
       label: 'Tag',
       placeholder: 'e.g. caso_proativo_mat',
       accordion: 'Advanced settings',
+      helperText:
+        'Requires Cloud Humans to enable the tag feature for your project. No commas; `NO_TAG` and `NO_TAG_*` are reserved.',
       moreInfoTooltip:
-        'Pins the ClaudIA conversation tag. On most channels it is written to the helpdesk as-is, so spelling matters — a typo creates a new tag rather than being ignored. Cannot contain commas. Accepts {{variables}}.',
+        'Pins the conversation tag instead of letting ClaudIA derive it. The first tag recorded for a conversation is final, and when a turn passes through more than one ClaudIA block only the tag from the last block is read. It reaches the helpdesk as-is on Zendesk and most channels, creating the tag; on HubSpot, Octadesk and legacy Intercom it is dropped unless registered there first, and on FrontApp tags are never written at all. Accepts {{variables}}, but an unset variable resolves to nothing — campanha_{{tipo}} becomes campanha_, so run the flow in preview and check the tag in the Claudia Response toast.',
     }),
   }),
 })
