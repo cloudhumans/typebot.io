@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { claudiaBlockSchema } from './schemas'
+import { claudiaBlock } from './index'
 import { endFlow } from './actions/end-flow'
 import { forwardToHuman } from './actions/forward-to-human'
 import { forwardToHumanIgnoreHours } from './actions/forward-to-human-ignore-hours'
@@ -92,6 +93,19 @@ describe.each(actions)('$name', ({ action, expectedAction }) => {
     })
     // A default would tag conversations for flows that never opted in.
     expect(tagField._def.layout.defaultValue).toBeUndefined()
+  })
+})
+
+describe('claudiaBlock.actions', () => {
+  // The `actions` list above is a hand-written snapshot. This one reads the
+  // block registry instead, so a sixth action registered without the field
+  // fails here rather than silently sitting outside the suite.
+  test('every registered action declares the Tag field', () => {
+    expect(claudiaBlock.actions).toHaveLength(actions.length)
+
+    for (const action of claudiaBlock.actions) {
+      expect((action as any).options?.shape?.tag, action.name).toBeDefined()
+    }
   })
 })
 
