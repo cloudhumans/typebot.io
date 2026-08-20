@@ -207,6 +207,20 @@ describe('Access Control Helpers', () => {
       expect(forbidden).toBe(true)
     })
 
+    it('should allow admin access for database ADMIN role even with non-admin Cognito claims', () => {
+      const adminUser = {
+        id: 'user-456',
+        email: 'admin@example.com',
+        cognitoClaims: {
+          'custom:hub_role': 'CLIENT',
+          'custom:eddie_workspaces': 'ws-shopee-123',
+        },
+      }
+
+      const forbidden = isAdminWriteWorkspaceForbidden(baseWorkspace, adminUser)
+      expect(forbidden).toBe(false)
+    })
+
     it('should fallback to database and allow admin access for database ADMIN role', () => {
       const adminUser = {
         id: 'user-456',

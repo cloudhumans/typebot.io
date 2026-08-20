@@ -8,6 +8,11 @@ export const isAdminWriteWorkspaceForbidden = (
   },
   user: Pick<User, 'email' | 'id'> & { cognitoClaims?: unknown }
 ) => {
+  const dbRole = workspace.members.find(
+    (member) => member.userId === user.id
+  )?.role
+  if (dbRole === WorkspaceRole.ADMIN) return false
+
   // Primary: Check Cognito token claims if workspace ID is available
   const cognitoAccess = checkCognitoWorkspaceAccess(user, workspace.id)
   if (cognitoAccess.hasAccess) {
@@ -15,8 +20,5 @@ export const isAdminWriteWorkspaceForbidden = (
   }
 
   // Fallback: Check database members
-  const userRole = workspace.members.find(
-    (member) => member.userId === user.id
-  )?.role
-  return !userRole || userRole !== WorkspaceRole.ADMIN
+  return !dbRole || dbRole !== WorkspaceRole.ADMIN
 }
