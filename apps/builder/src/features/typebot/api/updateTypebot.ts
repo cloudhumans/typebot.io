@@ -220,7 +220,8 @@ export const updateTypebot = authenticatedProcedure
       )
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Context enrichment flows cannot change type',
+          message:
+            'Context enrichment flows cannot change type: settings are replaced wholesale, so a payload carrying settings must include general.type = CONTEXT_ENRICHMENT',
         })
 
       if (typebot.variables !== undefined) {

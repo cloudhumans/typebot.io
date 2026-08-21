@@ -251,6 +251,14 @@ describe('updateTypebot', () => {
         typebot: { settings: { general: { type: 'TOOL' } } } as any,
       })
     ).rejects.toThrow(/cannot change type/)
+  })
+
+  it('rejects a settings payload that omits the type, because settings are replaced wholesale and the omission would drop CONTEXT_ENRICHMENT', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
 
     await expect(
       caller()({
