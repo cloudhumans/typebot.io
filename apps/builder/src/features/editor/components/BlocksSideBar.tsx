@@ -105,6 +105,9 @@ export const BlocksSideBar = () => {
   const [relativeCoordinates, setRelativeCoordinates] = useState({ x: 0, y: 0 })
   const [isLocked, setIsLocked] = useState(true)
 
+  const flowType = typebot?.settings?.general?.type
+  const isAgentToolFlow = flowType === 'TOOL' || flowType === 'CONTEXT_ENRICHMENT'
+
   const closeSideBar = useDebouncedCallback(
     () => setIsSidebarExtended(false),
     200
@@ -200,7 +203,7 @@ export const BlocksSideBar = () => {
           </Tooltip>
         </Flex>
 
-        {typebot?.settings?.general?.type !== 'TOOL' && (
+        {!isAgentToolFlow && (
           <Stack>
             <Text fontSize="sm" fontWeight="semibold">
               {t('editor.sidebarBlocks.blockType.bubbles.heading')}
@@ -219,7 +222,7 @@ export const BlocksSideBar = () => {
           </Stack>
         )}
 
-        {typebot?.settings?.general?.type !== 'TOOL' && (
+        {!isAgentToolFlow && (
           <Stack>
             <Text fontSize="sm" fontWeight="semibold">
               {t('editor.sidebarBlocks.blockType.inputs.heading')}
@@ -246,12 +249,14 @@ export const BlocksSideBar = () => {
             {Object.values(LogicBlockType)
               .filter((type) => !hiddenLogicTypes.includes(type))
               .filter((type) =>
-                typebot?.settings?.general?.type === 'TOOL'
+                isAgentToolFlow
                   ? [
                       LogicBlockType.SET_VARIABLE,
                       LogicBlockType.CONDITION,
                       LogicBlockType.SCRIPT,
-                      LogicBlockType.DECLARE_VARIABLES,
+                      ...(flowType === 'TOOL'
+                        ? [LogicBlockType.DECLARE_VARIABLES]
+                        : []),
                     ].includes(type)
                   : true
               )
@@ -272,7 +277,7 @@ export const BlocksSideBar = () => {
           <SimpleGrid columns={2} spacing="3">
             {allBlocks
               .filter((type) =>
-                typebot?.settings?.general?.type === 'TOOL'
+                isAgentToolFlow
                   ? type === IntegrationBlockType.WEBHOOK ||
                     type === IntegrationBlockType.GOOGLE_SHEETS
                   : true
@@ -287,7 +292,7 @@ export const BlocksSideBar = () => {
           </SimpleGrid>
         </Stack>
 
-        {typebot?.settings?.general?.type === 'TOOL' && (
+        {isAgentToolFlow && (
           <Stack>
             <Text fontSize="sm" fontWeight="semibold">
               Tool Output
