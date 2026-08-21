@@ -8,33 +8,33 @@ describe('findMissingEnrichmentBuiltIns', () => {
   it('returns all five names for an empty list', () => {
     expect(findMissingEnrichmentBuiltIns([])).toEqual([
       'helpdeskId',
-      'contactId',
+      'contactName',
       'contactEmail',
       'contactPhone',
-      'contactAttributes',
+      'contactExternalId',
     ])
   })
 
   it('returns only the names not present', () => {
     const variables = [
       { name: 'helpdeskId' },
-      { name: 'contactId' },
+      { name: 'contactName' },
       { name: 'contactEmail' },
       { name: 'custom' },
     ]
     expect(findMissingEnrichmentBuiltIns(variables)).toEqual([
       'contactPhone',
-      'contactAttributes',
+      'contactExternalId',
     ])
   })
 
   it('returns empty when all five are present', () => {
     const variables = [
       { name: 'helpdeskId' },
-      { name: 'contactId' },
+      { name: 'contactName' },
       { name: 'contactEmail' },
       { name: 'contactPhone' },
-      { name: 'contactAttributes' },
+      { name: 'contactExternalId' },
     ]
     expect(findMissingEnrichmentBuiltIns(variables)).toEqual([])
   })
@@ -46,10 +46,10 @@ describe('withBuiltInEnrichmentVariables', () => {
     expect(result).toHaveLength(5)
     expect(result.map((v) => v.name)).toEqual([
       'helpdeskId',
-      'contactId',
+      'contactName',
       'contactEmail',
       'contactPhone',
-      'contactAttributes',
+      'contactExternalId',
     ])
     expect(new Set(result.map((v) => v.id)).size).toBe(5)
   })
@@ -61,10 +61,10 @@ describe('withBuiltInEnrichmentVariables', () => {
     ]
     const result = withBuiltInEnrichmentVariables(existing)
     expect(result.map((v) => v.name)).toEqual([
-      'contactId',
+      'contactName',
       'contactEmail',
       'contactPhone',
-      'contactAttributes',
+      'contactExternalId',
       'helpdeskId',
       'custom',
     ])

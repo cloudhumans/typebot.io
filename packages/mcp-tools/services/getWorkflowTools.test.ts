@@ -102,7 +102,7 @@ describe('getWorkflowTools', () => {
         settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
         variables: [
           { id: 'v1', name: 'helpdeskId' },
-          { id: 'v2', name: 'contactId' },
+          { id: 'v2', name: 'contactName' },
         ],
         publicId: null,
         groups: [],

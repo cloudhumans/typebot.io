@@ -132,10 +132,10 @@ describe('importTypebot', () => {
       .data.variables as { name: string }[]
     expect(createdVariables.map((v) => v.name)).toEqual([
       'helpdeskId',
-      'contactId',
+      'contactName',
       'contactEmail',
       'contactPhone',
-      'contactAttributes',
+      'contactExternalId',
     ])
   })
 })

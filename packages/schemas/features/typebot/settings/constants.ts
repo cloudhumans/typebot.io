@@ -29,8 +29,8 @@ export const rememberUserStorages = ['session', 'local'] as const
 
 export const contextEnrichmentBuiltInVariables = [
   'helpdeskId',
-  'contactId',
+  'contactName',
   'contactEmail',
   'contactPhone',
-  'contactAttributes',
+  'contactExternalId',
 ] as const

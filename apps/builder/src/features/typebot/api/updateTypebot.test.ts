@@ -69,10 +69,10 @@ describe('updateTypebot', () => {
 
   const allBuiltInVariables = [
     { id: 'v1', name: 'helpdeskId' },
-    { id: 'v2', name: 'contactId' },
+    { id: 'v2', name: 'contactName' },
     { id: 'v3', name: 'contactEmail' },
     { id: 'v4', name: 'contactPhone' },
-    { id: 'v5', name: 'contactAttributes' },
+    { id: 'v5', name: 'contactExternalId' },
   ]
 
   const validUpdatedTypebot = {
