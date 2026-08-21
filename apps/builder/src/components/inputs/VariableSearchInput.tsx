@@ -30,6 +30,7 @@ import React, {
   ReactNode,
 } from 'react'
 import { byId, isDefined, isNotDefined } from '@typebot.io/lib'
+import { contextEnrichmentBuiltInVariables } from '@typebot.io/schemas/features/typebot/settings/constants'
 import { useOutsideClick } from '@/hooks/useOutsideClick'
 import { useParentModal } from '@/features/graph/providers/ParentModalProvider'
 import { MoreInfoTooltip } from '../MoreInfoTooltip'
@@ -82,6 +83,10 @@ export const VariableSearchInput = ({
   const itemsRef = useRef<(HTMLButtonElement | null)[]>([])
   const { ref: parentModalRef } = useParentModal()
   const { t } = useTranslate()
+
+  const isProtectedBuiltIn = (name: string) =>
+    typebot?.settings?.general?.type === 'CONTEXT_ENRICHMENT' &&
+    (contextEnrichmentBuiltInVariables as readonly string[]).includes(name)
 
   useOutsideClick({
     ref: dropdownRef,
@@ -299,20 +304,22 @@ export const VariableSearchInput = ({
                           {item.name}
                         </Text>
 
-                        <HStack>
-                          <IconButton
-                            icon={<EditIcon />}
-                            aria-label={t('variables.rename')}
-                            size="xs"
-                            onClick={handleRenameVariableClick(item)}
-                          />
-                          <IconButton
-                            icon={<TrashIcon />}
-                            aria-label={t('variables.remove')}
-                            size="xs"
-                            onClick={handleDeleteVariableClick(item)}
-                          />
-                        </HStack>
+                        {!isProtectedBuiltIn(item.name) && (
+                          <HStack>
+                            <IconButton
+                              icon={<EditIcon />}
+                              aria-label={t('variables.rename')}
+                              size="xs"
+                              onClick={handleRenameVariableClick(item)}
+                            />
+                            <IconButton
+                              icon={<TrashIcon />}
+                              aria-label={t('variables.remove')}
+                              size="xs"
+                              onClick={handleDeleteVariableClick(item)}
+                            />
+                          </HStack>
+                        )}
                       </Button>
                     )
                   })}
