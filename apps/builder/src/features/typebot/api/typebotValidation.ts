@@ -64,6 +64,10 @@ const validateFlowBranchesHaveClaudia = (
   edges: Edge[],
   settings?: Settings
 ) => {
+  const isContextEnrichmentFlow =
+    settings?.general?.type === 'CONTEXT_ENRICHMENT'
+  if (isContextEnrichmentFlow) return []
+
   const invalidGroupIds = new Set<string>()
   const groupMap = new Map<string, Group>(groups.map((g) => [g.id, g]))
 
