@@ -63,6 +63,18 @@ describe('updateTypebot', () => {
   const asTool = { settings: { general: { type: 'TOOL' } } }
   const asFlow = { settings: { general: { type: 'default' } } }
 
+  const asEnrichment = {
+    settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+  }
+
+  const allBuiltInVariables = [
+    { id: 'v1', name: 'helpdeskId' },
+    { id: 'v2', name: 'contactId' },
+    { id: 'v3', name: 'contactEmail' },
+    { id: 'v4', name: 'contactPhone' },
+    { id: 'v5', name: 'contactAttributes' },
+  ]
+
   const validUpdatedTypebot = {
     version: '6',
     id: 'tb-1',
@@ -205,6 +217,93 @@ describe('updateTypebot', () => {
         typebotId: 'tb-1',
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: { name: 'Renamed Flow' } as any,
+      })
+    ).resolves.toBeDefined()
+  })
+
+  it('rejects removing a built-in variable from a CONTEXT_ENRICHMENT flow', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { variables: allBuiltInVariables.slice(0, 4) } as any,
+      })
+    ).rejects.toThrow(/cannot be removed or renamed/)
+  })
+
+  it('rejects a settings payload that drops the CONTEXT_ENRICHMENT type', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { settings: { general: { type: 'TOOL' } } } as any,
+      })
+    ).rejects.toThrow(/cannot change type/)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { settings: { general: { isBrandingEnabled: false } } } as any,
+      })
+    ).rejects.toThrow(/cannot change type/)
+  })
+
+  it('rejects Declare variables blocks in a CONTEXT_ENRICHMENT flow', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: [
+            {
+              id: 'g1',
+              title: 'Group #1',
+              graphCoordinates: { x: 0, y: 0 },
+              blocks: [
+                { id: 'b1', type: 'Declare variables', options: { variables: [] } },
+              ],
+            },
+          ],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow(/Declare variables/)
+  })
+
+  it('accepts a valid CONTEXT_ENRICHMENT snapshot including a rename', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          name: 'Renamed Enrichment',
+          settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+          variables: [...allBuiltInVariables, { id: 'v6', name: 'custom' }],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       })
     ).resolves.toBeDefined()
   })

@@ -18,6 +18,8 @@ import {
   sanitizeVariables,
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
+import { findMissingEnrichmentBuiltIns } from '../helpers/enrichmentVariables'
+import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { isCloudProdInstance } from '@/helpers/isCloudProdInstance'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 
@@ -191,6 +193,49 @@ export const updateTypebot = authenticatedProcedure
           code: 'BAD_REQUEST',
           message:
             'Tenant and Tool description are mandatory for Tool workflows',
+        })
+    }
+
+    const isExistingContextEnrichment =
+      !!existingTypebot.settings &&
+      (existingTypebot.settings as unknown as Settings).general?.type ===
+        'CONTEXT_ENRICHMENT'
+
+    if (isExistingContextEnrichment) {
+      if (
+        typebot.settings !== undefined &&
+        typebot.settings.general?.type !== 'CONTEXT_ENRICHMENT'
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Context enrichment flows cannot change type',
+        })
+
+      if (typebot.variables !== undefined) {
+        const missing = findMissingEnrichmentBuiltIns(typebot.variables)
+        if (missing.length > 0)
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Built-in variables of context enrichment flows cannot be removed or renamed: ${missing.join(
+              ', '
+            )}`,
+          })
+      }
+
+      const hasDeclareVariablesBlock = (
+        typebot.groups as { blocks?: { type?: string }[] }[] | undefined
+      )?.some(
+        (group) =>
+          'blocks' in group &&
+          (group.blocks as { type?: string }[]).some(
+            (block) => block.type === LogicBlockType.DECLARE_VARIABLES
+          )
+      )
+      if (hasDeclareVariablesBlock)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Declare variables blocks are not allowed in context enrichment flows',
         })
     }
 
