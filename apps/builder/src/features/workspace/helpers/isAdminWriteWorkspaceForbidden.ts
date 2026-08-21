@@ -20,5 +20,5 @@ export const isAdminWriteWorkspaceForbidden = (
   }
 
   // Fallback: Check database members
-  return !dbRole || dbRole !== WorkspaceRole.ADMIN
+  return true
 }
