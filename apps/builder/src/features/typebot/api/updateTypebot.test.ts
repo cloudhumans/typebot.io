@@ -63,12 +63,48 @@ describe('updateTypebot', () => {
   const asTool = { settings: { general: { type: 'TOOL' } } }
   const asFlow = { settings: { general: { type: 'default' } } }
 
+  const validUpdatedTypebot = {
+    version: '6',
+    id: 'tb-1',
+    workspaceId: 'ws-1',
+    name: 'My Tool',
+    events: [
+      { id: 'event-1', type: 'start', graphCoordinates: { x: 0, y: 0 } },
+    ],
+    groups: [],
+    edges: [],
+    variables: [],
+    theme: {},
+    selectedThemeTemplateId: null,
+    settings: { general: { type: 'TOOL' } },
+    createdAt: new Date('2020-01-01'),
+    updatedAt: new Date('2020-01-01'),
+    icon: null,
+    folderId: null,
+    publicId: null,
+    customDomain: null,
+    resultsTablePreferences: null,
+    isArchived: false,
+    isClosed: false,
+    isSecondaryFlow: false,
+    whatsAppCredentialsId: null,
+    riskLevel: null,
+    tenant: null,
+    toolDescription: null,
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(isWriteTypebotForbidden).mockResolvedValue(false)
     vi.mocked(prisma.typebot.update).mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (async ({ data }: any) => ({ id: 'tb-1', ...data })) as any
+      (async ({ data }: any) => ({
+        ...validUpdatedTypebot,
+        ...Object.fromEntries(
+          Object.entries(data).filter(([, value]) => value !== undefined)
+        ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      })) as any
     )
   })
 

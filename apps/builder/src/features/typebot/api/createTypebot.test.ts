@@ -42,6 +42,37 @@ describe('createTypebot', () => {
     plan: Plan.FREE,
   }
 
+  const validCreatedTypebot = (overrides: Record<string, unknown> = {}) => ({
+    version: '6',
+    id: 'tb-1',
+    workspaceId: mockWorkspace.id,
+    name: 'My Bot',
+    events: [
+      { id: 'event-1', type: 'start', graphCoordinates: { x: 0, y: 0 } },
+    ],
+    groups: [],
+    edges: [],
+    variables: [],
+    theme: {},
+    selectedThemeTemplateId: null,
+    settings: { general: { type: 'TOOL' } },
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    updatedAt: new Date('2026-01-01T00:00:00Z'),
+    icon: null,
+    folderId: null,
+    publicId: null,
+    customDomain: null,
+    resultsTablePreferences: null,
+    isArchived: false,
+    isClosed: false,
+    isSecondaryFlow: false,
+    whatsAppCredentialsId: null,
+    riskLevel: null,
+    tenant: null,
+    toolDescription: null,
+    ...overrides,
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(prisma.workspace.findUnique).mockResolvedValue(
@@ -99,16 +130,13 @@ describe('createTypebot', () => {
   })
 
   it('should create TOOL if tenant and toolDescription provided', async () => {
-    vi.mocked(prisma.typebot.create).mockResolvedValue({
-      id: 'tb-1',
-      workspaceId: mockWorkspace.id,
-      name: 'My Bot',
-      settings: { general: { type: 'TOOL' } },
-      tenant: 'ten-1',
-      toolDescription: 'desc',
-      groups: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    vi.mocked(prisma.typebot.create).mockResolvedValue(
+      validCreatedTypebot({
+        tenant: 'ten-1',
+        toolDescription: 'desc',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -181,16 +209,15 @@ describe('createTypebot', () => {
     // findMany is scoped by tenant, so a colliding name in another tenant is
     // simply not returned here.
     vi.mocked(prisma.typebot.findMany).mockResolvedValue([])
-    vi.mocked(prisma.typebot.create).mockResolvedValue({
-      id: 'tb-3',
-      workspaceId: mockWorkspace.id,
-      name: 'Get Order',
-      settings: { general: { type: 'TOOL' } },
-      tenant: 'ten-2',
-      toolDescription: 'desc',
-      groups: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    vi.mocked(prisma.typebot.create).mockResolvedValue(
+      validCreatedTypebot({
+        id: 'tb-3',
+        name: 'Get Order',
+        tenant: 'ten-2',
+        toolDescription: 'desc',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const caller = router({ createTypebot }).createCaller({
@@ -213,14 +240,14 @@ describe('createTypebot', () => {
   })
 
   it('should create normal typebot without tenant/toolDescription', async () => {
-    vi.mocked(prisma.typebot.create).mockResolvedValue({
-      id: 'tb-2',
-      workspaceId: mockWorkspace.id,
-      name: 'Standard Bot',
-      settings: { general: { type: 'default' } },
-      groups: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    vi.mocked(prisma.typebot.create).mockResolvedValue(
+      validCreatedTypebot({
+        id: 'tb-2',
+        name: 'Standard Bot',
+        settings: { general: { type: 'default' } },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

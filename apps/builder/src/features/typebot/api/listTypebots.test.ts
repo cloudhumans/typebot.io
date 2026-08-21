@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { router } from '@/helpers/server/trpc'
 import { listTypebots } from './listTypebots'
 import { WorkspaceRole } from '@typebot.io/prisma'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
@@ -53,7 +54,9 @@ describe('listTypebots', () => {
   })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const caller = () => listTypebots.createCaller({ user: mockUser } as any)
+  const caller = () =>
+    router({ listTypebots }).createCaller({ user: mockUser } as never)
+      .listTypebots
 
   it('marks a TOOL-type typebot with isTool: true', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

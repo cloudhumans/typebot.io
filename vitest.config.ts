@@ -9,6 +9,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./apps/builder/src', import.meta.url)),
+      react: fileURLToPath(
+        new URL('./apps/builder/node_modules/react', import.meta.url)
+      ),
     },
   },
   test: {
@@ -21,6 +24,7 @@ export default defineConfig({
       'packages/**/*.test.ts',
       'apps/builder/src/features/auth/**/*.test.ts',
       'apps/builder/src/features/preview/helpers/*.test.ts',
+      'apps/builder/src/features/typebot/**/*.test.ts',
     ],
     exclude: [
       '**/node_modules/**',
