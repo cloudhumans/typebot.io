@@ -43,9 +43,7 @@ const graphContext = createContext<{
   // Per-block execution result during the Test (e.g., HTTP Request success or
   // error), shown as a green/red badge on the block. Cleared with the trail.
   blockResults: Record<string, 'success' | 'error'>
-  setBlockResults: Dispatch<
-    SetStateAction<Record<string, 'success' | 'error'>>
-  >
+  setBlockResults: Dispatch<SetStateAction<Record<string, 'success' | 'error'>>>
   // Group ids the Test flow jumped into (loop-backs via a Jump block, which has
   // no drawn edge). Flagged with a ↩ badge on the target group.
   jumpTargetGroupIds: string[]
