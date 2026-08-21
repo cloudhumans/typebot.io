@@ -7,6 +7,7 @@ README.md
 .git
 .github
 .turbo
+.pnpm-store
 **/.env
 landing-page
 docs
