@@ -17,6 +17,7 @@ import { EventType } from '@typebot.io/schemas/features/events/constants'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
 import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
+import { withBuiltInEnrichmentVariables } from '../helpers/enrichmentVariables'
 
 const typebotCreateSchemaPick = {
   name: true,
@@ -121,6 +122,9 @@ export const createTypebot = authenticatedProcedure
         })
     }
 
+    const isContextEnrichment =
+      typebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+
     if (typebot.folderId) {
       const existingFolder = await prisma.dashboardFolder.findUnique({
         where: {
@@ -133,6 +137,13 @@ export const createTypebot = authenticatedProcedure
     const groups = (
       typebot.groups ? await sanitizeGroups(workspaceId)(typebot.groups) : []
     ) as TypebotV6['groups']
+
+    const sanitizedVariables = typebot.variables
+      ? sanitizeVariables({ variables: typebot.variables, groups })
+      : []
+    const variables = isContextEnrichment
+      ? withBuiltInEnrichmentVariables(sanitizedVariables)
+      : sanitizedVariables
 
     const newTypebot = await prisma.typebot.create({
       data: {
@@ -158,9 +169,7 @@ export const createTypebot = authenticatedProcedure
             }
           : {},
         folderId: typebot.folderId,
-        variables: typebot.variables
-          ? sanitizeVariables({ variables: typebot.variables, groups })
-          : [],
+        variables,
         edges: typebot.edges ?? [],
         resultsTablePreferences: typebot.resultsTablePreferences ?? undefined,
         publicId: typebot.publicId ?? undefined,

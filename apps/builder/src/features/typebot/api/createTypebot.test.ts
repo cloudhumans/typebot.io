@@ -239,6 +239,93 @@ describe('createTypebot', () => {
     ).resolves.toBeDefined()
   })
 
+  it('creates a CONTEXT_ENRICHMENT flow without toolDescription', async () => {
+    vi.mocked(prisma.typebot.create).mockResolvedValue(
+      validCreatedTypebot({
+        id: 'tb-4',
+        name: 'Enrichment Flow',
+        settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        typebot: {
+          name: 'Enrichment Flow',
+          settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+        },
+      })
+    ).resolves.toBeDefined()
+  })
+
+  it('seeds the five built-in variables on CONTEXT_ENRICHMENT creation', async () => {
+    vi.mocked(prisma.typebot.create).mockResolvedValue(
+      validCreatedTypebot({
+        id: 'tb-5',
+        name: 'Enrichment Flow',
+        settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await caller.createTypebot({
+      workspaceId: mockWorkspace.id,
+      typebot: {
+        name: 'Enrichment Flow',
+        settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+      },
+    })
+
+    const createdVariables = vi.mocked(prisma.typebot.create).mock.calls[0][0]
+      .data.variables as { name: string }[]
+    expect(createdVariables.map((v) => v.name)).toEqual([
+      'helpdeskId',
+      'contactId',
+      'contactEmail',
+      'contactPhone',
+      'contactAttributes',
+    ])
+  })
+
+  it('does not seed built-in variables on default typebots', async () => {
+    vi.mocked(prisma.typebot.create).mockResolvedValue(
+      validCreatedTypebot({
+        id: 'tb-6',
+        name: 'Standard Bot',
+        settings: { general: { type: 'default' } },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await caller.createTypebot({
+      workspaceId: mockWorkspace.id,
+      typebot: {
+        name: 'Standard Bot',
+      },
+    })
+
+    expect(
+      vi.mocked(prisma.typebot.create).mock.calls[0][0].data.variables
+    ).toEqual([])
+  })
+
   it('should create normal typebot without tenant/toolDescription', async () => {
     vi.mocked(prisma.typebot.create).mockResolvedValue(
       validCreatedTypebot({
