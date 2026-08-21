@@ -48,7 +48,9 @@ export const listTypebots = authenticatedProcedure
           z.boolean()
         )
         .optional()
-        .describe('When true, omit TOOL-type typebots from the response.'),
+        .describe(
+          'When true, only return default flows (omits TOOL and CONTEXT_ENRICHMENT typebots).'
+        ),
       type: z
         .enum(['default', 'TOOL', 'CONTEXT_ENRICHMENT'])
         .optional()
