@@ -185,10 +185,10 @@ export const listTypebots = authenticatedProcedure
             const rawType = parsedSettings.success
               ? parsedSettings.data.general?.type
               : undefined
-            const flowType =
+            const flowType: 'default' | 'TOOL' | 'CONTEXT_ENRICHMENT' =
               rawType === 'TOOL' || rawType === 'CONTEXT_ENRICHMENT'
                 ? rawType
-                : ('default' as const)
+                : 'default'
             return {
               publishedTypebotId: typebot.publishedTypebot?.id,
               isTool: flowType === 'TOOL',
