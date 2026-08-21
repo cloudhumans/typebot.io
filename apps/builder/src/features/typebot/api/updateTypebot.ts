@@ -224,12 +224,10 @@ export const updateTypebot = authenticatedProcedure
 
       const hasDeclareVariablesBlock = (
         typebot.groups as { blocks?: { type?: string }[] }[] | undefined
-      )?.some(
-        (group) =>
-          'blocks' in group &&
-          (group.blocks as { type?: string }[]).some(
-            (block) => block.type === LogicBlockType.DECLARE_VARIABLES
-          )
+      )?.some((group) =>
+        group.blocks?.some(
+          (block) => block.type === LogicBlockType.DECLARE_VARIABLES
+        )
       )
       if (hasDeclareVariablesBlock)
         throw new TRPCError({
