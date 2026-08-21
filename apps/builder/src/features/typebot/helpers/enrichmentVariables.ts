@@ -1,5 +1,6 @@
 import { createId } from '@paralleldrive/cuid2'
 import { Variable } from '@typebot.io/schemas'
+import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { contextEnrichmentBuiltInVariables } from '@typebot.io/schemas/features/typebot/settings/constants'
 
 export const findMissingEnrichmentBuiltIns = (
@@ -18,3 +19,12 @@ export const withBuiltInEnrichmentVariables = (
   })),
   ...variables,
 ]
+
+export const hasDeclareVariablesBlock = (
+  groups: { blocks?: { type?: string }[] }[] | undefined
+): boolean =>
+  groups?.some((group) =>
+    group.blocks?.some(
+      (block) => block.type === LogicBlockType.DECLARE_VARIABLES
+    )
+  ) ?? false

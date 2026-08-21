@@ -18,8 +18,10 @@ import {
   sanitizeVariables,
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
-import { findMissingEnrichmentBuiltIns } from '../helpers/enrichmentVariables'
-import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
+import {
+  findMissingEnrichmentBuiltIns,
+  hasDeclareVariablesBlock,
+} from '../helpers/enrichmentVariables'
 import { isCloudProdInstance } from '@/helpers/isCloudProdInstance'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 
@@ -201,6 +203,16 @@ export const updateTypebot = authenticatedProcedure
       (existingTypebot.settings as unknown as Settings).general?.type ===
         'CONTEXT_ENRICHMENT'
 
+    if (
+      !isExistingContextEnrichment &&
+      typebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+    )
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Flows cannot be converted to context enrichment; create a new CONTEXT_ENRICHMENT flow instead',
+      })
+
     if (isExistingContextEnrichment) {
       if (
         typebot.settings !== undefined &&
@@ -222,14 +234,11 @@ export const updateTypebot = authenticatedProcedure
           })
       }
 
-      const hasDeclareVariablesBlock = (
-        typebot.groups as { blocks?: { type?: string }[] }[] | undefined
-      )?.some((group) =>
-        group.blocks?.some(
-          (block) => block.type === LogicBlockType.DECLARE_VARIABLES
+      if (
+        hasDeclareVariablesBlock(
+          typebot.groups as { blocks?: { type?: string }[] }[] | undefined
         )
       )
-      if (hasDeclareVariablesBlock)
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message:

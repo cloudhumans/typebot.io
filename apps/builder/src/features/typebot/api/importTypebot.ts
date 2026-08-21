@@ -22,7 +22,10 @@ import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
 import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
-import { withBuiltInEnrichmentVariables } from '../helpers/enrichmentVariables'
+import {
+  hasDeclareVariablesBlock,
+  withBuiltInEnrichmentVariables,
+} from '../helpers/enrichmentVariables'
 
 const omittedProps = {
   id: true,
@@ -157,6 +160,18 @@ export const importTypebot = authenticatedProcedure
           message: `A tool named '${migratedTypebot.name}' already exists in this tenant. Tool names must be unique.`,
         })
     }
+
+    if (
+      migratedTypebot.settings?.general?.type === 'CONTEXT_ENRICHMENT' &&
+      hasDeclareVariablesBlock(
+        migratedTypebot.groups as { blocks?: { type?: string }[] }[] | undefined
+      )
+    )
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Declare variables blocks are not allowed in context enrichment flows',
+      })
 
     const groups = (
       migratedTypebot.groups

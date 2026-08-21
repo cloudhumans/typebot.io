@@ -299,6 +299,37 @@ describe('createTypebot', () => {
     ])
   })
 
+  it('rejects Declare variables blocks on CONTEXT_ENRICHMENT creation', async () => {
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        typebot: {
+          name: 'My Enrichment',
+          settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+          groups: [
+            {
+              id: 'g1',
+              title: 'Group',
+              graphCoordinates: { x: 0, y: 0 },
+              blocks: [
+                {
+                  id: 'b1',
+                  type: 'Declare variables',
+                  options: { variables: [] },
+                },
+              ],
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any,
+          ],
+        },
+      })
+    ).rejects.toThrow(/Declare variables/)
+  })
+
   it('does not seed built-in variables on default typebots', async () => {
     vi.mocked(prisma.typebot.create).mockResolvedValue(
       validCreatedTypebot({

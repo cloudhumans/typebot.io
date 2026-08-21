@@ -17,7 +17,10 @@ import { EventType } from '@typebot.io/schemas/features/events/constants'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
 import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
-import { withBuiltInEnrichmentVariables } from '../helpers/enrichmentVariables'
+import {
+  hasDeclareVariablesBlock,
+  withBuiltInEnrichmentVariables,
+} from '../helpers/enrichmentVariables'
 
 const typebotCreateSchemaPick = {
   name: true,
@@ -124,6 +127,18 @@ export const createTypebot = authenticatedProcedure
 
     const isContextEnrichment =
       typebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+
+    if (
+      isContextEnrichment &&
+      hasDeclareVariablesBlock(
+        typebot.groups as { blocks?: { type?: string }[] }[] | undefined
+      )
+    )
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Declare variables blocks are not allowed in context enrichment flows',
+      })
 
     if (typebot.folderId) {
       const existingFolder = await prisma.dashboardFolder.findUnique({

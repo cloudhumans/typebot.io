@@ -292,6 +292,27 @@ describe('updateTypebot', () => {
     ).rejects.toThrow(/Declare variables/)
   })
 
+  it('rejects converting an existing flow into CONTEXT_ENRICHMENT', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asFlow,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    const caller = router({ updateTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.updateTypebot({
+        typebotId: 'tb-1',
+        typebot: {
+          settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+        },
+      })
+    ).rejects.toThrow(/cannot be converted to context enrichment/)
+  })
+
   it('accepts a valid CONTEXT_ENRICHMENT snapshot including a rename', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,
