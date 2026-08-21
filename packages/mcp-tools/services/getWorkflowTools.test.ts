@@ -91,4 +91,29 @@ describe('getWorkflowTools', () => {
     )
     expect(variable?.required).toBe(true)
   })
+
+  it('never returns CONTEXT_ENRICHMENT flows, even with a toolDescription set', async () => {
+    findManyMock.mockResolvedValue([
+      {
+        id: 'ce-1234567',
+        name: 'Enrich Contact',
+        tenant: 'solides',
+        toolDescription: 'should never leak',
+        settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+        variables: [
+          { id: 'v1', name: 'helpdeskId' },
+          { id: 'v2', name: 'contactId' },
+        ],
+        publicId: null,
+        groups: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        publishedTypebot: { id: 'pub-1' },
+      },
+    ])
+
+    const { tools } = await getWorkflowTools({ tenant: 'solides' })
+
+    expect(tools).toEqual([])
+  })
 })
