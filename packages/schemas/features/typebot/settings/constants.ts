@@ -26,3 +26,11 @@ export const defaultSettings = {
 } as const
 
 export const rememberUserStorages = ['session', 'local'] as const
+
+export const contextEnrichmentBuiltInVariables = [
+  'helpdeskId',
+  'contactId',
+  'contactEmail',
+  'contactPhone',
+  'contactAttributes',
+] as const
