@@ -278,7 +278,11 @@ describe('updateTypebot', () => {
               title: 'Group #1',
               graphCoordinates: { x: 0, y: 0 },
               blocks: [
-                { id: 'b1', type: 'Declare variables', options: { variables: [] } },
+                {
+                  id: 'b1',
+                  type: 'Declare variables',
+                  options: { variables: [] },
+                },
               ],
             },
           ],

@@ -106,7 +106,8 @@ export const BlocksSideBar = () => {
   const [isLocked, setIsLocked] = useState(true)
 
   const flowType = typebot?.settings?.general?.type
-  const isAgentToolFlow = flowType === 'TOOL' || flowType === 'CONTEXT_ENRICHMENT'
+  const isAgentToolFlow =
+    flowType === 'TOOL' || flowType === 'CONTEXT_ENRICHMENT'
 
   const closeSideBar = useDebouncedCallback(
     () => setIsSidebarExtended(false),
