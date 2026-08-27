@@ -17,6 +17,7 @@ import {
   SimpleGrid,
   keyframes,
   useColorModeValue,
+  usePrefersReducedMotion,
 } from '@chakra-ui/react'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
@@ -85,14 +86,26 @@ export const GettingStartedModal = () => {
   const { t } = useTranslate()
   const { query } = useRouter()
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const prefersReducedMotion = usePrefersReducedMotion()
+
+  /** Drops a decorative animation when the OS asks for reduced motion. */
+  const motion = (value: string) => (prefersReducedMotion ? undefined : value)
 
   const bodyBg = useColorModeValue(brand.cream, 'gray.850')
   const cardBg = useColorModeValue('white', 'gray.800')
-  const cardBorder = useColorModeValue('blackAlpha.100', 'whiteAlpha.100')
+  // In dark mode the card (`gray.800`) sits on the dialog (`gray.850`) at
+  // 1.10:1, and shadows are invisible there — the border is all that separates
+  // them. `whiteAlpha.400` puts that edge at 3.32:1, clearing the 3:1 WCAG
+  // 1.4.11 threshold for non-text contrast.
+  const cardBorder = useColorModeValue('blackAlpha.100', 'whiteAlpha.400')
   const cardTitleColor = useColorModeValue(brand.ink, 'gray.100')
   const cardTextColor = useColorModeValue('gray.600', 'gray.400')
   const iconBg = useColorModeValue('primary.50', 'whiteAlpha.100')
   const dialogBorder = useColorModeValue('blackAlpha.50', 'whiteAlpha.200')
+  // `brand.orange` on `brand.cream` is 2.47:1 — under AA for this 14px/600
+  // link. `primary.700` is 5.03:1 in the same hue. Dark mode already passed at
+  // 6.32:1, so it keeps `brand.orange`.
+  const faqColor = useColorModeValue('primary.700', brand.orange)
 
   useEffect(() => {
     const isFirstBot = Array.isArray(query.isFirstBot)
@@ -113,9 +126,12 @@ export const GettingStartedModal = () => {
     >
       <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(6px)" />
       <ModalContent
-        // The flow-editor canvas listens for wheel events to pan/zoom; without
-        // this the three stacked cards can't be scrolled on short viewports.
-        onWheel={(e) => e.stopPropagation()}
+        // There is no `ModalHeader` here (the title lives inside the hero), so
+        // Chakra emits no `aria-labelledby` and the dialog would go unnamed.
+        // Passing `aria-labelledby` in doesn't help: `getDialogProps` spreads
+        // our props first and then hardcodes the attribute. `aria-label`
+        // survives that spread.
+        aria-label={t('editor.gettingStartedModal.welcome.title')}
         overflow="hidden"
         rounded="3xl"
         bg={bodyBg}
@@ -139,9 +155,18 @@ export const GettingStartedModal = () => {
         <Box
           position="relative"
           overflow="hidden"
+          // The hero is a sibling of `ModalBody`, so it gets none of the
+          // `flex: 1; overflow: auto` the theme gives the body. Without this it
+          // shrinks below its content height once `scrollBehavior="inside"`
+          // caps the dialog, and the clipped part can't be scrolled to. The
+          // short-viewport padding keeps it from pushing the cards off-screen.
+          flexShrink={0}
           px={{ base: 6, md: 10 }}
           pt={{ base: 7, md: 9 }}
           pb={{ base: 8, md: 10 }}
+          sx={{
+            '@media (max-height: 800px)': { paddingTop: 4, paddingBottom: 5 },
+          }}
           bgGradient={`linear(135deg, ${brand.orange} 0%, ${brand.tangerine} 52%, ${brand.amber} 100%)`}
         >
           {/* mascots emerging from the gradient */}
@@ -175,7 +200,7 @@ export const GettingStartedModal = () => {
             rounded="full"
             bg="radial-gradient(circle, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 70%)"
             filter="blur(6px)"
-            animation={`${floatBlob} 11s ease-in-out infinite`}
+            animation={motion(`${floatBlob} 11s ease-in-out infinite`)}
           />
           <Box
             aria-hidden
@@ -187,30 +212,51 @@ export const GettingStartedModal = () => {
             rounded="full"
             bg={`radial-gradient(circle, ${brand.amber}aa 0%, rgba(248,186,5,0) 70%)`}
             filter="blur(10px)"
-            animation={`${floatBlob} 14s ease-in-out infinite reverse`}
+            animation={motion(`${floatBlob} 14s ease-in-out infinite reverse`)}
           />
 
-          {sparkles.map((s, i) => (
-            <Box
-              key={i}
-              aria-hidden
-              position="absolute"
-              top={s.top}
-              left={s.left}
-              w={s.size}
-              h={s.size}
-              rounded="full"
-              bg="white"
-              animation={`${twinkle} 3.4s ease-in-out ${s.delay} infinite`}
-            />
-          ))}
+          {/* The sparkles exist only to twinkle, so reduced motion drops them
+              rather than leaving five static dots on the gradient. */}
+          {!prefersReducedMotion &&
+            sparkles.map((s, i) => (
+              <Box
+                key={i}
+                aria-hidden
+                position="absolute"
+                top={s.top}
+                left={s.left}
+                w={s.size}
+                h={s.size}
+                rounded="full"
+                bg="white"
+                animation={`${twinkle} 3.4s ease-in-out ${s.delay} infinite`}
+              />
+            ))}
+
+          {/* White copy on the orange-to-yellow gradient is 1.53-2.60:1 on its
+              own. This scrim darkens only the column the text occupies, taking
+              the worst case to 6.05:1 and leaving the gradient untouched on the
+              mascot side. */}
+          <Box
+            aria-hidden
+            position="absolute"
+            inset={0}
+            bg={{ base: 'blackAlpha.500', md: 'transparent' }}
+            bgGradient={{
+              base: 'none',
+              md: 'linear(to-r, blackAlpha.500 0%, blackAlpha.500 60%, transparent 88%)',
+            }}
+          />
 
           <Stack
             position="relative"
             spacing={{ base: 4, md: 5 }}
             maxW={{ base: '100%', md: '62%' }}
           >
-            <HStack spacing={2.5} animation={`${riseIn} .5s ease-out both`}>
+            <HStack
+              spacing={2.5}
+              animation={motion(`${riseIn} .5s ease-out both`)}
+            >
               <CloudHumansMark />
               <Text
                 fontFamily="heading"
@@ -235,7 +281,7 @@ export const GettingStartedModal = () => {
                 rounded="full"
                 bg="whiteAlpha.300"
                 backdropFilter="blur(4px)"
-                animation={`${riseIn} .5s ease-out .05s both`}
+                animation={motion(`${riseIn} .5s ease-out .05s both`)}
               >
                 <Box w="6px" h="6px" rounded="full" bg="white" />
                 <Text
@@ -255,7 +301,7 @@ export const GettingStartedModal = () => {
                 lineHeight="1.1"
                 color="white"
                 textShadow="0 2px 18px rgba(0,0,0,.18)"
-                animation={`${riseIn} .5s ease-out .1s both`}
+                animation={motion(`${riseIn} .5s ease-out .1s both`)}
               >
                 {t('editor.gettingStartedModal.welcome.title')}
               </Heading>
@@ -263,7 +309,7 @@ export const GettingStartedModal = () => {
               <Text
                 fontSize={{ base: 'sm', md: 'md' }}
                 color="whiteAlpha.900"
-                animation={`${riseIn} .5s ease-out .18s both`}
+                animation={motion(`${riseIn} .5s ease-out .18s both`)}
               >
                 {t('editor.gettingStartedModal.welcome.subtitle')}
               </Text>
@@ -284,7 +330,9 @@ export const GettingStartedModal = () => {
                 borderColor={cardBorder}
                 shadow="sm"
                 transition="transform .2s ease, box-shadow .2s ease, border-color .2s ease"
-                animation={`${riseIn} .5s ease-out ${0.24 + i * 0.08}s both`}
+                animation={motion(
+                  `${riseIn} .5s ease-out ${0.24 + i * 0.08}s both`
+                )}
                 _hover={{
                   transform: 'translateY(-4px)',
                   shadow: `0 14px 28px -16px ${brand.orange}80`,
@@ -292,6 +340,7 @@ export const GettingStartedModal = () => {
                 }}
               >
                 <Box
+                  aria-hidden
                   fontSize="xl"
                   lineHeight="1"
                   w="40px"
@@ -326,14 +375,14 @@ export const GettingStartedModal = () => {
             align="center"
             justify="space-between"
             spacing={4}
-            animation={`${riseIn} .5s ease-out .5s both`}
+            animation={motion(`${riseIn} .5s ease-out .5s both`)}
           >
             <Link
               href={t('editor.gettingStartedModal.welcome.faq')}
               isExternal
               fontSize="sm"
               fontWeight="600"
-              color={brand.orange}
+              color={faqColor}
               _hover={{ textDecoration: 'underline' }}
             >
               {t('editor.gettingStartedModal.welcome.faqLabel')} →
