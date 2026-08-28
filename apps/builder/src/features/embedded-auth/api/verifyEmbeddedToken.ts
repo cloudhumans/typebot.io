@@ -9,7 +9,10 @@ export const verifyEmbeddedToken = publicProcedure
   .mutation(async ({ input }) => {
     try {
       const payload = await verifyCognitoToken({
-        cognitoAppClientId: env.CLOUDCHAT_COGNITO_APP_CLIENT_ID,
+        cognitoAppClientId: [
+          env.CLOUDCHAT_COGNITO_APP_CLIENT_ID,
+          env.CLOUDCHAT_COGNITO_CONFIDENTIAL_CLIENT_ID,
+        ].filter((audience): audience is string => Boolean(audience)),
         cognitoIssuerUrl: env.COGNITO_ISSUER_URL,
         cognitoToken: input.token,
       })
