@@ -12,6 +12,7 @@ type ClaudiaResponse = {
   topic?: string
   searchTerm?: string
   tag?: string
+  silent?: boolean
 }
 
 type TypebotLog = Extract<
