@@ -1,6 +1,7 @@
 import { createId } from '@paralleldrive/cuid2'
 import { Variable } from '@typebot.io/schemas'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
+import { EventType } from '@typebot.io/schemas/features/events/constants'
 import { contextEnrichmentBuiltInVariables } from '@typebot.io/schemas/features/typebot/settings/constants'
 
 export const findMissingEnrichmentBuiltIns = (
@@ -123,4 +124,53 @@ export const normalizeEnrichmentDeclareVariables = <
   )
 
   return { groups: finalGroups, edges: finalEdges }
+}
+
+export const ENRICHMENT_STARTER_GROUP_TITLE = 'Retorna contexto do CRM'
+
+export const ENRICHMENT_STARTER_CUSTOM_JSON = JSON.stringify(
+  {
+    cliente: '{{contactName}}',
+    email: '{{contactEmail}}',
+    telefone: '{{contactPhone}}',
+    id_crm: '{{contactExternalId}}',
+    exemplo: 'Substitua este JSON pelo retorno real do seu CRM',
+  },
+  null,
+  2
+)
+
+export const buildEnrichmentStarterFlow = () => {
+  const eventId = createId()
+  const edgeId = createId()
+  const groupId = createId()
+  return {
+    events: [
+      {
+        id: eventId,
+        type: EventType.START,
+        outgoingEdgeId: edgeId,
+        graphCoordinates: { x: 0, y: 0 },
+      },
+    ],
+    edges: [{ id: edgeId, from: { eventId }, to: { groupId } }],
+    groups: [
+      {
+        id: groupId,
+        title: ENRICHMENT_STARTER_GROUP_TITLE,
+        graphCoordinates: { x: 400, y: 100 },
+        blocks: [
+          {
+            id: createId(),
+            type: 'workflow',
+            options: {
+              action: 'Return Output',
+              responseType: 'Custom JSON',
+              customJson: ENRICHMENT_STARTER_CUSTOM_JSON,
+            },
+          },
+        ],
+      },
+    ],
+  }
 }

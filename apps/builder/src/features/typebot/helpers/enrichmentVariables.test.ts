@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ENRICHMENT_STARTER_GROUP_TITLE,
   ENRICHMENT_VARIABLES_GROUP_TITLE,
+  buildEnrichmentStarterFlow,
   findMissingEnrichmentBuiltIns,
   normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
@@ -187,5 +189,61 @@ describe('normalizeEnrichmentDeclareVariables', () => {
     })
 
     expect(edges).toEqual([])
+  })
+})
+
+describe('buildEnrichmentStarterFlow', () => {
+  const builtInVariables = [
+    { id: 'v1', name: 'helpdeskId' },
+    { id: 'v2', name: 'contactName' },
+    { id: 'v3', name: 'contactEmail' },
+    { id: 'v4', name: 'contactPhone' },
+    { id: 'v5', name: 'contactExternalId' },
+  ]
+
+  it('wires start event -> edge -> starter group consistently', () => {
+    const { events, edges, groups } = buildEnrichmentStarterFlow()
+
+    expect(events).toHaveLength(1)
+    expect(edges).toHaveLength(1)
+    expect(groups).toHaveLength(1)
+    expect(events[0].outgoingEdgeId).toBe(edges[0].id)
+    expect(edges[0].from.eventId).toBe(events[0].id)
+    expect(edges[0].to.groupId).toBe(groups[0].id)
+    expect(groups[0].title).toBe(ENRICHMENT_STARTER_GROUP_TITLE)
+  })
+
+  it('seeds a Return Output block with a parseable Custom JSON example using the built-ins', () => {
+    const { groups } = buildEnrichmentStarterFlow()
+    const block = groups[0].blocks[0]
+
+    expect(block.type).toBe('workflow')
+    expect(block.options.responseType).toBe('Custom JSON')
+    const parsed = JSON.parse(block.options.customJson)
+    expect(parsed.cliente).toBe('{{contactName}}')
+    expect(parsed.id_crm).toBe('{{contactExternalId}}')
+  })
+
+  it('generates fresh ids on every call', () => {
+    const first = buildEnrichmentStarterFlow()
+    const second = buildEnrichmentStarterFlow()
+
+    expect(first.groups[0].id).not.toBe(second.groups[0].id)
+    expect(first.events[0].id).not.toBe(second.events[0].id)
+  })
+
+  it('survives normalization keeping the starter edge and gaining the declare group', () => {
+    const starter = buildEnrichmentStarterFlow()
+    const { groups, edges } = normalizeEnrichmentDeclareVariables({
+      groups: starter.groups,
+      edges: starter.edges,
+      variables: builtInVariables,
+    })
+
+    expect(edges).toEqual(starter.edges)
+    expect(groups.map((g) => g.title)).toEqual([
+      ENRICHMENT_STARTER_GROUP_TITLE,
+      ENRICHMENT_VARIABLES_GROUP_TITLE,
+    ])
   })
 })
