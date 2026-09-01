@@ -3,6 +3,7 @@ import {
   Button,
   HStack,
   IconButton,
+  Tag,
   Text,
   Tooltip,
   Checkbox,
@@ -16,6 +17,7 @@ import { VariableSearchInput } from '@/components/inputs/VariableSearchInput'
 import { TextInput } from '@/components/inputs'
 import { TrashIcon, PlusIcon } from '@/components/icons'
 import { useTypebot } from '@/features/editor/providers/TypebotProvider'
+import { byId } from '@typebot.io/lib'
 
 type Props = {
   options: DeclareVariablesBlock['options']
@@ -26,8 +28,27 @@ export const DeclareVariablesSettings = ({
   options,
   onOptionsChange,
 }: Props) => {
-  const { updateVariable } = useTypebot()
+  const { typebot, updateVariable } = useTypebot()
   const variables = options?.variables ?? []
+
+  if (typebot?.settings?.general?.type === 'CONTEXT_ENRICHMENT') {
+    return (
+      <Stack spacing={3}>
+        <Text fontSize="sm" color="gray.600">
+          Variables prefilled by ClaudIA on every run of this flow. This block
+          is read-only: the variables cannot be edited or removed.
+        </Text>
+        <HStack wrap="wrap" spacing={2}>
+          {variables.map((declared) => (
+            <Tag key={declared.variableId} size="sm" colorScheme="primary">
+              {typebot.variables.find(byId(declared.variableId))?.name ??
+                'Unknown'}
+            </Tag>
+          ))}
+        </HStack>
+      </Stack>
+    )
+  }
 
   const addVariable = () => {
     onOptionsChange({

@@ -299,35 +299,36 @@ describe('createTypebot', () => {
     ])
   })
 
-  it('rejects Declare variables blocks on CONTEXT_ENRICHMENT creation', async () => {
+  it('seeds a detached readonly Declare variables group on CONTEXT_ENRICHMENT creation', async () => {
     const caller = router({ createTypebot }).createCaller({
       user: mockUser,
     } as never)
 
-    await expect(
-      caller.createTypebot({
-        workspaceId: mockWorkspace.id,
-        typebot: {
-          name: 'My Enrichment',
-          settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
-          groups: [
-            {
-              id: 'g1',
-              title: 'Group',
-              graphCoordinates: { x: 0, y: 0 },
-              blocks: [
-                {
-                  id: 'b1',
-                  type: 'Declare variables',
-                  options: { variables: [] },
-                },
-              ],
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any,
-          ],
-        },
-      })
-    ).rejects.toThrow(/Declare variables/)
+    await caller.createTypebot({
+      workspaceId: mockWorkspace.id,
+      typebot: {
+        name: 'My Enrichment',
+        settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+      },
+    })
+
+    const createdData = vi.mocked(prisma.typebot.create).mock.calls[0][0].data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createdGroups = createdData.groups as any[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createdVariables = createdData.variables as any[]
+    expect(createdGroups).toHaveLength(1)
+    expect(createdGroups[0].title).toBe(
+      'Variáveis pré-preenchidas pela ClaudIA'
+    )
+    expect(createdGroups[0].blocks).toHaveLength(1)
+    expect(createdGroups[0].blocks[0].type).toBe('Declare variables')
+    expect(
+      createdGroups[0].blocks[0].options.variables.map(
+        (v: { variableId: string }) => v.variableId
+      )
+    ).toEqual(createdVariables.map((v) => v.id))
+    expect(createdData.edges).toEqual([])
   })
 
   it('does not seed built-in variables on default typebots', async () => {

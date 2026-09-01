@@ -20,7 +20,7 @@ import {
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 import {
-  hasDeclareVariablesBlock,
+  normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
 } from '../helpers/enrichmentVariables'
 import { isCloudProdInstance } from '@/helpers/isCloudProdInstance'
@@ -98,6 +98,7 @@ export const updateTypebot = authenticatedProcedure
         customDomain: true,
         publicId: true,
         settings: true,
+        variables: true,
         collaborators: {
           select: {
             userId: true,
@@ -231,16 +232,24 @@ export const updateTypebot = authenticatedProcedure
         )
       }
 
-      if (
-        hasDeclareVariablesBlock(
-          typebot.groups as { blocks?: { type?: string }[] }[] | undefined
-        )
-      )
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message:
-            'Declare variables blocks are not allowed in context enrichment flows',
+      if (typebot.groups !== undefined) {
+        const normalized = normalizeEnrichmentDeclareVariables({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          groups: typebot.groups as any[],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          edges: (typebot.edges ?? []) as any[],
+          variables:
+            (typebot.variables as Variable[] | undefined) ??
+            withBuiltInEnrichmentVariables(
+              (existingTypebot.variables as Variable[] | null) ?? []
+            ),
         })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot.groups = normalized.groups as any
+        if (typebot.edges !== undefined)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          typebot.edges = normalized.edges as any
+      }
     }
 
     const groups = typebot.groups

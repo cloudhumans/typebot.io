@@ -324,35 +324,92 @@ describe('updateTypebot', () => {
     ).rejects.toThrow(/cannot change type/)
   })
 
-  it('rejects Declare variables blocks in a CONTEXT_ENRICHMENT flow', async () => {
+  it('seeds a detached readonly Declare variables group on a CONTEXT_ENRICHMENT update without one', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,
       ...asEnrichment,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    await expect(
-      caller()({
-        typebotId: 'tb-1',
-        typebot: {
-          groups: [
-            {
-              id: 'g1',
-              title: 'Group #1',
-              graphCoordinates: { x: 0, y: 0 },
-              blocks: [
-                {
-                  id: 'b1',
-                  type: 'Declare variables',
-                  options: { variables: [] },
+    await caller()({
+      typebotId: 'tb-1',
+      typebot: {
+        variables: allBuiltInVariables,
+        groups: [],
+        edges: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    })
+
+    const savedGroups =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.typebot.update).mock.calls[0][0].data.groups as any[]
+    expect(savedGroups).toHaveLength(1)
+    expect(savedGroups[0].title).toBe('Variáveis pré-preenchidas pela ClaudIA')
+    expect(savedGroups[0].blocks).toHaveLength(1)
+    expect(savedGroups[0].blocks[0].type).toBe('Declare variables')
+    expect(
+      savedGroups[0].blocks[0].options.variables.map(
+        (v: { variableId: string }) => v.variableId
+      )
+    ).toEqual(['v1', 'v2', 'v3', 'v4', 'v5'])
+  })
+
+  it('rewrites a tampered Declare variables block to the canonical built-ins and detaches it', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await caller()({
+      typebotId: 'tb-1',
+      typebot: {
+        variables: allBuiltInVariables,
+        groups: [
+          {
+            id: 'g1',
+            title: 'Variáveis pré-preenchidas pela ClaudIA',
+            graphCoordinates: { x: 0, y: 0 },
+            blocks: [
+              {
+                id: 'b1',
+                type: 'Declare variables',
+                options: {
+                  variables: [
+                    {
+                      variableId: 'v-injected',
+                      description: 'injected',
+                      required: false,
+                    },
+                  ],
                 },
-              ],
-            },
-          ],
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      })
-    ).rejects.toThrow(/Declare variables/)
+              },
+            ],
+          },
+        ],
+        edges: [
+          {
+            id: 'e1',
+            from: { eventId: 'start' },
+            to: { groupId: 'g1' },
+          },
+        ],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    })
+
+    const savedData = vi.mocked(prisma.typebot.update).mock.calls[0][0].data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const savedGroups = savedData.groups as any[]
+    expect(savedGroups).toHaveLength(1)
+    expect(savedGroups[0].blocks[0].id).toBe('b1')
+    expect(
+      savedGroups[0].blocks[0].options.variables.map(
+        (v: { variableId: string }) => v.variableId
+      )
+    ).toEqual(['v1', 'v2', 'v3', 'v4', 'v5'])
+    expect(savedData.edges).toEqual([])
   })
 
   it('rejects converting an existing flow into CONTEXT_ENRICHMENT', async () => {

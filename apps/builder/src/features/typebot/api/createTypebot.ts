@@ -18,7 +18,7 @@ import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
 import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
 import {
-  hasDeclareVariablesBlock,
+  normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
 } from '../helpers/enrichmentVariables'
 
@@ -128,18 +128,6 @@ export const createTypebot = authenticatedProcedure
     const isContextEnrichment =
       typebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
 
-    if (
-      isContextEnrichment &&
-      hasDeclareVariablesBlock(
-        typebot.groups as { blocks?: { type?: string }[] }[] | undefined
-      )
-    )
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message:
-          'Declare variables blocks are not allowed in context enrichment flows',
-      })
-
     if (typebot.folderId) {
       const existingFolder = await prisma.dashboardFolder.findUnique({
         where: {
@@ -160,6 +148,15 @@ export const createTypebot = authenticatedProcedure
       ? withBuiltInEnrichmentVariables(sanitizedVariables)
       : sanitizedVariables
 
+    const { groups: finalGroups, edges: finalEdges } = isContextEnrichment
+      ? normalizeEnrichmentDeclareVariables({
+          groups,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          edges: (typebot.edges ?? []) as any[],
+          variables,
+        })
+      : { groups, edges: typebot.edges ?? [] }
+
     const newTypebot = await prisma.typebot.create({
       data: {
         version: '6',
@@ -167,7 +164,7 @@ export const createTypebot = authenticatedProcedure
         name: typebot.name,
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
-        groups,
+        groups: finalGroups,
         events: typebot.events ?? [
           {
             type: EventType.START,
@@ -185,7 +182,7 @@ export const createTypebot = authenticatedProcedure
           : {},
         folderId: typebot.folderId,
         variables,
-        edges: typebot.edges ?? [],
+        edges: finalEdges,
         resultsTablePreferences: typebot.resultsTablePreferences ?? undefined,
         publicId: typebot.publicId ?? undefined,
         customDomain: typebot.customDomain ?? undefined,

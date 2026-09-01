@@ -23,7 +23,7 @@ import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
 import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
 import {
-  hasDeclareVariablesBlock,
+  normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
 } from '../helpers/enrichmentVariables'
 
@@ -161,18 +161,6 @@ export const importTypebot = authenticatedProcedure
         })
     }
 
-    if (
-      migratedTypebot.settings?.general?.type === 'CONTEXT_ENRICHMENT' &&
-      hasDeclareVariablesBlock(
-        migratedTypebot.groups as { blocks?: { type?: string }[] }[] | undefined
-      )
-    )
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message:
-          'Declare variables blocks are not allowed in context enrichment flows',
-      })
-
     const groups = (
       migratedTypebot.groups
         ? await sanitizeGroups(workspaceId)(migratedTypebot.groups)
@@ -187,6 +175,16 @@ export const importTypebot = authenticatedProcedure
         ? withBuiltInEnrichmentVariables(sanitizedVariables)
         : sanitizedVariables
 
+    const { groups: finalGroups, edges: finalEdges } =
+      migratedTypebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+        ? normalizeEnrichmentDeclareVariables({
+            groups,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            edges: (migratedTypebot.edges ?? []) as any[],
+            variables,
+          })
+        : { groups, edges: migratedTypebot.edges ?? [] }
+
     const newTypebot = await prisma.typebot.create({
       data: {
         version: '6',
@@ -194,7 +192,7 @@ export const importTypebot = authenticatedProcedure
         name: migratedTypebot.name,
         icon: migratedTypebot.icon,
         selectedThemeTemplateId: migratedTypebot.selectedThemeTemplateId,
-        groups,
+        groups: finalGroups,
         events: migratedTypebot.events ?? undefined,
         theme: migratedTypebot.theme ? migratedTypebot.theme : {},
         settings: migratedTypebot.settings
@@ -211,7 +209,7 @@ export const importTypebot = authenticatedProcedure
           workspaceId: workspace.id,
         }),
         variables,
-        edges: migratedTypebot.edges ?? [],
+        edges: finalEdges,
         resultsTablePreferences:
           migratedTypebot.resultsTablePreferences ?? undefined,
         tenant: migratedTypebot.tenant ?? undefined,
