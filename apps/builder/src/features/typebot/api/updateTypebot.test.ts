@@ -221,7 +221,7 @@ describe('updateTypebot', () => {
     ).resolves.toBeDefined()
   })
 
-  it('rejects removing a built-in variable from a CONTEXT_ENRICHMENT flow', async () => {
+  it('re-seeds missing built-in variables on a CONTEXT_ENRICHMENT update instead of rejecting', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,
       ...asEnrichment,
@@ -231,10 +231,65 @@ describe('updateTypebot', () => {
     await expect(
       caller()({
         typebotId: 'tb-1',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        typebot: { variables: allBuiltInVariables.slice(0, 4) } as any,
+        typebot: {
+          variables: allBuiltInVariables.slice(0, 4),
+          groups: [],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       })
-    ).rejects.toThrow(/cannot be removed or renamed/)
+    ).resolves.toBeDefined()
+
+    const { sanitizeVariables } = await import('../helpers/sanitizers')
+    const savedVariables =
+      vi.mocked(sanitizeVariables).mock.calls[0][0].variables
+    const savedNames = savedVariables.map((v: { name: string }) => v.name)
+    expect(savedNames).toEqual(
+      expect.arrayContaining([
+        'helpdeskId',
+        'contactName',
+        'contactEmail',
+        'contactPhone',
+        'contactExternalId',
+      ])
+    )
+  })
+
+  it('keeps stale pre-revision variables as plain variables while re-seeding the current built-ins', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          variables: [
+            { id: 'v-old-1', name: 'contactId' },
+            { id: 'v-old-2', name: 'contactAttributes' },
+          ],
+          groups: [],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).resolves.toBeDefined()
+
+    const { sanitizeVariables } = await import('../helpers/sanitizers')
+    const savedVariables =
+      vi.mocked(sanitizeVariables).mock.calls[0][0].variables
+    const savedNames = savedVariables.map((v: { name: string }) => v.name)
+    expect(savedNames).toEqual(
+      expect.arrayContaining([
+        'helpdeskId',
+        'contactName',
+        'contactEmail',
+        'contactPhone',
+        'contactExternalId',
+        'contactId',
+        'contactAttributes',
+      ])
+    )
   })
 
   it('rejects a settings payload that drops the CONTEXT_ENRICHMENT type', async () => {

@@ -7,6 +7,7 @@ import {
   typebotSchema,
   typebotV5Schema,
   typebotV6Schema,
+  Variable,
 } from '@typebot.io/schemas'
 import { z } from 'zod'
 import {
@@ -19,8 +20,8 @@ import {
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 import {
-  findMissingEnrichmentBuiltIns,
   hasDeclareVariablesBlock,
+  withBuiltInEnrichmentVariables,
 } from '../helpers/enrichmentVariables'
 import { isCloudProdInstance } from '@/helpers/isCloudProdInstance'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
@@ -225,14 +226,9 @@ export const updateTypebot = authenticatedProcedure
         })
 
       if (typebot.variables !== undefined) {
-        const missing = findMissingEnrichmentBuiltIns(typebot.variables)
-        if (missing.length > 0)
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `Built-in variables of context enrichment flows cannot be removed or renamed: ${missing.join(
-              ', '
-            )}`,
-          })
+        typebot.variables = withBuiltInEnrichmentVariables(
+          typebot.variables as Variable[]
+        )
       }
 
       if (
