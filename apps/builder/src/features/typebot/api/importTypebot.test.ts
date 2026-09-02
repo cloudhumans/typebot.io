@@ -111,4 +111,31 @@ describe('importTypebot', () => {
       })
     ).rejects.toThrow('Tenant and Tool description are mandatory')
   })
+
+  it('seeds the five built-in variables when importing a CONTEXT_ENRICHMENT flow', async () => {
+    const typebot = parseTestTypebot({
+      version: '6',
+      name: 'Enrichment Flow',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      settings: { general: { type: 'CONTEXT_ENRICHMENT' } } as any,
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(prisma.typebot.create).mockResolvedValue(typebot as any)
+
+    await caller()({
+      workspaceId: mockWorkspace.id,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      typebot: typebot as any,
+    })
+
+    const createdVariables = vi.mocked(prisma.typebot.create).mock.calls[0][0]
+      .data.variables as { name: string }[]
+    expect(createdVariables.map((v) => v.name)).toEqual([
+      'helpdeskId',
+      'contactName',
+      'contactEmail',
+      'contactPhone',
+      'contactExternalId',
+    ])
+  })
 })

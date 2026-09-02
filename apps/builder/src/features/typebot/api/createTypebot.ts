@@ -17,6 +17,11 @@ import { EventType } from '@typebot.io/schemas/features/events/constants'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
 import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
+import {
+  buildEnrichmentStarterFlow,
+  normalizeEnrichmentDeclareVariables,
+  withBuiltInEnrichmentVariables,
+} from '../helpers/enrichmentVariables'
 
 const typebotCreateSchemaPick = {
   name: true,
@@ -121,6 +126,9 @@ export const createTypebot = authenticatedProcedure
         })
     }
 
+    const isContextEnrichment =
+      typebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+
     if (typebot.folderId) {
       const existingFolder = await prisma.dashboardFolder.findUnique({
         where: {
@@ -130,9 +138,37 @@ export const createTypebot = authenticatedProcedure
       if (!existingFolder) typebot.folderId = null
     }
 
-    const groups = (
+    const sanitizedGroups = (
       typebot.groups ? await sanitizeGroups(workspaceId)(typebot.groups) : []
     ) as TypebotV6['groups']
+
+    const starterFlow =
+      isContextEnrichment &&
+      sanitizedGroups.length === 0 &&
+      (typebot.edges ?? []).length === 0 &&
+      (typebot.events ?? []).length === 0
+        ? buildEnrichmentStarterFlow()
+        : null
+
+    const groups = starterFlow
+      ? (starterFlow.groups as unknown as TypebotV6['groups'])
+      : sanitizedGroups
+
+    const sanitizedVariables = typebot.variables
+      ? sanitizeVariables({ variables: typebot.variables, groups })
+      : []
+    const variables = isContextEnrichment
+      ? withBuiltInEnrichmentVariables(sanitizedVariables)
+      : sanitizedVariables
+
+    const { groups: finalGroups, edges: finalEdges } = isContextEnrichment
+      ? normalizeEnrichmentDeclareVariables({
+          groups,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          edges: (starterFlow?.edges ?? typebot.edges ?? []) as any[],
+          variables,
+        })
+      : { groups, edges: typebot.edges ?? [] }
 
     const newTypebot = await prisma.typebot.create({
       data: {
@@ -141,14 +177,15 @@ export const createTypebot = authenticatedProcedure
         name: typebot.name,
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
-        groups,
-        events: typebot.events ?? [
-          {
-            type: EventType.START,
-            graphCoordinates: { x: 0, y: 0 },
-            id: createId(),
-          },
-        ],
+        groups: finalGroups,
+        events: (starterFlow?.events as TypebotV6['events'] | undefined) ??
+          typebot.events ?? [
+            {
+              type: EventType.START,
+              graphCoordinates: { x: 0, y: 0 },
+              id: createId(),
+            },
+          ],
         theme: typebot.theme ? typebot.theme : {},
         settings: typebot.settings
           ? sanitizeSettings(typebot.settings, workspace.plan, 'create')
@@ -158,10 +195,8 @@ export const createTypebot = authenticatedProcedure
             }
           : {},
         folderId: typebot.folderId,
-        variables: typebot.variables
-          ? sanitizeVariables({ variables: typebot.variables, groups })
-          : [],
-        edges: typebot.edges ?? [],
+        variables,
+        edges: finalEdges,
         resultsTablePreferences: typebot.resultsTablePreferences ?? undefined,
         publicId: typebot.publicId ?? undefined,
         customDomain: typebot.customDomain ?? undefined,

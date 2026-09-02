@@ -1,9 +1,4 @@
-import {
-  SignJWT,
-  createLocalJWKSet,
-  exportJWK,
-  generateKeyPair,
-} from 'jose'
+import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair } from 'jose'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { verifyCognitoToken } from './verifyCognitoToken'
 

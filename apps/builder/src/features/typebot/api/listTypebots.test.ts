@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { router } from '@/helpers/server/trpc'
 import { listTypebots } from './listTypebots'
 import { WorkspaceRole } from '@typebot.io/prisma'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
@@ -42,6 +43,14 @@ describe('listTypebots', () => {
     settings: { general: { type: 'default' } },
     publishedTypebot: { id: 'pub-1' },
   }
+  const enrichmentTypebot = {
+    id: 'ce-1',
+    name: 'Enrich Contact',
+    icon: null,
+    createdAt: new Date('2026-01-03T00:00:00Z'),
+    settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+    publishedTypebot: null,
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -53,7 +62,9 @@ describe('listTypebots', () => {
   })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const caller = () => listTypebots.createCaller({ user: mockUser } as any)
+  const caller = () =>
+    router({ listTypebots }).createCaller({ user: mockUser } as never)
+      .listTypebots
 
   it('marks a TOOL-type typebot with isTool: true', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,6 +115,57 @@ describe('listTypebots', () => {
 
     expect(typebots).toHaveLength(1)
     expect(typebots[0].id).toBe('flow-1')
+  })
+
+  it('returns the type of each typebot', async () => {
+    vi.mocked(prisma.typebot.findMany).mockResolvedValue([
+      toolTypebot,
+      normalTypebot,
+      enrichmentTypebot,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ] as any)
+
+    const { typebots } = await caller()({ workspaceId: mockWorkspace.id })
+
+    expect(
+      typebots.map((t) => ({ id: t.id, type: t.type, isTool: t.isTool }))
+    ).toEqual([
+      { id: 'tool-1', type: 'TOOL', isTool: true },
+      { id: 'flow-1', type: 'default', isTool: false },
+      { id: 'ce-1', type: 'CONTEXT_ENRICHMENT', isTool: false },
+    ])
+  })
+
+  it('filters by type when requested', async () => {
+    vi.mocked(prisma.typebot.findMany).mockResolvedValue([
+      toolTypebot,
+      normalTypebot,
+      enrichmentTypebot,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ] as any)
+
+    const { typebots } = await caller()({
+      workspaceId: mockWorkspace.id,
+      type: 'CONTEXT_ENRICHMENT',
+    })
+
+    expect(typebots.map((t) => t.id)).toEqual(['ce-1'])
+  })
+
+  it('excludeTools hides CONTEXT_ENRICHMENT flows as well', async () => {
+    vi.mocked(prisma.typebot.findMany).mockResolvedValue([
+      toolTypebot,
+      normalTypebot,
+      enrichmentTypebot,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ] as any)
+
+    const { typebots } = await caller()({
+      workspaceId: mockWorkspace.id,
+      excludeTools: true,
+    })
+
+    expect(typebots.map((t) => t.id)).toEqual(['flow-1'])
   })
 
   it('returns both flows and tools when excludeTools is not set', async () => {

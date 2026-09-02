@@ -7,6 +7,7 @@ import {
   typebotSchema,
   typebotV5Schema,
   typebotV6Schema,
+  Variable,
 } from '@typebot.io/schemas'
 import { z } from 'zod'
 import {
@@ -18,6 +19,10 @@ import {
   sanitizeVariables,
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
+import {
+  normalizeEnrichmentDeclareVariables,
+  withBuiltInEnrichmentVariables,
+} from '../helpers/enrichmentVariables'
 import { isCloudProdInstance } from '@/helpers/isCloudProdInstance'
 import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 
@@ -93,6 +98,7 @@ export const updateTypebot = authenticatedProcedure
         customDomain: true,
         publicId: true,
         settings: true,
+        variables: true,
         collaborators: {
           select: {
             userId: true,
@@ -192,6 +198,58 @@ export const updateTypebot = authenticatedProcedure
           message:
             'Tenant and Tool description are mandatory for Tool workflows',
         })
+    }
+
+    const isExistingContextEnrichment =
+      !!existingTypebot.settings &&
+      (existingTypebot.settings as unknown as Settings).general?.type ===
+        'CONTEXT_ENRICHMENT'
+
+    if (
+      !isExistingContextEnrichment &&
+      typebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+    )
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Flows cannot be converted to context enrichment; create a new CONTEXT_ENRICHMENT flow instead',
+      })
+
+    if (isExistingContextEnrichment) {
+      if (
+        typebot.settings !== undefined &&
+        typebot.settings.general?.type !== 'CONTEXT_ENRICHMENT'
+      )
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Context enrichment flows cannot change type: settings are replaced wholesale, so a payload carrying settings must include general.type = CONTEXT_ENRICHMENT',
+        })
+
+      if (typebot.variables !== undefined) {
+        typebot.variables = withBuiltInEnrichmentVariables(
+          typebot.variables as Variable[]
+        )
+      }
+
+      if (typebot.groups !== undefined) {
+        const normalized = normalizeEnrichmentDeclareVariables({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          groups: typebot.groups as any[],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          edges: (typebot.edges ?? []) as any[],
+          variables:
+            (typebot.variables as Variable[] | undefined) ??
+            withBuiltInEnrichmentVariables(
+              (existingTypebot.variables as Variable[] | null) ?? []
+            ),
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot.groups = normalized.groups as any
+        if (typebot.edges !== undefined)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          typebot.edges = normalized.edges as any
+      }
     }
 
     const groups = typebot.groups

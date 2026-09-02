@@ -35,6 +35,7 @@ import { createId } from '@paralleldrive/cuid2'
 import { isInputBlock } from '@typebot.io/schemas/helpers'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { sessionOnlySetVariableOptions } from '@typebot.io/schemas/features/blocks/logic/setVariable/constants'
+import { contextEnrichmentBuiltInVariables } from '@typebot.io/schemas/features/typebot/settings/constants'
 
 type Props = {
   onClose: () => void
@@ -144,6 +145,12 @@ export const VariablesDrawer = ({ onClose }: Props) => {
               onChange={(changes) => updateVariable(variable.id, changes)}
               onDelete={() => deleteVariable(variable.id)}
               setVariableAndInputBlocks={setVariableAndInputBlocks}
+              isReadOnly={
+                typebot?.settings?.general?.type === 'CONTEXT_ENRICHMENT' &&
+                (
+                  contextEnrichmentBuiltInVariables as readonly string[]
+                ).includes(variable.name)
+              }
             />
           ))}
         </Stack>
@@ -157,11 +164,13 @@ const VariableItem = ({
   onChange,
   onDelete,
   setVariableAndInputBlocks,
+  isReadOnly,
 }: {
   variable: Variable
   onChange: (variable: Partial<Variable>) => void
   onDelete: () => void
   setVariableAndInputBlocks: (InputBlock | SetVariableBlock)[]
+  isReadOnly?: boolean
 }) => {
   const isSessionOnly = setVariableAndInputBlocks.some(
     (b) =>
@@ -181,6 +190,7 @@ const VariableItem = ({
       <Editable
         defaultValue={variable.name}
         onSubmit={(name) => onChange({ name })}
+        isDisabled={isReadOnly}
       >
         <EditablePreview
           px="2"
@@ -194,7 +204,7 @@ const VariableItem = ({
       </Editable>
 
       <HStack>
-        {!isSessionOnly && !isLinkedToAnswer && (
+        {!isReadOnly && !isSessionOnly && !isLinkedToAnswer && (
           <Popover>
             <PopoverTrigger>
               <IconButton
@@ -220,12 +230,14 @@ const VariableItem = ({
             </PopoverContent>
           </Popover>
         )}
-        <IconButton
-          icon={<TrashIcon />}
-          onClick={onDelete}
-          aria-label="Delete"
-          size="sm"
-        />
+        {!isReadOnly && (
+          <IconButton
+            icon={<TrashIcon />}
+            onClick={onDelete}
+            aria-label="Delete"
+            size="sm"
+          />
+        )}
       </HStack>
     </HStack>
   )

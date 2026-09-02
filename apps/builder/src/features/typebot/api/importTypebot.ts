@@ -22,6 +22,10 @@ import { migrateTypebot } from '@typebot.io/migrations/migrateTypebot'
 import { trackEvents } from '@typebot.io/telemetry/trackEvents'
 import { isToolNameTaken } from '../helpers/isToolNameTaken'
 import { sanitizeToolName } from '@typebot.io/lib/sanitizeToolName'
+import {
+  normalizeEnrichmentDeclareVariables,
+  withBuiltInEnrichmentVariables,
+} from '../helpers/enrichmentVariables'
 
 const omittedProps = {
   id: true,
@@ -163,6 +167,24 @@ export const importTypebot = authenticatedProcedure
         : []
     ) as TypebotV6['groups']
 
+    const sanitizedVariables = migratedTypebot.variables
+      ? sanitizeVariables({ variables: migratedTypebot.variables, groups })
+      : []
+    const variables =
+      migratedTypebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+        ? withBuiltInEnrichmentVariables(sanitizedVariables)
+        : sanitizedVariables
+
+    const { groups: finalGroups, edges: finalEdges } =
+      migratedTypebot.settings?.general?.type === 'CONTEXT_ENRICHMENT'
+        ? normalizeEnrichmentDeclareVariables({
+            groups,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            edges: (migratedTypebot.edges ?? []) as any[],
+            variables,
+          })
+        : { groups, edges: migratedTypebot.edges ?? [] }
+
     const newTypebot = await prisma.typebot.create({
       data: {
         version: '6',
@@ -170,7 +192,7 @@ export const importTypebot = authenticatedProcedure
         name: migratedTypebot.name,
         icon: migratedTypebot.icon,
         selectedThemeTemplateId: migratedTypebot.selectedThemeTemplateId,
-        groups,
+        groups: finalGroups,
         events: migratedTypebot.events ?? undefined,
         theme: migratedTypebot.theme ? migratedTypebot.theme : {},
         settings: migratedTypebot.settings
@@ -186,10 +208,8 @@ export const importTypebot = authenticatedProcedure
           folderId: migratedTypebot.folderId,
           workspaceId: workspace.id,
         }),
-        variables: migratedTypebot.variables
-          ? sanitizeVariables({ variables: migratedTypebot.variables, groups })
-          : [],
-        edges: migratedTypebot.edges ?? [],
+        variables,
+        edges: finalEdges,
         resultsTablePreferences:
           migratedTypebot.resultsTablePreferences ?? undefined,
         tenant: migratedTypebot.tenant ?? undefined,

@@ -48,7 +48,13 @@ export const listTypebots = authenticatedProcedure
           z.boolean()
         )
         .optional()
-        .describe('When true, omit TOOL-type typebots from the response.'),
+        .describe(
+          'When true, only return default flows (omits TOOL and CONTEXT_ENRICHMENT typebots).'
+        ),
+      type: z
+        .enum(['default', 'TOOL', 'CONTEXT_ENRICHMENT'])
+        .optional()
+        .describe('When set, only return typebots of this flow type.'),
     })
   )
   .output(
@@ -65,6 +71,7 @@ export const listTypebots = authenticatedProcedure
             z.object({
               publishedTypebotId: z.string().optional(),
               isTool: z.boolean(),
+              type: z.enum(['default', 'TOOL', 'CONTEXT_ENRICHMENT']),
             })
           )
       ),
@@ -80,6 +87,7 @@ export const listTypebots = authenticatedProcedure
         createdAtFrom,
         createdAtTo,
         excludeTools,
+        type,
       },
       ctx: { user },
     }) => {
@@ -174,16 +182,22 @@ export const listTypebots = authenticatedProcedure
             const parsedSettings = toolSettingsSchema.safeParse(
               typebot.settings
             )
-            const isTool =
-              parsedSettings.success &&
-              parsedSettings.data.general?.type === 'TOOL'
+            const rawType = parsedSettings.success
+              ? parsedSettings.data.general?.type
+              : undefined
+            const flowType: 'default' | 'TOOL' | 'CONTEXT_ENRICHMENT' =
+              rawType === 'TOOL' || rawType === 'CONTEXT_ENRICHMENT'
+                ? rawType
+                : 'default'
             return {
               publishedTypebotId: typebot.publishedTypebot?.id,
-              isTool,
+              isTool: flowType === 'TOOL',
+              type: flowType,
               ...omit(typebot, 'publishedTypebot', 'settings'),
             }
           })
-          .filter((typebot) => !excludeTools || !typebot.isTool),
+          .filter((typebot) => !excludeTools || typebot.type === 'default')
+          .filter((typebot) => !type || typebot.type === type),
       }
     }
   )

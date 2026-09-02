@@ -55,7 +55,12 @@ export const findNextRunningBlockId = ({
       (edge) => 'blockId' in edge.from && edge.from.blockId === blockId
     )
   const entryIndex = (group: Group, blockId?: string) =>
-    blockId ? Math.max(0, group.blocks.findIndex((b) => b.id === blockId)) : 0
+    blockId
+      ? Math.max(
+          0,
+          group.blocks.findIndex((b) => b.id === blockId)
+        )
+      : 0
 
   // Resolve where the flow goes from the answered input: if the block has
   // exactly one outgoing edge, follow it (item edges included); if it has

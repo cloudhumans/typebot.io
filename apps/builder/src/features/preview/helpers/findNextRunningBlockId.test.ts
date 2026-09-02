@@ -88,8 +88,12 @@ describe('findNextRunningBlockId', () => {
     const typebot = typebotWith({
       groups: [
         group('group_1', [answeredInput]),
-        group('group_2', [block('block_webhook', IntegrationBlockType.WEBHOOK)]),
-        group('group_3', [block('block_webhook_2', IntegrationBlockType.WEBHOOK)]),
+        group('group_2', [
+          block('block_webhook', IntegrationBlockType.WEBHOOK),
+        ]),
+        group('group_3', [
+          block('block_webhook_2', IntegrationBlockType.WEBHOOK),
+        ]),
       ],
       edges: [
         edge('edge_1', answeredInput.id, 'group_2'),
@@ -106,10 +110,7 @@ describe('findNextRunningBlockId', () => {
     const buttons = block('block_buttons', InputBlockType.CHOICE)
     const webhook = block('block_webhook', IntegrationBlockType.WEBHOOK)
     const typebot = typebotWith({
-      groups: [
-        group('group_1', [buttons]),
-        group('group_2', [webhook]),
-      ],
+      groups: [group('group_1', [buttons]), group('group_2', [webhook])],
       edges: [
         {
           id: 'edge_1',
@@ -130,10 +131,7 @@ describe('findNextRunningBlockId', () => {
     // and the spinner never showed.
     const webhook = block('block_webhook', IntegrationBlockType.WEBHOOK)
     const typebot = typebotWith({
-      groups: [
-        group('group_1', [answeredInput]),
-        group('group_2', [webhook]),
-      ],
+      groups: [group('group_1', [answeredInput]), group('group_2', [webhook])],
       edges: [edge('edge_1', answeredInput.id, 'group_2')],
     })
 
@@ -144,9 +142,7 @@ describe('findNextRunningBlockId', () => {
 
   it('returns undefined when the flow loops back into a group already walked', () => {
     const typebot = typebotWith({
-      groups: [
-        group('group_1', [answeredInput, block('block_text', 'text')]),
-      ],
+      groups: [group('group_1', [answeredInput, block('block_text', 'text')])],
       edges: [edge('edge_loop', 'block_text', 'group_1')],
     })
 

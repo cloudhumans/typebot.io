@@ -59,6 +59,10 @@ const isJumpBlock = (block: Block): block is JumpBlock =>
   block.type === LogicBlockType.JUMP
 
 // Helpers restaurados
+const requiresWorkflowEnd = (settings?: Settings) =>
+  settings?.general?.type === 'TOOL' ||
+  settings?.general?.type === 'CONTEXT_ENRICHMENT'
+
 const validateFlowBranchesHaveClaudia = (
   groups: Group[],
   edges: Edge[],
@@ -154,7 +158,7 @@ const validateFlowBranchesHaveClaudia = (
 
       let currentHasTerminator = hasTerminator
 
-      const isToolWorkflow = settings?.general?.type === 'TOOL'
+      const isToolWorkflow = requiresWorkflowEnd(settings)
 
       if (isToolWorkflow) {
         if (isWorkflowBlock(block)) {
@@ -825,7 +829,7 @@ const validateTypebot = async ({
       })
     )
 
-    const isToolWorkflow = settings?.general?.type === 'TOOL'
+    const isToolWorkflow = requiresWorkflowEnd(settings)
 
     const missingClaudiaInFlowBranches = validateFlowBranchesHaveClaudia(
       groups,
