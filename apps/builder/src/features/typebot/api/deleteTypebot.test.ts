@@ -73,6 +73,30 @@ describe('deleteTypebot', () => {
     })
   })
 
+  it('should reject deleting a published CONTEXT_ENRICHMENT flow', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+      publishedTypebot: { id: 'pub-1' },
+    } as never)
+
+    await expect(caller()({ typebotId: 'tb-1' })).rejects.toThrow(
+      'Published context enrichment flows cannot be deleted'
+    )
+  })
+
+  it('should allow deleting a never-published (draft) CONTEXT_ENRICHMENT flow', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      settings: { general: { type: 'CONTEXT_ENRICHMENT' } },
+      publishedTypebot: null,
+    } as never)
+
+    await expect(caller()({ typebotId: 'tb-1' })).resolves.toEqual({
+      message: 'success',
+    })
+  })
+
   it('should allow deleting a published non-TOOL flow', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,

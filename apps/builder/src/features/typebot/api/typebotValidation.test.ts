@@ -48,11 +48,33 @@ describe('postTypebotValidation', () => {
     router({ postTypebotValidation }).createCaller({ user: undefined } as never)
       .postTypebotValidation
 
-  const validate = (type?: 'default' | 'TOOL' | 'CONTEXT_ENRICHMENT') =>
+  const returnOutputGroups = [
+    {
+      id: 'group-1',
+      title: 'Group #1',
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [
+        {
+          id: 'block-1',
+          type: 'workflow',
+          options: {
+            action: 'Return Output',
+            responseType: 'Custom JSON',
+            customJson: '{}',
+          },
+        },
+      ],
+    },
+  ]
+
+  const validate = (
+    type?: 'default' | 'TOOL' | 'CONTEXT_ENRICHMENT',
+    flowGroups: unknown[] = groups
+  ) =>
     caller()({
       typebot: {
         variables: [],
-        groups: groups as never,
+        groups: flowGroups as never,
         edges,
         settings: type ? { general: { type } } : undefined,
       },
@@ -101,14 +123,30 @@ describe('postTypebotValidation', () => {
     )
   })
 
-  it('should not require a terminator block in a CONTEXT_ENRICHMENT flow', async () => {
+  it('should flag a CONTEXT_ENRICHMENT branch that never reaches a Return Output block, never asking for a ClaudIA block', async () => {
     const { errors } = await validate('CONTEXT_ENRICHMENT')
 
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'missingWorkflowEndInFlowBranches',
+          groupId: 'group-1',
+        }),
+      ])
+    )
     expect(errors.some((e) => e.type === 'missingClaudiaInFlowBranches')).toBe(
       false
     )
+  })
+
+  it('should accept a CONTEXT_ENRICHMENT branch that ends in a Return Output block', async () => {
+    const { errors } = await validate('CONTEXT_ENRICHMENT', returnOutputGroups)
+
     expect(
       errors.some((e) => e.type === 'missingWorkflowEndInFlowBranches')
     ).toBe(false)
+    expect(errors.some((e) => e.type === 'missingClaudiaInFlowBranches')).toBe(
+      false
+    )
   })
 })

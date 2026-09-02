@@ -168,6 +168,92 @@ describe('normalizeEnrichmentDeclareVariables', () => {
     expect(edges.map((e) => e.id)).toEqual(['e-kept'])
   })
 
+  it('retargets an edge that reached a removed declare block to the start of its group', () => {
+    const mixedGroup = {
+      id: 'g-mixed',
+      title: 'Group',
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [{ id: 'b-text', type: 'text' }, declareBlock('b-declare')],
+    }
+
+    const { edges } = normalizeEnrichmentDeclareVariables({
+      groups: [mixedGroup],
+      edges: [
+        {
+          id: 'e-into-declare',
+          from: { blockId: 'b-elsewhere' },
+          to: { groupId: 'g-mixed', blockId: 'b-declare' },
+        },
+      ],
+      variables: builtInVariables,
+    })
+
+    expect(edges).toEqual([
+      {
+        id: 'e-into-declare',
+        from: { blockId: 'b-elsewhere' },
+        to: { groupId: 'g-mixed' },
+      },
+    ])
+  })
+
+  it('removes a duplicated declare-only group together with the edges that reached it', () => {
+    const carrier = {
+      id: 'g-carrier',
+      title: ENRICHMENT_VARIABLES_GROUP_TITLE,
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [declareBlock('b-carrier')],
+    }
+    const duplicate = {
+      id: 'g-dup',
+      title: 'Copy of readonly group',
+      graphCoordinates: { x: 400, y: 0 },
+      blocks: [{ ...declareBlock('b-dup'), outgoingEdgeId: 'e-dup-out' }],
+    }
+
+    const { groups, edges } = normalizeEnrichmentDeclareVariables({
+      groups: [carrier, duplicate],
+      edges: [
+        {
+          id: 'e-in-carrier',
+          from: { eventId: 'start' },
+          to: { groupId: 'g-carrier' },
+        },
+        {
+          id: 'e-in-dup',
+          from: { blockId: 'b-carrier' },
+          to: { groupId: 'g-dup' },
+        },
+        {
+          id: 'e-dup-out',
+          from: { blockId: 'b-dup' },
+          to: { groupId: 'g-next' },
+        },
+      ],
+      variables: builtInVariables,
+    })
+
+    expect(groups.map((g) => g.id)).toEqual(['g-carrier'])
+    expect(edges.map((e) => e.id)).toEqual(['e-in-carrier'])
+  })
+
+  it('keeps a user group that was already empty before normalization', () => {
+    const emptyUserGroup = {
+      id: 'g-empty',
+      title: 'Empty',
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [],
+    }
+
+    const { groups } = normalizeEnrichmentDeclareVariables({
+      groups: [emptyUserGroup],
+      edges: [],
+      variables: builtInVariables,
+    })
+
+    expect(groups.map((g) => g.id)).toContain('g-empty')
+  })
+
   it('keeps edges into the canonical group and the block outgoing edge so the flow stays wired', () => {
     const carrier = {
       id: 'g-carrier',

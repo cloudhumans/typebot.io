@@ -4,6 +4,10 @@ import { createTypebot } from './createTypebot'
 import { WorkspaceRole, Plan } from '@typebot.io/prisma'
 import { getUserRoleInWorkspace } from '@/features/workspace/helpers/getUserRoleInWorkspace'
 import prisma from '@typebot.io/lib/prisma'
+import {
+  ENRICHMENT_STARTER_GROUP_TITLE,
+  ENRICHMENT_VARIABLES_GROUP_TITLE,
+} from '../helpers/enrichmentVariables'
 
 vi.mock('@typebot.io/lib/prisma', () => ({
   default: {
@@ -299,7 +303,7 @@ describe('createTypebot', () => {
     ])
   })
 
-  it('seeds a detached readonly Declare variables group on CONTEXT_ENRICHMENT creation', async () => {
+  it('seeds the readonly Declare variables group wired into the Return Output group on CONTEXT_ENRICHMENT creation', async () => {
     const caller = router({ createTypebot }).createCaller({
       user: mockUser,
     } as never)
@@ -317,10 +321,15 @@ describe('createTypebot', () => {
     const createdGroups = createdData.groups as any[]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const createdVariables = createdData.variables as any[]
-    expect(createdGroups).toHaveLength(1)
-    expect(createdGroups[0].title).toBe(
-      'Variáveis pré-preenchidas pela ClaudIA'
-    )
+    const createdEdges = createdData.edges as unknown as {
+      id: string
+      from: { eventId?: string; blockId?: string }
+      to: { groupId: string }
+    }[]
+    expect(createdGroups.map((g) => g.title)).toEqual([
+      ENRICHMENT_VARIABLES_GROUP_TITLE,
+      ENRICHMENT_STARTER_GROUP_TITLE,
+    ])
     expect(createdGroups[0].blocks).toHaveLength(1)
     expect(createdGroups[0].blocks[0].type).toBe('Declare variables')
     expect(
@@ -328,7 +337,13 @@ describe('createTypebot', () => {
         (v: { variableId: string }) => v.variableId
       )
     ).toEqual(createdVariables.map((v) => v.id))
-    expect(createdData.edges).toEqual([])
+    expect(createdEdges).toHaveLength(2)
+    expect(createdEdges[0].to).toEqual({ groupId: createdGroups[0].id })
+    expect(createdGroups[0].blocks[0].outgoingEdgeId).toBe(createdEdges[1].id)
+    expect(createdEdges[1].from).toEqual({
+      blockId: createdGroups[0].blocks[0].id,
+    })
+    expect(createdEdges[1].to).toEqual({ groupId: createdGroups[1].id })
   })
 
   it('does not seed built-in variables on default typebots', async () => {

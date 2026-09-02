@@ -66,14 +66,20 @@ export const deleteTypebot = authenticatedProcedure
     )
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
 
-    const isTool =
-      !!existingTypebot.settings &&
-      (existingTypebot.settings as unknown as Settings).general?.type === 'TOOL'
+    const flowType = existingTypebot.settings
+      ? (existingTypebot.settings as unknown as Settings).general?.type
+      : undefined
 
-    if (isTool && existingTypebot.publishedTypebot)
+    if (flowType === 'TOOL' && existingTypebot.publishedTypebot)
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Published tools cannot be deleted',
+      })
+
+    if (flowType === 'CONTEXT_ENRICHMENT' && existingTypebot.publishedTypebot)
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Published context enrichment flows cannot be deleted',
       })
 
     await prisma.$transaction([

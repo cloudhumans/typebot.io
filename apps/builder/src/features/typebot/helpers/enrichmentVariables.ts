@@ -121,12 +121,36 @@ export const normalizeEnrichmentDeclareVariables = <
     [...declareBlockIds].filter((id) => id !== canonicalBlock.id)
   )
 
-  const finalEdges = edges.filter(
-    (edge) =>
-      !(edge.from.blockId && removedDeclareBlockIds.has(edge.from.blockId))
+  const emptiedGroupIds = new Set(
+    groups
+      .filter(
+        (group) =>
+          group.id !== carrierGroup?.id &&
+          group.blocks.length > 0 &&
+          group.blocks.every(isDeclareVariablesBlock)
+      )
+      .map((group) => group.id)
   )
 
-  return { groups: finalGroups, edges: finalEdges }
+  const prunedGroups = finalGroups.filter(
+    (group) => !emptiedGroupIds.has(group.id)
+  )
+
+  const finalEdges = edges
+    .filter(
+      (edge) =>
+        !(edge.from.blockId && removedDeclareBlockIds.has(edge.from.blockId))
+    )
+    .filter(
+      (edge) => !(edge.to.groupId && emptiedGroupIds.has(edge.to.groupId))
+    )
+    .map((edge) =>
+      edge.to.blockId && removedDeclareBlockIds.has(edge.to.blockId)
+        ? { ...edge, to: { groupId: edge.to.groupId } }
+        : edge
+    )
+
+  return { groups: prunedGroups, edges: finalEdges }
 }
 
 export const ENRICHMENT_STARTER_GROUP_TITLE = 'Retorna contexto do CRM'

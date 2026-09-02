@@ -355,7 +355,7 @@ describe('updateTypebot', () => {
     ).toEqual(['v1', 'v2', 'v3', 'v4', 'v5'])
   })
 
-  it('rewrites a tampered Declare variables block to the canonical built-ins and detaches it', async () => {
+  it('rewrites a tampered Declare variables block to the canonical built-ins and keeps it wired', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,
       ...asEnrichment,
@@ -409,7 +409,9 @@ describe('updateTypebot', () => {
         (v: { variableId: string }) => v.variableId
       )
     ).toEqual(['v1', 'v2', 'v3', 'v4', 'v5'])
-    expect(savedData.edges).toEqual([])
+    expect(savedData.edges).toEqual([
+      { id: 'e1', from: { eventId: 'start' }, to: { groupId: 'g1' } },
+    ])
   })
 
   it('rejects converting an existing flow into CONTEXT_ENRICHMENT', async () => {
