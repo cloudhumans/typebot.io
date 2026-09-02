@@ -96,27 +96,6 @@ export const normalizeEnrichmentDeclareVariables = <
       : {}),
   }
 
-  const strippedGroups = groups.map((group) =>
-    group.id === carrierGroup?.id
-      ? { ...group, blocks: [canonicalBlock] }
-      : {
-          ...group,
-          blocks: group.blocks.filter((b) => !isDeclareVariablesBlock(b)),
-        }
-  )
-
-  const finalGroups = carrierGroup
-    ? strippedGroups
-    : [
-        ...strippedGroups,
-        {
-          id: createId(),
-          title: ENRICHMENT_VARIABLES_GROUP_TITLE,
-          graphCoordinates: { x: -320, y: 0 },
-          blocks: [canonicalBlock],
-        } as unknown as G,
-      ]
-
   const removedDeclareBlockIds = new Set(
     [...declareBlockIds].filter((id) => id !== canonicalBlock.id)
   )
@@ -132,10 +111,6 @@ export const normalizeEnrichmentDeclareVariables = <
       .map((group) => group.id)
   )
 
-  const prunedGroups = finalGroups.filter(
-    (group) => !emptiedGroupIds.has(group.id)
-  )
-
   const finalEdges = edges
     .filter(
       (edge) =>
@@ -149,6 +124,42 @@ export const normalizeEnrichmentDeclareVariables = <
         ? { ...edge, to: { groupId: edge.to.groupId } }
         : edge
     )
+
+  const survivingEdgeIds = new Set(finalEdges.map((edge) => edge.id))
+  const wiredCanonicalBlock =
+    canonicalBlock.outgoingEdgeId &&
+    !survivingEdgeIds.has(canonicalBlock.outgoingEdgeId)
+      ? {
+          id: canonicalBlock.id,
+          type: canonicalBlock.type,
+          options: canonicalBlock.options,
+        }
+      : canonicalBlock
+
+  const strippedGroups = groups.map((group) =>
+    group.id === carrierGroup?.id
+      ? { ...group, blocks: [wiredCanonicalBlock] }
+      : {
+          ...group,
+          blocks: group.blocks.filter((b) => !isDeclareVariablesBlock(b)),
+        }
+  )
+
+  const finalGroups = carrierGroup
+    ? strippedGroups
+    : [
+        ...strippedGroups,
+        {
+          id: createId(),
+          title: ENRICHMENT_VARIABLES_GROUP_TITLE,
+          graphCoordinates: { x: -320, y: 0 },
+          blocks: [wiredCanonicalBlock],
+        } as unknown as G,
+      ]
+
+  const prunedGroups = finalGroups.filter(
+    (group) => !emptiedGroupIds.has(group.id)
+  )
 
   return { groups: prunedGroups, edges: finalEdges }
 }

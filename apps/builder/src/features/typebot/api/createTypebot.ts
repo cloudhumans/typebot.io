@@ -178,7 +178,7 @@ export const createTypebot = authenticatedProcedure
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
         groups: finalGroups,
-        events: starterFlow?.events ??
+        events: (starterFlow?.events as TypebotV6['events'] | undefined) ??
           typebot.events ?? [
             {
               type: EventType.START,

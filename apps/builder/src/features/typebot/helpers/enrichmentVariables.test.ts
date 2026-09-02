@@ -237,6 +237,38 @@ describe('normalizeEnrichmentDeclareVariables', () => {
     expect(edges.map((e) => e.id)).toEqual(['e-in-carrier'])
   })
 
+  it('drops the canonical outgoingEdgeId when its edge led to a removed declare-only group', () => {
+    const carrier = {
+      id: 'g-carrier',
+      title: ENRICHMENT_VARIABLES_GROUP_TITLE,
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [{ ...declareBlock('b-carrier'), outgoingEdgeId: 'e-to-dup' }],
+    }
+    const duplicate = {
+      id: 'g-dup',
+      title: 'Copy of readonly group',
+      graphCoordinates: { x: 400, y: 0 },
+      blocks: [declareBlock('b-dup')],
+    }
+
+    const { groups, edges } = normalizeEnrichmentDeclareVariables({
+      groups: [carrier, duplicate],
+      edges: [
+        {
+          id: 'e-to-dup',
+          from: { blockId: 'b-carrier' },
+          to: { groupId: 'g-dup' },
+        },
+      ],
+      variables: builtInVariables,
+    })
+
+    expect(edges).toEqual([])
+    expect(groups.map((g) => g.id)).toEqual(['g-carrier'])
+    expect(groups[0].blocks[0].id).toBe('b-carrier')
+    expect(groups[0].blocks[0]).not.toHaveProperty('outgoingEdgeId')
+  })
+
   it('keeps a user group that was already empty before normalization', () => {
     const emptyUserGroup = {
       id: 'g-empty',
