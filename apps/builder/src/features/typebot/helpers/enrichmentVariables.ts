@@ -69,7 +69,7 @@ export const normalizeEnrichmentDeclareVariables = <
             {
               variableId: variable.id,
               description: ENRICHMENT_VARIABLE_DESCRIPTION,
-              required: true,
+              required: false,
             },
           ]
         : []
@@ -91,6 +91,9 @@ export const normalizeEnrichmentDeclareVariables = <
     id: carrierGroup?.blocks[0].id ?? createId(),
     type: LogicBlockType.DECLARE_VARIABLES,
     options: canonicalOptions,
+    ...(carrierGroup?.blocks[0].outgoingEdgeId
+      ? { outgoingEdgeId: carrierGroup.blocks[0].outgoingEdgeId }
+      : {}),
   }
 
   const strippedGroups = groups.map((group) =>
@@ -114,13 +117,13 @@ export const normalizeEnrichmentDeclareVariables = <
         } as unknown as G,
       ]
 
-  const carrierGroupId =
-    carrierGroup?.id ?? finalGroups[finalGroups.length - 1].id
+  const removedDeclareBlockIds = new Set(
+    [...declareBlockIds].filter((id) => id !== canonicalBlock.id)
+  )
 
   const finalEdges = edges.filter(
     (edge) =>
-      edge.to.groupId !== carrierGroupId &&
-      !(edge.from.blockId && declareBlockIds.has(edge.from.blockId))
+      !(edge.from.blockId && removedDeclareBlockIds.has(edge.from.blockId))
   )
 
   return { groups: finalGroups, edges: finalEdges }
@@ -142,23 +145,50 @@ export const ENRICHMENT_STARTER_CUSTOM_JSON = JSON.stringify(
 
 export const buildEnrichmentStarterFlow = () => {
   const eventId = createId()
-  const edgeId = createId()
-  const groupId = createId()
+  const startEdgeId = createId()
+  const declareGroupId = createId()
+  const declareBlockId = createId()
+  const outputEdgeId = createId()
+  const outputGroupId = createId()
   return {
     events: [
       {
         id: eventId,
         type: EventType.START,
-        outgoingEdgeId: edgeId,
+        outgoingEdgeId: startEdgeId,
         graphCoordinates: { x: 0, y: 0 },
       },
     ],
-    edges: [{ id: edgeId, from: { eventId }, to: { groupId } }],
+    edges: [
+      {
+        id: startEdgeId,
+        from: { eventId },
+        to: { groupId: declareGroupId },
+      },
+      {
+        id: outputEdgeId,
+        from: { blockId: declareBlockId },
+        to: { groupId: outputGroupId },
+      },
+    ],
     groups: [
       {
-        id: groupId,
+        id: declareGroupId,
+        title: ENRICHMENT_VARIABLES_GROUP_TITLE,
+        graphCoordinates: { x: 350, y: 0 },
+        blocks: [
+          {
+            id: declareBlockId,
+            type: LogicBlockType.DECLARE_VARIABLES,
+            options: { variables: [] },
+            outgoingEdgeId: outputEdgeId,
+          },
+        ],
+      },
+      {
+        id: outputGroupId,
         title: ENRICHMENT_STARTER_GROUP_TITLE,
-        graphCoordinates: { x: 400, y: 100 },
+        graphCoordinates: { x: 750, y: 0 },
         blocks: [
           {
             id: createId(),

@@ -168,15 +168,15 @@ describe('normalizeEnrichmentDeclareVariables', () => {
     expect(edges.map((e) => e.id)).toEqual(['e-kept'])
   })
 
-  it('drops edges pointing into the canonical group so it never executes', () => {
+  it('keeps edges into the canonical group and the block outgoing edge so the flow stays wired', () => {
     const carrier = {
       id: 'g-carrier',
       title: ENRICHMENT_VARIABLES_GROUP_TITLE,
       graphCoordinates: { x: 0, y: 0 },
-      blocks: [declareBlock('b-carrier')],
+      blocks: [{ ...declareBlock('b-carrier'), outgoingEdgeId: 'e-out' }],
     }
 
-    const { edges } = normalizeEnrichmentDeclareVariables({
+    const { groups, edges } = normalizeEnrichmentDeclareVariables({
       groups: [carrier],
       edges: [
         {
@@ -184,11 +184,31 @@ describe('normalizeEnrichmentDeclareVariables', () => {
           from: { eventId: 'start' },
           to: { groupId: 'g-carrier' },
         },
+        {
+          id: 'e-out',
+          from: { blockId: 'b-carrier' },
+          to: { groupId: 'g-next' },
+        },
       ],
       variables: builtInVariables,
     })
 
-    expect(edges).toEqual([])
+    expect(edges.map((e) => e.id)).toEqual(['e-in', 'e-out'])
+    expect(groups[0].blocks[0].outgoingEdgeId).toBe('e-out')
+  })
+
+  it('declares the built-ins as not required so empty prefilled values never block the run', () => {
+    const { groups } = normalizeEnrichmentDeclareVariables({
+      groups: [],
+      edges: [],
+      variables: builtInVariables,
+    })
+
+    expect(
+      groups[0].blocks[0].options.variables.every(
+        (v: { required: boolean }) => v.required === false
+      )
+    ).toBe(true)
   })
 })
 
@@ -201,21 +221,25 @@ describe('buildEnrichmentStarterFlow', () => {
     { id: 'v5', name: 'contactExternalId' },
   ]
 
-  it('wires start event -> edge -> starter group consistently', () => {
+  it('wires start -> declare variables -> return output consistently', () => {
     const { events, edges, groups } = buildEnrichmentStarterFlow()
 
     expect(events).toHaveLength(1)
-    expect(edges).toHaveLength(1)
-    expect(groups).toHaveLength(1)
+    expect(edges).toHaveLength(2)
+    expect(groups).toHaveLength(2)
+    expect(groups[0].title).toBe(ENRICHMENT_VARIABLES_GROUP_TITLE)
+    expect(groups[1].title).toBe(ENRICHMENT_STARTER_GROUP_TITLE)
     expect(events[0].outgoingEdgeId).toBe(edges[0].id)
     expect(edges[0].from.eventId).toBe(events[0].id)
     expect(edges[0].to.groupId).toBe(groups[0].id)
-    expect(groups[0].title).toBe(ENRICHMENT_STARTER_GROUP_TITLE)
+    expect(edges[1].from.blockId).toBe(groups[0].blocks[0].id)
+    expect(edges[1].to.groupId).toBe(groups[1].id)
+    expect(groups[0].blocks[0].outgoingEdgeId).toBe(edges[1].id)
   })
 
   it('seeds a Return Output block with a parseable Custom JSON example using the built-ins', () => {
     const { groups } = buildEnrichmentStarterFlow()
-    const block = groups[0].blocks[0]
+    const block = groups[1].blocks[0]
 
     expect(block.type).toBe('workflow')
     expect(block.options.responseType).toBe('Custom JSON')
@@ -232,7 +256,7 @@ describe('buildEnrichmentStarterFlow', () => {
     expect(first.events[0].id).not.toBe(second.events[0].id)
   })
 
-  it('survives normalization keeping the starter edge and gaining the declare group', () => {
+  it('survives normalization keeping both edges and canonicalizing the declare group in place', () => {
     const starter = buildEnrichmentStarterFlow()
     const { groups, edges } = normalizeEnrichmentDeclareVariables({
       groups: starter.groups,
@@ -242,8 +266,15 @@ describe('buildEnrichmentStarterFlow', () => {
 
     expect(edges).toEqual(starter.edges)
     expect(groups.map((g) => g.title)).toEqual([
-      ENRICHMENT_STARTER_GROUP_TITLE,
       ENRICHMENT_VARIABLES_GROUP_TITLE,
+      ENRICHMENT_STARTER_GROUP_TITLE,
     ])
+    expect(groups[0].blocks[0].id).toBe(starter.groups[0].blocks[0].id)
+    expect(groups[0].blocks[0].outgoingEdgeId).toBe(starter.edges[1].id)
+    expect(
+      groups[0].blocks[0].options.variables.map(
+        (v: { variableId: string }) => v.variableId
+      )
+    ).toEqual(['v1', 'v2', 'v3', 'v4', 'v5'])
   })
 })
