@@ -127,6 +127,7 @@ const baseEnv = {
     COGNITO_ISSUER_URL: z.string().min(1),
     CLOUDCHAT_COGNITO_APP_CLIENT_ID: z.string().min(1),
     MCP_COGNITO_APP_CLIENT_ID: z.string().min(1).optional(),
+    CLOUDCHAT_COGNITO_CONFIDENTIAL_CLIENT_ID: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_E2E_TEST: boolean.optional(),
