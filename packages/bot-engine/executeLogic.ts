@@ -38,7 +38,7 @@ export const executeLogic =
       case LogicBlockType.WAIT:
         return await executeWait(state, block)
       case LogicBlockType.JUMP:
-        return executeJumpBlock(state, block.options)
+        return executeJumpBlock(state, block)
       case LogicBlockType.AB_TEST:
         return executeAbTest(state, block)
       case LogicBlockType.DECLARE_VARIABLES:

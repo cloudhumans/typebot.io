@@ -55,3 +55,21 @@ export const createEmptyExecutionTrail = (): ExecutionTrail => ({
   edgeVisitCounts: {},
   visitedGroupIds: new Set(),
 })
+
+// Jumps taken during the Test, reduced to lookups for the same reason as
+// `ExecutionTrail`: the raw list is cumulative, and every block and every group
+// checks it on every render.
+export type JumpTrail = {
+  // Jump blocks the flow actually left from — badged as the jump origin.
+  originBlockIds: Set<string>
+  // Groups a jump landed in, each mapped to the blocks that jumped into it, so
+  // the target badge can name where the flow came from. Several jumps can share
+  // a target, hence a list. The keys double as the set of jump targets: they get
+  // the trail border too, since no drawn edge points into them.
+  originBlockIdsByTargetGroupId: Map<string, string[]>
+}
+
+export const createEmptyJumpTrail = (): JumpTrail => ({
+  originBlockIds: new Set(),
+  originBlockIdsByTargetGroupId: new Map(),
+})

@@ -81,6 +81,9 @@ export const BlockNode = ({
     'orange.400',
     'orange.300'
   )
+  // Same pair the group card uses for its trail border, so the jump badge on the
+  // origin block matches the one on the target group.
+  const jumpBadgeBg = useColorModeValue('orange.500', 'orange.400')
   const { pathname, query } = useRouter()
   const {
     setConnectingIds,
@@ -94,6 +97,7 @@ export const BlockNode = ({
     previewingBlock,
     runningBlockId,
     blockResults,
+    jumpTrail,
   } = useGraph()
   const { mouseOverBlock, setMouseOverBlock } = useBlockDnd()
   const { highlightedBlockId } = useFlowSearch()
@@ -119,6 +123,11 @@ export const BlockNode = ({
   const blockResult = isExecutionStatusBlock
     ? blockResults[block.id]
     : undefined
+
+  // The Test flow jumped away from this block. A jump has no drawn edge, so
+  // without this badge the trail just stops here. The other half is the ↩ badge
+  // on the target card, whose tooltip names this card as the origin.
+  const isJumpOrigin = jumpTrail.originBlockIds.has(block.id)
 
   const groupId = typebot?.groups.at(indices.groupIndex)?.id
 
@@ -327,6 +336,28 @@ export const BlockNode = ({
                     thickness="2px"
                     speed="0.7s"
                   />
+                </Flex>
+              )}
+              {isJumpOrigin && (
+                <Flex
+                  pos="absolute"
+                  top="-9px"
+                  right="-9px"
+                  zIndex={3}
+                  align="center"
+                  px="2"
+                  py="0.5"
+                  rounded="full"
+                  bg={jumpBadgeBg}
+                  color="white"
+                  fontSize="10px"
+                  fontWeight="bold"
+                  letterSpacing="wide"
+                  shadow="sm"
+                  pointerEvents="none"
+                  data-testid="block-jump-origin"
+                >
+                  jump ↪
                 </Flex>
               )}
               {blockResult && (

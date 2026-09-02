@@ -8,12 +8,13 @@ import {
   keyframes,
   SlideFade,
   Stack,
+  Tooltip,
   useColorModeValue,
 } from '@chakra-ui/react'
 import React, { useEffect, useRef, useState } from 'react'
 import { GroupV6 } from '@typebot.io/schemas'
 import { BlockNodesList } from '../block/BlockNodesList'
-import { isEmpty, isNotDefined } from '@typebot.io/lib'
+import { isDefined, isEmpty, isNotDefined } from '@typebot.io/lib'
 import { GroupNodeContextMenu } from './GroupNodeContextMenu'
 import { ContextMenu } from '@/components/ContextMenu'
 import { useDrag } from '@use-gesture/react'
@@ -59,7 +60,7 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
     isReadOnly,
     graphPosition,
     executionTrail,
-    jumpTargetGroupIds,
+    jumpTrail,
   } = useGraph()
   const { typebot, updateGroup, updateGroupsCoordinates } = useTypebot()
   const { setMouseOverGroup, mouseOverGroup } = useBlockDnd()
@@ -78,15 +79,34 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
         (previewingEdge.to.groupId === group.id &&
           isNotDefined(previewingEdge.to.blockId))))
 
-  // Group is part of the path taken in the Test: a visited edge points into it.
-  // Gives the whole card an orange/bold border, matching the arrow trail. The
-  // set is derived once per response — see `computeExecutionTrail`.
-  const isVisited = executionTrail.visitedGroupIds.has(group.id)
-
   // Where the Test flow is right now, and whether this group is the target of a
   // jump/loop-back.
   const isCurrent = previewingBlock?.groupId === group.id
-  const isJumpTarget = jumpTargetGroupIds.includes(group.id)
+  const jumpOriginBlockIds = jumpTrail.originBlockIdsByTargetGroupId.get(
+    group.id
+  )
+  const isJumpTarget = isDefined(jumpOriginBlockIds)
+
+  // Names of the cards the jump came from, for the badge tooltip: a jump has no
+  // drawn edge, so this is the only way to see where the flow arrived from
+  // without hunting the canvas. Resolved here instead of in `computeJumpTrail` so
+  // renaming a card mid-Test updates the tooltip without waiting for the next
+  // chat response — and it only runs for the few groups that are jump targets.
+  const jumpOriginTitles = jumpOriginBlockIds?.map((blockId) => {
+    const originGroup = typebot?.groups.find((candidate) =>
+      candidate.blocks.some((block) => block.id === blockId)
+    )
+    return isEmpty(originGroup?.title) ? 'untitled card' : originGroup?.title
+  })
+
+  // Group is part of the path taken in the Test: a visited edge points into it,
+  // or the flow jumped into it. A jump arrives through a virtual edge that the
+  // editor never draws, so it leaves no trace in `visitedGroupIds` — without the
+  // second half, a group only ever reached by a jump kept the default border and
+  // the trail looked like it stopped at the Jump block. Gives the whole card an
+  // orange/bold border, matching the arrow trail. Both sets are derived once per
+  // response — see `computeExecutionTrail` and `computeJumpTrail`.
+  const isVisited = executionTrail.visitedGroupIds.has(group.id) || isJumpTarget
 
   const groupRef = useRef<HTMLDivElement | null>(null)
   const isDraggingGraph = useGroupsStore((state) => state.isDraggingGraph)
@@ -258,28 +278,35 @@ export const GroupNode = ({ group, groupIndex }: Props) => {
               sx={{ animation: `${currentGlow} 1.3s ease-in-out infinite` }}
             />
           )}
-          {isJumpTarget && (
-            <Flex
-              pos="absolute"
-              top="-11px"
-              left="12px"
-              zIndex={3}
-              align="center"
-              px="2"
-              py="0.5"
-              rounded="full"
-              bg={visitedBorderColor}
-              color="white"
-              fontSize="10px"
-              fontWeight="bold"
-              letterSpacing="wide"
-              shadow="sm"
-              pointerEvents="none"
-              data-testid="group-jump-target"
+          {jumpOriginTitles?.length ? (
+            <Tooltip
+              label={`Jumped from "${jumpOriginTitles.join('", "')}"`}
+              placement="top"
             >
-              ↩ jump
-            </Flex>
-          )}
+              <Flex
+                pos="absolute"
+                top="-11px"
+                left="12px"
+                zIndex={3}
+                align="center"
+                px="2"
+                py="0.5"
+                rounded="full"
+                bg={visitedBorderColor}
+                color="white"
+                fontSize="10px"
+                fontWeight="bold"
+                letterSpacing="wide"
+                shadow="sm"
+                // No `pointerEvents="none"` here, unlike the other trail badges:
+                // the tooltip needs the hover. Cursor is left inherited so the
+                // badge still reads as part of the draggable card.
+                data-testid="group-jump-target"
+              >
+                ↩ jump
+              </Flex>
+            </Tooltip>
+          ) : null}
           {hasError && (
             <IconButton
               onClick={handleAlertClick}

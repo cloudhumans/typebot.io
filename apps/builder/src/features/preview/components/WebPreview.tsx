@@ -5,11 +5,15 @@ import { useTypebot } from '@/features/editor/providers/TypebotProvider'
 import { useGraph } from '@/features/graph/providers/GraphProvider'
 import { useToast } from '@/hooks/useToast'
 import { Standard } from '@typebot.io/nextjs'
-import { ContinueChatResponse } from '@typebot.io/schemas'
+import { ContinueChatResponse, PreviewJump } from '@typebot.io/schemas'
 import { DebugVariable } from './DebugVariablesPanel'
 import { findNextRunningBlockId } from '../helpers/findNextRunningBlockId'
 import { computeExecutionTrail } from '../helpers/computeExecutionTrail'
-import { createEmptyExecutionTrail } from '@/features/graph/types'
+import { computeJumpTrail } from '../helpers/computeJumpTrail'
+import {
+  createEmptyExecutionTrail,
+  createEmptyJumpTrail,
+} from '@/features/graph/types'
 import { ComponentProps, useEffect, useRef } from 'react'
 
 type Props = {
@@ -25,7 +29,7 @@ export const WebPreview = ({ onNewVariables }: Props) => {
     setExecutionTrail,
     setRunningBlockId,
     setBlockResults,
-    setJumpTargetGroupIds,
+    setJumpTrail,
   } = useGraph()
 
   const { showToast } = useToast()
@@ -73,7 +77,7 @@ export const WebPreview = ({ onNewVariables }: Props) => {
     setExecutionTrail(createEmptyExecutionTrail())
     setRunningBlockId(undefined)
     setBlockResults({})
-    setJumpTargetGroupIds([])
+    setJumpTrail(createEmptyJumpTrail())
     setPreviewingBlock(undefined)
   }
 
@@ -124,9 +128,9 @@ export const WebPreview = ({ onNewVariables }: Props) => {
           computeExecutionTrail({ visitedEdgeIds, edges: typebot.edges })
         )
       }
-      onJumps={(jumpTargetGroupIds) =>
-        setJumpTargetGroupIds(jumpTargetGroupIds)
-      }
+      // Same idea as the edge trail: reduce the cumulative jump list to lookups
+      // here, once, instead of in every block and every group on every render.
+      onJumps={(jumps) => setJumpTrail(computeJumpTrail(jumps))}
       onNewVariables={onNewVariables}
       resetTrail={resetTrail}
     />
@@ -145,7 +149,7 @@ type PreviewBotProps = {
   onAnswer: NonNullable<ComponentProps<typeof Standard>['onAnswer']>
   onEnd: NonNullable<ComponentProps<typeof Standard>['onEnd']>
   onVisitedEdges: (visitedEdgeIds: string[]) => void
-  onJumps: (jumpTargetGroupIds: string[]) => void
+  onJumps: (jumps: PreviewJump[]) => void
   onNewVariables?: (variables: DebugVariable[]) => void
   resetTrail: () => void
 }
@@ -202,8 +206,8 @@ const PreviewBot = ({
       onVisitedEdges={(visitedEdgeIds) => {
         if (isMounted.current) onVisitedEdges(visitedEdgeIds)
       }}
-      onJumps={(jumpTargetGroupIds) => {
-        if (isMounted.current) onJumps(jumpTargetGroupIds)
+      onJumps={(jumps) => {
+        if (isMounted.current) onJumps(jumps)
       }}
       onNewVariables={(variables) => {
         if (isMounted.current) onNewVariables?.(variables)

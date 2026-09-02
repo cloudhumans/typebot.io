@@ -13,7 +13,9 @@ import { graphPositionDefaultValue } from '../constants'
 import {
   ConnectingIds,
   createEmptyExecutionTrail,
+  createEmptyJumpTrail,
   ExecutionTrail,
+  JumpTrail,
 } from '../types'
 
 type Position = Coordinates & { scale: number }
@@ -46,10 +48,11 @@ const graphContext = createContext<{
   setBlockResults: Dispatch<
     SetStateAction<Record<string, 'success' | 'error'>>
   >
-  // Group ids the Test flow jumped into (loop-backs via a Jump block, which has
-  // no drawn edge). Flagged with a ↩ badge on the target group.
-  jumpTargetGroupIds: string[]
-  setJumpTargetGroupIds: Dispatch<SetStateAction<string[]>>
+  // Jumps the Test flow took (loop-backs via a Jump block, which has no drawn
+  // edge), reduced to lookups: a ↪ badge on the origin block and a ↩ badge on
+  // the target group. Cleared with the trail.
+  jumpTrail: JumpTrail
+  setJumpTrail: Dispatch<SetStateAction<JumpTrail>>
   openedBlockId?: string
   setOpenedBlockId: Dispatch<SetStateAction<string | undefined>>
   openedItemId?: string
@@ -89,7 +92,7 @@ export const GraphProvider = ({
   const [blockResults, setBlockResults] = useState<
     Record<string, 'success' | 'error'>
   >({})
-  const [jumpTargetGroupIds, setJumpTargetGroupIds] = useState<string[]>([])
+  const [jumpTrail, setJumpTrail] = useState<JumpTrail>(createEmptyJumpTrail)
   const [openedBlockId, setOpenedBlockId] = useState<string>()
   const [openedItemId, setOpenedItemId] = useState<string>()
   const [focusedGroupId, setFocusedGroupId] = useState<string>()
@@ -125,8 +128,8 @@ export const GraphProvider = ({
         setRunningBlockId,
         blockResults,
         setBlockResults,
-        jumpTargetGroupIds,
-        setJumpTargetGroupIds,
+        jumpTrail,
+        setJumpTrail,
         openedBlockId,
         setOpenedBlockId,
         openedItemId,

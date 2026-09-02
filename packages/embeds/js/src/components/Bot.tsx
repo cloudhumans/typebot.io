@@ -15,7 +15,13 @@ import {
 } from '@/utils/storage'
 import { setCssVariablesValue } from '@/utils/setCssVariablesValue'
 import immutableCss from '../assets/immutable.css'
-import { DebugVariable, Font, InputBlock, StartFrom } from '@typebot.io/schemas'
+import {
+  DebugVariable,
+  Font,
+  InputBlock,
+  PreviewJump,
+  StartFrom,
+} from '@typebot.io/schemas'
 import { clsx } from 'clsx'
 import { HTTPError } from 'ky'
 import { injectFont } from '@/utils/injectFont'
@@ -49,7 +55,7 @@ export type BotProps = {
   onNewLogs?: (logs: OutgoingLog[]) => void
   onNewVariables?: (variables: DebugVariable[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
-  onJumps?: (jumpTargetGroupIds: string[]) => void
+  onJumps?: (jumps: PreviewJump[]) => void
   onChatStatePersisted?: (isEnabled: boolean) => void
 }
 
@@ -173,7 +179,7 @@ export const Bot = (props: BotProps & { class?: string }) => {
       if (data.logs) props.onNewLogs?.(data.logs)
       if (data.variables) props.onNewVariables?.(data.variables)
       if (data.visitedEdgeIds) props.onVisitedEdges?.(data.visitedEdgeIds)
-      if (data.jumpTargetGroupIds) props.onJumps?.(data.jumpTargetGroupIds)
+      if (data.jumps) props.onJumps?.(data.jumps)
       props.onChatStatePersisted?.(false)
     }
 
@@ -272,7 +278,7 @@ type BotContentProps = {
   onNewLogs?: (logs: OutgoingLog[]) => void
   onNewVariables?: (variables: DebugVariable[]) => void
   onVisitedEdges?: (visitedEdgeIds: string[]) => void
-  onJumps?: (jumpTargetGroupIds: string[]) => void
+  onJumps?: (jumps: PreviewJump[]) => void
 }
 
 const BotContent = (props: BotContentProps) => {

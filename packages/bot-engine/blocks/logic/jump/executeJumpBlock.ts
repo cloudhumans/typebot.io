@@ -6,8 +6,9 @@ import { JumpBlock } from '@typebot.io/schemas/features/blocks/logic/jump'
 
 export const executeJumpBlock = (
   state: SessionState,
-  { groupId, blockId }: JumpBlock['options'] = {}
+  block: JumpBlock
 ): ExecuteLogicResponse => {
+  const { groupId, blockId } = block.options ?? {}
   if (!groupId) return { outgoingEdgeId: undefined }
   const { typebot } = state.typebotsQueue[0]
   const groupToJumpTo = typebot.groups.find((group) => group.id === groupId)
@@ -30,19 +31,22 @@ export const executeJumpBlock = (
   let newSessionState = addEdgeToTypebot(state, portalEdge)
 
   // Preview: a jump travels through a virtual edge (no line in the editor).
-  // Records the target group so the builder can flag the loop-back. Deduped on
-  // write: the builder only needs the set of targets, and a loop going through
+  // Records both ends — the block the flow left from and the group it landed in
+  // — so the builder can flag the loop-back on either side. Deduped on write by
+  // the pair: the builder only needs the set of jumps, and a loop going through
   // the same jump 50 times would otherwise store it 50 times — in the session
   // state *and* in every `continueChat` response.
   if (!newSessionState.typebotsQueue[0].resultId) {
-    const jumpTargetGroupIds =
-      newSessionState.previewMetadata?.jumpTargetGroupIds ?? []
-    if (!jumpTargetGroupIds.includes(groupId))
+    const jumps = newSessionState.previewMetadata?.jumps ?? []
+    const isAlreadyRecorded = jumps.some(
+      (jump) => jump.fromBlockId === block.id && jump.toGroupId === groupId
+    )
+    if (!isAlreadyRecorded)
       newSessionState = {
         ...newSessionState,
         previewMetadata: {
           ...newSessionState.previewMetadata,
-          jumpTargetGroupIds: [...jumpTargetGroupIds, groupId],
+          jumps: [...jumps, { fromBlockId: block.id, toGroupId: groupId }],
         },
       }
   }
