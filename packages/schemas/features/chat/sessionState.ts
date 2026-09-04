@@ -103,6 +103,13 @@ const sessionStateSchemaV3 = sessionStateSchemaV2
         // Preview-only: group ids the flow jumped into via a Jump block (which
         // uses an invisible virtual edge). Lets the builder flag loop-backs.
         jumpTargetGroupIds: z.array(z.string()).optional(),
+        // Preview-only: the real JS type of each variable's value, keyed by
+        // variable id, captured at write time. Variable values are stored as
+        // text (`safeStringify`), so this is the only place the original type
+        // survives — the builder debug panel reads it instead of guessing the
+        // type back from the string, which cannot tell the text "5" from the
+        // number 5.
+        variableTypes: z.record(z.string(), z.string()).optional(),
         setVariableHistory: z
           .array(
             setVariableHistoryItemSchema.pick({
