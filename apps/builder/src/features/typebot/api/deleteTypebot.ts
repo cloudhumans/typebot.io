@@ -4,6 +4,11 @@ import { TRPCError } from '@trpc/server'
 import { Settings } from '@typebot.io/schemas'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
+import {
+  isPrismaLockNotAcquired,
+  isPrismaRecordNotFound,
+} from '../helpers/isPrismaLockNotAcquired'
+import logger from '@/helpers/logger'
 
 export const deleteTypebot = authenticatedProcedure
   .meta({
@@ -82,21 +87,38 @@ export const deleteTypebot = authenticatedProcedure
         message: 'Published context enrichment flows cannot be deleted',
       })
 
-    await prisma.$transaction([
-      prisma.$executeRaw`
-        DELETE FROM "ChatSession"
-        WHERE id IN (
-          SELECT "lastChatSessionId" FROM "Result"
-          WHERE "typebotId" = ${typebotId}
-          AND "lastChatSessionId" IS NOT NULL
-        )
-      `,
-      prisma.typebotEditQueue.deleteMany({ where: { typebotId } }),
-      prisma.bannedIp.deleteMany({
-        where: { responsibleTypebotId: typebotId },
-      }),
-      prisma.typebot.delete({ where: { id: typebotId } }),
-    ])
+    try {
+      await prisma.$transaction([
+        prisma.$queryRaw`SELECT 1 / (CASE WHEN pg_try_advisory_xact_lock(hashtext('typebot:delete'), hashtext(${typebotId})) THEN 1 ELSE 0 END)`,
+        prisma.$executeRaw`
+          DELETE FROM "ChatSession"
+          WHERE id IN (
+            SELECT "lastChatSessionId" FROM "Result"
+            WHERE "typebotId" = ${typebotId}
+            AND "lastChatSessionId" IS NOT NULL
+          )
+        `,
+        prisma.typebotEditQueue.deleteMany({ where: { typebotId } }),
+        prisma.bannedIp.deleteMany({
+          where: { responsibleTypebotId: typebotId },
+        }),
+        prisma.typebot.delete({ where: { id: typebotId } }),
+      ])
+    } catch (e) {
+      if (isPrismaLockNotAcquired(e)) {
+        logger.warn('deleteTypebot: concurrent deletion blocked', {
+          typebotId,
+          userId: user.id,
+        })
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Typebot deletion already in progress',
+        })
+      }
+      if (isPrismaRecordNotFound(e))
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
+      throw e
+    }
 
     return {
       message: 'success',

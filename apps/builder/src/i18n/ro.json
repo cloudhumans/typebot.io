@@ -213,6 +213,8 @@
   "folders.typebotButton.delete": "Șterge",
   "folders.typebotButton.deleteConfirmationMessage": "Sigur doriți să ștergeți <strong>typebotName</strong> de typebot?",
   "folders.typebotButton.deleteConfirmationMessageWarning": "Toate datele asociate acesteia vor fi șterse și nu vor fi recuperate.",
+  "folders.typebotButton.deleteInProgress": "Acest typebot este deja în curs de ștergere. Va dispărea în curând din listă.",
+  "folders.typebotButton.deleteUnknownState": "Nu am putut confirma ștergerea. Este posibil să ruleze în continuare în fundal; lista a fost actualizată.",
   "folders.typebotButton.duplicate": "Duplicat",
   "folders.typebotButton.live": "Trăi",
   "folders.typebotButton.showMoreOptions": "Afișați mai multe opțiuni",
