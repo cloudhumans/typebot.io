@@ -377,7 +377,6 @@
   "folders.typebotButton.deleteConfirmationMessage": "Es-tu sûr de vouloir supprimer votre typebot <strong>typebotName</strong> ?",
   "folders.typebotButton.deleteConfirmationMessageWarning": "Toutes les données associées seront supprimées et ne pourront pas être récupérées.",
   "folders.typebotButton.deleteInProgress": "Ce typebot est déjà en cours de suppression. Il disparaîtra bientôt de la liste.",
-  "folders.typebotButton.deleteUnknownState": "Nous n'avons pas pu confirmer la suppression. Elle peut encore être en cours en arrière-plan ; la liste a été actualisée.",
   "folders.typebotButton.duplicate": "Dupliquer",
   "folders.typebotButton.live": "Live",
   "folders.typebotButton.showMoreOptions": "Afficher plus d'options",
