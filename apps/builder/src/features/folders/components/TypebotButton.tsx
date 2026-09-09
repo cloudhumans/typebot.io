@@ -33,7 +33,14 @@ import {
   useDragDistance,
 } from '@/features/graph/providers/GraphDndProvider'
 import type { TRPCClientErrorLike } from '@trpc/client'
+import type { TRPC_ERROR_CODE_KEY } from '@trpc/server/rpc'
 import type { AppRouter } from '@/helpers/server/routers/appRouter'
+
+const rejectedDeleteCodes = new Set<TRPC_ERROR_CODE_KEY>([
+  'BAD_REQUEST',
+  'FORBIDDEN',
+  'UNAUTHORIZED',
+])
 
 type Props = {
   typebot: TypebotInDashboard
@@ -105,12 +112,15 @@ const TypebotButton = ({
     try {
       await deleteTypebot({ typebotId: typebot.id })
     } catch (error) {
-      const code = (error as TRPCClientErrorLike<AppRouter>).data?.code
+      const { data, message } = error as TRPCClientErrorLike<AppRouter>
+      const code = data?.code
       if (code === 'CONFLICT')
         showToast({
           status: 'info',
           description: t('folders.typebotButton.deleteInProgress'),
         })
+      else if (code && rejectedDeleteCodes.has(code))
+        showToast({ description: message })
       else if (code !== 'NOT_FOUND')
         showToast({
           status: 'info',
