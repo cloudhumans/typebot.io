@@ -30,6 +30,7 @@ export const visitedEdgeSchema = z.object({
   edgeId: z.string(),
   resultId: z.string(),
   index: z.number(),
+  typebotId: z.string().nullable(),
 }) satisfies z.ZodType<VisitedEdge>
 
 export const resultWithAnswersInputSchema = resultSchema.merge(

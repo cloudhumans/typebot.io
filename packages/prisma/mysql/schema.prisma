@@ -291,10 +291,13 @@ model SetVariableHistoryItem {
 }
 
 model VisitedEdge {
-  result   Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
-  resultId String
-  edgeId   String
-  index    Int
+  result    Result  @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  resultId  String
+  edgeId    String
+  index     Int
+  // Typebot that owns the edge. Edge ids are only unique within a flow, so
+  // without this the owner is ambiguous when linked sub-flows share cloned ids.
+  typebotId String?
 
   @@unique([resultId, index])
 }
