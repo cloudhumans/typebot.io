@@ -436,6 +436,7 @@
   "folders.typebotButton.deleteConfirmationMessage": "Are you sure you want to delete your Flow <strong>typebotName</strong>?",
   "folders.typebotButton.deleteConfirmationMessageWarning": "All its associated data will be deleted and won't be recoverable.",
   "folders.typebotButton.deleteConfirmationLabel": "To delete, type the Flow name:",
+  "folders.typebotButton.deleteInProgress": "This Flow is already being deleted. It will disappear from the list shortly.",
   "folders.typebotButton.duplicate": "Duplicate",
   "folders.typebotButton.live": "Live",
   "folders.typebotButton.showMoreOptions": "Show more options",

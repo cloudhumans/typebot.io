@@ -340,6 +340,7 @@
   "folders.typebotButton.delete": "Cancellare",
   "folders.typebotButton.deleteConfirmationMessage": "Si è sicuri di voler eliminare il proprio typebot <strong>typebotName</strong>?",
   "folders.typebotButton.deleteConfirmationMessageWarning": "Tutti i dati associati verranno eliminati e non saranno più recuperabili.",
+  "folders.typebotButton.deleteInProgress": "Questo typebot è già in fase di eliminazione. Scomparirà a breve dall'elenco.",
   "folders.typebotButton.duplicate": "Duplicato",
   "folders.typebotButton.live": "In diretta",
   "folders.typebotButton.showMoreOptions": "Mostra più opzioni",

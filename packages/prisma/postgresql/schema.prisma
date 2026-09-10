@@ -384,6 +384,7 @@ model AnswerV2 {
   result    Result   @relation(fields: [resultId], references: [id], onDelete: Cascade)
 
   @@index([blockId])
+  @@index([resultId])
 }
 
 model Coupon {

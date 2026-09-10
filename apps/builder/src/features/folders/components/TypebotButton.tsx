@@ -32,6 +32,8 @@ import {
   NodePosition,
   useDragDistance,
 } from '@/features/graph/providers/GraphDndProvider'
+import type { TRPCClientErrorLike } from '@trpc/client'
+import type { AppRouter } from '@/helpers/server/routers/appRouter'
 
 type Props = {
   typebot: TypebotInDashboard
@@ -76,14 +78,8 @@ const TypebotButton = ({
     },
   })
 
-  const { mutate: deleteTypebot } = trpc.typebot.deleteTypebot.useMutation({
-    onError: (error) => {
-      showToast({ description: error.message })
-    },
-    onSuccess: () => {
-      onTypebotUpdated()
-    },
-  })
+  const { mutateAsync: deleteTypebot } =
+    trpc.typebot.deleteTypebot.useMutation()
 
   const { mutate: unpublishTypebot } =
     trpc.typebot.unpublishTypebot.useMutation({
@@ -106,9 +102,19 @@ const TypebotButton = ({
 
   const handleDeleteTypebotClick = async () => {
     if (isReadOnly) return
-    deleteTypebot({
-      typebotId: typebot.id,
-    })
+    try {
+      await deleteTypebot({ typebotId: typebot.id })
+    } catch (error) {
+      const { data, message } = error as TRPCClientErrorLike<AppRouter>
+      if (data?.code === 'CONFLICT')
+        showToast({
+          status: 'info',
+          description: t('folders.typebotButton.deleteInProgress'),
+        })
+      else showToast({ description: message })
+    } finally {
+      onTypebotUpdated()
+    }
   }
 
   const handleDuplicateClick = async (e: React.MouseEvent) => {

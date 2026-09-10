@@ -212,6 +212,7 @@
   "folders.typebotButton.delete": "Löschen",
   "folders.typebotButton.deleteConfirmationMessage": "Möchtest du deinen Typebot <strong>typebotName</strong> wirklich löschen?",
   "folders.typebotButton.deleteConfirmationMessageWarning": "Alle zugehörigen Daten werden gelöscht und können nicht wiederhergestellt werden.",
+  "folders.typebotButton.deleteInProgress": "Dieser Typebot wird bereits gelöscht. Er wird in Kürze aus der Liste verschwinden.",
   "folders.typebotButton.duplicate": "Duplizieren",
   "folders.typebotButton.live": "Live",
   "folders.typebotButton.showMoreOptions": "Mehr Optionen anzeigen",
