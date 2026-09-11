@@ -1,3 +1,4 @@
+import type { typebotRouter } from '@/features/typebot/api/router'
 import { router } from '../trpc'
 import { createTypebot } from '@/features/typebot/api/createTypebot'
 import { updateTypebot } from '@/features/typebot/api/updateTypebot'
@@ -25,3 +26,12 @@ export const claudiaAdminRouter = router({
 })
 
 export type ClaudiaAdminRouter = typeof claudiaAdminRouter
+
+type ServedOperationId = keyof (typeof typebotRouter)['_def']['procedures']
+type UnservedCuratedOperation = Exclude<
+  keyof ClaudiaAdminRouter['_def']['procedures'],
+  ServedOperationId
+>
+export const curatedOperationsAreServed: UnservedCuratedOperation extends never
+  ? true
+  : never = true
