@@ -8,6 +8,7 @@ import {
 } from '@typebot.io/schemas'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '@/features/typebot/helpers/isWriteTypebotForbidden'
+import { assertLinkedTypebotsInWorkspace } from '@/features/typebot/helpers/assertLinkedTypebotsInWorkspace'
 import { executeDraftWorkflow } from '@typebot.io/mcp-tools'
 
 export const runTypebotDraft = authenticatedProcedure
@@ -81,6 +82,12 @@ export const runTypebotDraft = authenticatedProcedure
         cause: err,
       })
     }
+
+    await assertLinkedTypebotsInWorkspace({
+      rootId: existingTypebot.id,
+      workspaceId: existingTypebot.workspaceId,
+      groups: draft.groups,
+    })
 
     return executeDraftWorkflow({
       typebot: draft,

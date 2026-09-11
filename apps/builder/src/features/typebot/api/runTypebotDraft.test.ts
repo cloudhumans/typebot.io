@@ -4,6 +4,8 @@ import { runTypebotDraft } from './runTypebotDraft'
 import prisma from '@typebot.io/lib/prisma'
 import { isWriteTypebotForbidden } from '@/features/typebot/helpers/isWriteTypebotForbidden'
 import { executeDraftWorkflow } from '@typebot.io/mcp-tools'
+import { assertLinkedTypebotsInWorkspace } from '@/features/typebot/helpers/assertLinkedTypebotsInWorkspace'
+import { TRPCError } from '@trpc/server'
 
 vi.mock('@typebot.io/lib/prisma', () => ({
   default: {
@@ -17,6 +19,9 @@ vi.mock('@/features/typebot/helpers/isWriteTypebotForbidden', () => ({
 }))
 vi.mock('@typebot.io/mcp-tools', () => ({
   executeDraftWorkflow: vi.fn(),
+}))
+vi.mock('@/features/typebot/helpers/assertLinkedTypebotsInWorkspace', () => ({
+  assertLinkedTypebotsInWorkspace: vi.fn(),
 }))
 
 const user = { id: 'user-1', email: 'dev@acme.inc' }
@@ -62,6 +67,7 @@ describe('runTypebotDraft', () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue(draft as never)
     vi.mocked(isWriteTypebotForbidden).mockResolvedValue(false)
     vi.mocked(executeDraftWorkflow).mockResolvedValue(successResult as never)
+    vi.mocked(assertLinkedTypebotsInWorkspace).mockResolvedValue(undefined)
   })
 
   it('runs the draft as the caller with the given variables', async () => {
@@ -73,6 +79,9 @@ describe('runTypebotDraft', () => {
     expect(isWriteTypebotForbidden).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'tool-1' }),
       user
+    )
+    expect(assertLinkedTypebotsInWorkspace).toHaveBeenCalledWith(
+      expect.objectContaining({ rootId: 'tool-1', workspaceId: 'ws-1' })
     )
     expect(executeDraftWorkflow).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -138,6 +147,17 @@ describe('runTypebotDraft', () => {
       })
     )
     expect(result).toEqual(successResult)
+  })
+
+  it('responds BAD_REQUEST when a Typebot link leaves the workspace', async () => {
+    vi.mocked(assertLinkedTypebotsInWorkspace).mockRejectedValue(
+      new TRPCError({ code: 'BAD_REQUEST', message: 'another workspace' })
+    )
+
+    await expect(caller()({ typebotId: 'tool-1' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    })
+    expect(executeDraftWorkflow).not.toHaveBeenCalled()
   })
 
   it('checks access before parsing, so a forbidden unparseable row is still NOT_FOUND', async () => {
