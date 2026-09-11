@@ -63,8 +63,16 @@ export const runTypebotDraft = authenticatedProcedure
       })
     }
 
-    const flowType = settingsSchema.parse(existingTypebot.settings ?? {})
-      .general?.type
+    const parsedSettings = settingsSchema.safeParse(
+      existingTypebot.settings ?? {}
+    )
+    if (!parsedSettings.success)
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Typebot ${typebotId} has settings that cannot be parsed. Fix the flow settings before running the draft.`,
+        cause: parsedSettings.error,
+      })
+    const flowType = parsedSettings.data.general?.type
     if (flowType !== 'TOOL' && flowType !== 'CONTEXT_ENRICHMENT') {
       throw new TRPCError({
         code: 'BAD_REQUEST',

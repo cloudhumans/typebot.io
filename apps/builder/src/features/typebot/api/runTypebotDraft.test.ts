@@ -130,6 +130,18 @@ describe('runTypebotDraft', () => {
     expect(executeDraftWorkflow).not.toHaveBeenCalled()
   })
 
+  it('responds BAD_REQUEST when the settings cannot be parsed', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...draft,
+      settings: { general: { type: 'NOT_A_TYPE' } },
+    } as never)
+
+    await expect(caller()({ typebotId: 'tool-1' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    })
+    expect(executeDraftWorkflow).not.toHaveBeenCalled()
+  })
+
   it('accepts a CONTEXT_ENRICHMENT flow', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...draft,
