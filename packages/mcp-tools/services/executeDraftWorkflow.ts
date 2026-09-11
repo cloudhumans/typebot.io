@@ -1,5 +1,9 @@
 import { startChatPreview } from '@typebot.io/bot-engine/apiHandlers/startChatPreview'
-import type { DraftRunResult, StartTypebot } from '@typebot.io/schemas'
+import type {
+  DraftRunError,
+  DraftRunResult,
+  StartTypebot,
+} from '@typebot.io/schemas'
 import logger from '@typebot.io/lib/logger'
 import { extractToolOutput } from '../helpers/extractToolOutput'
 import { findBlockType } from '../helpers/findBlockType'
@@ -12,6 +16,16 @@ interface ExecuteDraftWorkflowParams {
 }
 
 type PreviewResult = Awaited<ReturnType<typeof startChatPreview>>
+
+const errorFromLog = (
+  typebot: StartTypebot,
+  log: { description: string; blockId?: string; details?: unknown }
+) => ({
+  message: log.description,
+  blockId: log.blockId,
+  blockType: findBlockType(typebot, log.blockId),
+  details: log.details,
+})
 
 const engineThrew = (message: string): DraftRunResult => ({
   status: 'error',
@@ -102,17 +116,20 @@ export async function executeDraftWorkflow({
       typebotId: typebot.id,
       status: 'success',
     })
-    return { status: 'success', output, error: null, logs, trail, variables }
+    const warningLog = firstErrorLog(result)
+    return {
+      status: 'success',
+      output,
+      error: warningLog ? errorFromLog(typebot, warningLog) : null,
+      logs,
+      trail,
+      variables,
+    }
   }
 
   const errorLog = firstErrorLog(result)
-  const error = errorLog
-    ? {
-        message: errorLog.description,
-        blockId: errorLog.blockId,
-        blockType: findBlockType(typebot, errorLog.blockId),
-        details: errorLog.details,
-      }
+  const error: DraftRunError = errorLog
+    ? errorFromLog(typebot, errorLog)
     : {
         message:
           'Flow ended without a "Tool Output" log. Add an End Workflow block (action "Return Output") so the tool returns a result.',

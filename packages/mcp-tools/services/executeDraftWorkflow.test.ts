@@ -207,7 +207,12 @@ describe('executeDraftWorkflow', () => {
     const result = await run()
 
     expect(result.status).toBe('success')
-    expect(result.error).toBeNull()
+    expect(result.error).toEqual({
+      message: 'Webhook returned an error.',
+      blockId: 'hook',
+      blockType: 'Webhook',
+      details: { status: 500, body: 'boom' },
+    })
     expect(result.logs).toContainEqual(webhookError)
   })
 

@@ -378,7 +378,9 @@ export const draftRunResultSchema = z.object({
     ),
   error: draftRunErrorSchema
     .nullable()
-    .describe('Null on success; the structured failure otherwise.'),
+    .describe(
+      'Null only when no block reported an error. On "success" it points at a block that failed on a non-fatal path (production would still deliver `output`, so fix it anyway); on "error" and "paused" it is the failure that stopped the run.'
+    ),
   logs: z
     .array(chatLogSchema)
     .describe(
