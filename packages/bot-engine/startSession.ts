@@ -50,11 +50,13 @@ import {
 import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 import { parseVariablesInRichText } from './parseBubbleBlock'
+import { resolveIsToolWorkflow } from './resolveIsToolWorkflow'
 
 type StartParams =
   | ({
       type: 'preview'
       userId?: string
+      headless?: boolean
     } & StartPreviewChatInput)
   | ({
       type: 'live'
@@ -117,9 +119,7 @@ export const startSession = async ({
     // param) assumes an agent on the other end. The builder preview runs the same
     // flow with a human in front of it, so it keeps the interactive Declare
     // Variables prompt instead.
-    (typebot.settings?.general?.type === 'TOOL' ||
-      typebot.settings?.general?.type === 'CONTEXT_ENRICHMENT') &&
-      startParams.type !== 'preview'
+    resolveIsToolWorkflow(typebot, startParams)
   )
 
   const initialState: SessionState = {

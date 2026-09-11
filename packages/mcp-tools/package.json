@@ -8,7 +8,8 @@
   "types": "./index.ts",
   "dependencies": {
     "@typebot.io/bot-engine": "workspace:*",
-    "@typebot.io/lib": "workspace:*"
+    "@typebot.io/lib": "workspace:*",
+    "@typebot.io/schemas": "workspace:*"
   },
   "devDependencies": {
     "@typebot.io/tsconfig": "workspace:*",
