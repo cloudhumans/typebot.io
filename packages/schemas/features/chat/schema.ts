@@ -338,6 +338,63 @@ export const debugVariableSchema = z.object({
 })
 export type DebugVariable = z.infer<typeof debugVariableSchema>
 
+export const draftRunErrorSchema = z.object({
+  message: z
+    .string()
+    .describe(
+      'Human-readable reason. For a paused run: which input block stopped the flow. For a missing required variable: the engine message naming the variable. For a failed webhook: the error log description.'
+    ),
+  blockId: z
+    .string()
+    .optional()
+    .describe(
+      'Id of the block that produced the first error log, or of the input block that paused the flow. Absent when the error is not tied to a block (e.g. the flow ended without an End Workflow block).'
+    ),
+  blockType: z
+    .string()
+    .optional()
+    .describe('Type of that block, e.g. "Webhook" or "text input".'),
+  details: z
+    .unknown()
+    .optional()
+    .describe(
+      'Raw details of the error log (for a webhook: response status and body).'
+    ),
+})
+export type DraftRunError = z.infer<typeof draftRunErrorSchema>
+
+export const draftRunStatusSchema = z.enum(['success', 'error', 'paused'])
+export type DraftRunStatus = z.infer<typeof draftRunStatusSchema>
+
+export const draftRunResultSchema = z.object({
+  status: draftRunStatusSchema.describe(
+    '"success": the flow produced a Tool Output that is not the transport-error marker; error logs on non-fatal paths do not change this, inspect `logs` for them. "error": the flow failed; read `error`. "paused": the flow stopped at an input block waiting for a human. Headless flows (TOOL and CONTEXT_ENRICHMENT) must not contain input blocks: in production nobody answers, so the tool yields no Tool Output. Remove or bypass the block named in `error`.'
+  ),
+  output: z
+    .string()
+    .nullable()
+    .describe(
+      'The Tool Output of the End Workflow block, exactly what the agent calling this tool in production would receive. Null when the run produced none.'
+    ),
+  error: draftRunErrorSchema
+    .nullable()
+    .describe('Null on success; the structured failure otherwise.'),
+  logs: z
+    .array(chatLogSchema)
+    .describe(
+      'Every execution log, unfiltered, each with status, description, details and, when it came from a block, the id of that block.'
+    ),
+  trail: z
+    .array(z.string())
+    .describe(
+      'Ids of the edges traversed, in order. Shows how far the flow got.'
+    ),
+  variables: z
+    .array(debugVariableSchema)
+    .describe('Variables holding a value at the end of the run.'),
+})
+export type DraftRunResult = z.infer<typeof draftRunResultSchema>
+
 const chatResponseBaseSchema = z.object({
   lastMessageNewFormat: z
     .string()
