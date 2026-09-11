@@ -328,6 +328,9 @@ importers:
       '@typebot.io/lib':
         specifier: workspace:*
         version: link:../../packages/lib
+      '@typebot.io/mcp-tools':
+        specifier: workspace:*
+        version: link:../../packages/mcp-tools
       '@typebot.io/migrations':
         specifier: workspace:*
         version: link:../../packages/migrations
