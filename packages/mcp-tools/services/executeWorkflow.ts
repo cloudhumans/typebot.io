@@ -2,7 +2,7 @@ import { startChat } from '@typebot.io/bot-engine/apiHandlers/startChat'
 import { filterPotentiallySensitiveLogs } from '@typebot.io/bot-engine/logs/filterPotentiallySensitiveLogs'
 import logger from '@typebot.io/lib/logger'
 import { extractToolOutput } from '../helpers/extractToolOutput'
-import { hasErrorLog } from '../helpers/hasErrorLog'
+import { TYPEBOT_ERROR_MARKER, isFailedRun } from '../helpers/runVerdict'
 
 /**
  * Marker the typebot webhook engine masks into the response body on a transport
@@ -12,7 +12,7 @@ import { hasErrorLog } from '../helpers/hasErrorLog'
  * below is engineered to match that shim exactly. If you change the wording,
  * change it in both repos or the shim and this gate diverge.
  */
-const TYPEBOT_ERROR_MARKER = 'Error from Typebot server:'
+export { TYPEBOT_ERROR_MARKER }
 
 interface ExecuteWorkflowParams {
   publicId: string
@@ -85,9 +85,7 @@ export async function executeWorkflow({
   // The marker arm preserves the PR's original target: a transport failure
   // (`fetch failed`) routed to a "Last HTTP Response" Return Output DOES produce
   // a truthy Tool Output, so `!hadToolOutput` alone would miss it.
-  const isError =
-    hasErrorLog(rawResult) &&
-    (!hadToolOutput || output.includes(TYPEBOT_ERROR_MARKER))
+  const isError = isFailedRun({ result: rawResult, output, hadToolOutput })
 
   logger.info('executeWorkflow: completed', { publicId, isError })
   return { result, isError, output }
