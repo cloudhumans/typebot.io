@@ -3,7 +3,9 @@ import { resolveIsToolWorkflow } from './resolveIsToolWorkflow'
 
 const tool = { settings: { general: { type: 'TOOL' as const } } }
 const flow = { settings: { general: { type: 'default' as const } } }
-const enrichment = { settings: { general: { type: 'CONTEXT_ENRICHMENT' as const } } }
+const enrichment = {
+  settings: { general: { type: 'CONTEXT_ENRICHMENT' as const } },
+}
 
 describe('resolveIsToolWorkflow', () => {
   it('is true for a TOOL in a live session', () => {

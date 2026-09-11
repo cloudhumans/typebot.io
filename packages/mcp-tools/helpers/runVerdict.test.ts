@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  TYPEBOT_ERROR_MARKER,
-  firstErrorLog,
-  isFailedRun,
-} from './runVerdict'
+import { TYPEBOT_ERROR_MARKER, firstErrorLog, isFailedRun } from './runVerdict'
 
 const errorLog = {
   status: 'error',
