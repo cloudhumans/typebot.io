@@ -97,11 +97,11 @@ export async function executeDraftWorkflow({
       status: 'paused',
       output: hadToolOutput ? output : null,
       error: {
-        message: `Flow paused at a client-side action (block ${
-          clientAction.lastBubbleBlockId ?? 'unknown'
-        }) that needs a browser to answer. Headless flows (TOOL and CONTEXT_ENRICHMENT) must not use client-side Script or Set Variable blocks.`,
-        blockId: clientAction.lastBubbleBlockId,
-        blockType: findBlockType(typebot, clientAction.lastBubbleBlockId),
+        message: `Flow paused waiting for a browser to run a client-side action of type "${
+          clientAction.type
+        }". Headless flows (TOOL and CONTEXT_ENRICHMENT) must not use blocks that run on the client: a Webhook with "Execute on client", a Set Variable with a client-side value, or a forged block executed on the client. Check the block that follows bubble ${
+          clientAction.lastBubbleBlockId ?? '(none)'
+        } in the trail.`,
       },
       logs,
       trail,

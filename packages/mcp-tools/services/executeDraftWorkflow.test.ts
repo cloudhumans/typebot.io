@@ -178,7 +178,11 @@ describe('executeDraftWorkflow', () => {
     previewMock.mockResolvedValue({
       logs: [],
       clientSideActions: [
-        { expectsDedicatedReply: true, lastBubbleBlockId: 'hook' },
+        {
+          type: 'setVariable',
+          expectsDedicatedReply: true,
+          lastBubbleBlockId: 'hook',
+        },
       ],
     })
 
@@ -186,7 +190,8 @@ describe('executeDraftWorkflow', () => {
 
     expect(result.status).toBe('paused')
     expect(result.error?.message).toContain('client-side action')
-    expect(result.error?.blockId).toBe('hook')
+    expect(result.error?.message).toContain('setVariable')
+    expect(result.error?.blockId).toBeUndefined()
   })
 
   it('keeps the Tool Output when the flow paused after producing it', async () => {
