@@ -174,6 +174,21 @@ describe('executeDraftWorkflow', () => {
     expect(result.trail).toEqual(['e1'])
   })
 
+  it('reports paused when the flow stopped at a client-side action', async () => {
+    previewMock.mockResolvedValue({
+      logs: [],
+      clientSideActions: [
+        { expectsDedicatedReply: true, lastBubbleBlockId: 'hook' },
+      ],
+    })
+
+    const result = await run()
+
+    expect(result.status).toBe('paused')
+    expect(result.error?.message).toContain('client-side action')
+    expect(result.error?.blockId).toBe('hook')
+  })
+
   it('keeps the Tool Output when the flow paused after producing it', async () => {
     previewMock.mockResolvedValue({
       logs: [toolOutput('ok')],

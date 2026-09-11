@@ -75,6 +75,26 @@ export async function executeDraftWorkflow({
     }
   }
 
+  const clientAction = result.clientSideActions?.find(
+    (action) => action.expectsDedicatedReply
+  )
+  if (clientAction) {
+    return {
+      status: 'paused',
+      output: hadToolOutput ? output : null,
+      error: {
+        message: `Flow paused at a client-side action (block ${
+          clientAction.lastBubbleBlockId ?? 'unknown'
+        }) that needs a browser to answer. Headless flows (TOOL and CONTEXT_ENRICHMENT) must not use client-side Script or Set Variable blocks.`,
+        blockId: clientAction.lastBubbleBlockId,
+        blockType: findBlockType(typebot, clientAction.lastBubbleBlockId),
+      },
+      logs,
+      trail,
+      variables,
+    }
+  }
+
   const failed = isFailedRun({ result, output, hadToolOutput })
 
   if (hadToolOutput && !failed) {
