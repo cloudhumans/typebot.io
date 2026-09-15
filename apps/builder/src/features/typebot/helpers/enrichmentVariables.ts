@@ -52,9 +52,9 @@ const isDeclareVariablesBlock = (block: BlockLike) =>
 
 const unwirePrunedEdges = <B extends BlockLike>(
   block: B,
-  survivingEdgeIds: Set<string>
+  prunedEdgeIds: Set<string>
 ): B => {
-  const keeps = (edgeId?: string) => !edgeId || survivingEdgeIds.has(edgeId)
+  const keeps = (edgeId?: string) => !edgeId || !prunedEdgeIds.has(edgeId)
   const items = block.items?.map((item) =>
     keeps(item.outgoingEdgeId) ? item : { ...item, outgoingEdgeId: undefined }
   )
@@ -142,9 +142,12 @@ export const normalizeEnrichmentDeclareVariables = <
     )
 
   const survivingEdgeIds = new Set(finalEdges.map((edge) => edge.id))
+  const prunedEdgeIds = new Set(
+    edges.map((edge) => edge.id).filter((id) => !survivingEdgeIds.has(id))
+  )
   const wiredCanonicalBlock =
     canonicalBlock.outgoingEdgeId &&
-    !survivingEdgeIds.has(canonicalBlock.outgoingEdgeId)
+    prunedEdgeIds.has(canonicalBlock.outgoingEdgeId)
       ? {
           id: canonicalBlock.id,
           type: canonicalBlock.type,
@@ -159,7 +162,7 @@ export const normalizeEnrichmentDeclareVariables = <
           ...group,
           blocks: group.blocks
             .filter((b) => !isDeclareVariablesBlock(b))
-            .map((b) => unwirePrunedEdges(b, survivingEdgeIds)),
+            .map((b) => unwirePrunedEdges(b, prunedEdgeIds)),
         }
   )
 

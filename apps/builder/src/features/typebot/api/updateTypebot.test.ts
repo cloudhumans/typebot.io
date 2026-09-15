@@ -477,6 +477,48 @@ describe('updateTypebot', () => {
     expect(savedOutput?.blocks[0].outgoingEdgeId).toBeUndefined()
   })
 
+  it('rejects a CONTEXT_ENRICHMENT payload that sends groups with an empty edges array, like any other flow', async () => {
+    const carrier = {
+      id: 'g_declare',
+      title: 'Variáveis pré-preenchidas pela ClaudIA',
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [
+        {
+          id: 'b_declare',
+          type: 'Declare variables',
+          options: { variables: [] },
+          outgoingEdgeId: 'e_declare_out',
+        },
+      ],
+    }
+    const output = flowGroup('g_out', [textBlock('b_out')])
+    const storedEdges = [
+      {
+        id: 'e_declare_out',
+        from: { blockId: 'b_declare' },
+        to: { groupId: 'g_out' },
+      },
+    ]
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      variables: allBuiltInVariables,
+      groups: [carrier, output],
+      edges: storedEdges,
+      events: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { groups: [carrier, output], edges: [] } as any,
+      })
+    ).rejects.toThrow(/would leave 1 references/)
+    expect(prisma.typebot.updateMany).not.toHaveBeenCalled()
+  })
+
   it('should reject renaming a TOOL', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,

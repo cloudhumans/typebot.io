@@ -302,6 +302,32 @@ describe('normalizeEnrichmentDeclareVariables', () => {
     ])
   })
 
+  it('keeps outgoingEdgeIds that point at edges the caller omitted, so the integrity check can reject the omission', () => {
+    const carrier = {
+      id: 'g-carrier',
+      title: ENRICHMENT_VARIABLES_GROUP_TITLE,
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [declareBlock('b-carrier')],
+    }
+    const user = {
+      id: 'g-user',
+      title: 'User group',
+      graphCoordinates: { x: 800, y: 0 },
+      blocks: [{ id: 'b-text', type: 'text', outgoingEdgeId: 'e-live' }],
+    }
+
+    const { groups } = normalizeEnrichmentDeclareVariables({
+      groups: [carrier, user],
+      edges: [],
+      variables: builtInVariables,
+    })
+
+    const userBlocks = groups.find((g) => g.id === 'g-user')?.blocks as {
+      outgoingEdgeId?: string
+    }[]
+    expect(userBlocks[0].outgoingEdgeId).toBe('e-live')
+  })
+
   it('drops the canonical outgoingEdgeId when its edge led to a removed declare-only group', () => {
     const carrier = {
       id: 'g-carrier',
