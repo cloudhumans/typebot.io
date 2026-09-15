@@ -48,7 +48,7 @@ export const getTypebotHistory = authenticatedProcedure
               image: z.string().nullable(),
             })
             .nullable(),
-          hasDanglingReferences: z.boolean().optional(),
+          hasDanglingReferences: z.boolean(),
           content: z
             .object({
               name: z.string(),
@@ -149,14 +149,14 @@ export const getTypebotHistory = authenticatedProcedure
           author: {
             select: { id: true, name: true, email: true, image: true },
           },
+          groups: true,
+          events: true,
+          edges: true,
           ...(!excludeContent
             ? {
                 name: true,
                 icon: true,
-                groups: true,
-                events: true,
                 variables: true,
-                edges: true,
                 theme: true,
                 settings: true,
               }
@@ -180,14 +180,14 @@ export const getTypebotHistory = authenticatedProcedure
           restoredFromId: item.restoredFromId,
           publishedAt: item.publishedAt,
           author: item.author,
+          hasDanglingReferences:
+            findDanglingReferences({
+              groups: item.groups,
+              edges: item.edges,
+              events: item.events,
+            }).length > 0,
           ...(!excludeContent && 'name' in item
             ? {
-                hasDanglingReferences:
-                  findDanglingReferences({
-                    groups: item.groups,
-                    edges: item.edges,
-                    events: item.events,
-                  }).length > 0,
                 content: {
                   name: item.name,
                   icon: item.icon,

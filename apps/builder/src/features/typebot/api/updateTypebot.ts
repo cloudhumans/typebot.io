@@ -241,7 +241,7 @@ export const updateTypebot = authenticatedProcedure
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           groups: typebot.groups as any[],
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          edges: (typebot.edges ?? []) as any[],
+          edges: (typebot.edges ?? existingTypebot.edges ?? []) as any[],
           variables:
             (typebot.variables as Variable[] | undefined) ??
             withBuiltInEnrichmentVariables(
@@ -250,9 +250,8 @@ export const updateTypebot = authenticatedProcedure
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot.groups = normalized.groups as any
-        if (typebot.edges !== undefined)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          typebot.edges = normalized.edges as any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot.edges = normalized.edges as any
       }
     }
 
@@ -306,9 +305,10 @@ export const updateTypebot = authenticatedProcedure
       updatedSettings = settingsToUpdate
     }
 
-    const newTypebot = await prisma.typebot.update({
+    const { count: updatedCount } = await prisma.typebot.updateMany({
       where: {
         id: existingTypebot.id,
+        updatedAt: existingTypebot.updatedAt,
       },
       data: {
         version: typebot.version ?? undefined,
@@ -349,6 +349,17 @@ export const updateTypebot = authenticatedProcedure
         tenant: typebot.tenant,
         toolDescription: typebot.toolDescription,
       },
+    })
+
+    if (updatedCount === 0)
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'Typebot changed since you read it; re-read it with getTypebot and resend your change',
+      })
+
+    const newTypebot = await prisma.typebot.findUnique({
+      where: { id: existingTypebot.id },
     })
 
     const migratedTypebot = await migrateTypebot(

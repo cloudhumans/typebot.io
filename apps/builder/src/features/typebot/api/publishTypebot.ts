@@ -79,15 +79,6 @@ export const publishTypebot = authenticatedProcedure
     )
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
 
-    assertFlowIntegrity(
-      {
-        groups: existingTypebot.groups,
-        edges: existingTypebot.edges,
-        events: existingTypebot.events,
-      },
-      'publish'
-    )
-
     const hasFileUploadBlocks = parseGroups(existingTypebot.groups, {
       typebotVersion: existingTypebot.version,
     }).some((group) =>
@@ -151,6 +142,15 @@ export const publishTypebot = authenticatedProcedure
         })
       }
     }
+
+    assertFlowIntegrity(
+      {
+        groups: existingTypebot.groups,
+        edges: existingTypebot.edges,
+        events: existingTypebot.events,
+      },
+      'publish'
+    )
 
     const publishEvents = await parseTypebotPublishEvents({
       existingTypebot,

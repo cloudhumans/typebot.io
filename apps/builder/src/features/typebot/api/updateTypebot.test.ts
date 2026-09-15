@@ -9,7 +9,8 @@ vi.mock('@typebot.io/lib/prisma', () => ({
   default: {
     typebot: {
       findFirst: vi.fn(),
-      update: vi.fn(),
+      updateMany: vi.fn(),
+      findUnique: vi.fn(),
     },
   },
 }))
@@ -108,16 +109,24 @@ describe('updateTypebot', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(isWriteTypebotForbidden).mockResolvedValue(false)
-    vi.mocked(prisma.typebot.update).mockImplementation(
+    let lastWrittenData: Record<string, unknown> = {}
+    vi.mocked(prisma.typebot.updateMany).mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (async ({ data }: any) => ({
-        ...validUpdatedTypebot,
-        ...Object.fromEntries(
-          Object.entries(data).filter(([, value]) => value !== undefined)
-        ),
+      (async ({ data }: any) => {
+        lastWrittenData = data
+        return { count: 1 }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      })) as any
+      }) as any
     )
+    vi.mocked(prisma.typebot.findUnique).mockImplementation((async () => ({
+      ...validUpdatedTypebot,
+      ...Object.fromEntries(
+        Object.entries(lastWrittenData).filter(
+          ([, value]) => value !== undefined
+        )
+      ),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    })) as any)
   })
 
   const caller = () =>
@@ -178,7 +187,8 @@ describe('updateTypebot', () => {
       ...flow,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-  const savedData = () => vi.mocked(prisma.typebot.update).mock.calls[0][0].data
+  const savedData = () =>
+    vi.mocked(prisma.typebot.updateMany).mock.calls[0][0].data
 
   it('rejects a partial groups array (the GAD payload) with a message about removed groups, without writing', async () => {
     mockStoredFlow()
@@ -204,7 +214,7 @@ describe('updateTypebot', () => {
     expect(message).toContain('replaced wholesale')
     expect(message).toContain('Do not delete edges')
     expect(message).not.toMatch(/edge e_/)
-    expect(prisma.typebot.update).not.toHaveBeenCalled()
+    expect(prisma.typebot.updateMany).not.toHaveBeenCalled()
   })
 
   it('rejects a partial groups array even when the orphan edges have no to.blockId', async () => {
@@ -222,7 +232,7 @@ describe('updateTypebot', () => {
         typebot: { groups: [flow.groups[1]] } as any,
       })
     ).rejects.toThrow(/removing grp_a, grp_c, grp_d/)
-    expect(prisma.typebot.update).not.toHaveBeenCalled()
+    expect(prisma.typebot.updateMany).not.toHaveBeenCalled()
   })
 
   it('rejects partial groups sent together with partial edges', async () => {
@@ -377,6 +387,90 @@ describe('updateTypebot', () => {
       })
     ).resolves.toBeDefined()
     expect(savedData().folderId).toBe('folder-1')
+  })
+
+  it('writes conditionally on the updatedAt it read and answers 409 when the row moved on', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+    vi.mocked(prisma.typebot.updateMany).mockResolvedValue({ count: 0 })
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { groups: flow.groups } as any,
+      })
+    ).rejects.toThrow(/changed since you read it/)
+    expect(vi.mocked(prisma.typebot.updateMany).mock.calls[0][0].where).toEqual(
+      { id: 'tb-1', updatedAt: baseExistingTypebot.updatedAt }
+    )
+    expect(prisma.typebot.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('normalizes a CONTEXT_ENRICHMENT groups-only payload against the stored edges and saves both consistently', async () => {
+    const declareBlock = (id: string, outgoingEdgeId?: string) => ({
+      id,
+      type: 'Declare variables',
+      options: { variables: [] },
+      outgoingEdgeId,
+    })
+    const carrier = {
+      id: 'g_declare',
+      title: 'Variáveis pré-preenchidas pela ClaudIA',
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [declareBlock('b_declare', 'e_declare_out')],
+    }
+    const extraDeclareOnly = {
+      id: 'g_extra',
+      title: 'extra',
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [declareBlock('b_extra')],
+    }
+    const output = flowGroup('g_out', [textBlock('b_out')])
+    const storedEdges = [
+      {
+        id: 'e_declare_out',
+        from: { blockId: 'b_declare' },
+        to: { groupId: 'g_out' },
+      },
+      {
+        id: 'e_to_extra',
+        from: { blockId: 'b_out' },
+        to: { groupId: 'g_extra' },
+      },
+    ]
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asEnrichment,
+      variables: allBuiltInVariables,
+      groups: [carrier, extraDeclareOnly, output],
+      edges: storedEdges,
+      events: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: [
+            carrier,
+            extraDeclareOnly,
+            { ...output, title: 'saída editada' },
+          ],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).resolves.toBeDefined()
+
+    const data = savedData()
+    expect((data.groups as { id: string }[]).map((g) => g.id)).toEqual([
+      'g_declare',
+      'g_out',
+    ])
+    expect((data.edges as { id: string }[]).map((e) => e.id)).toEqual([
+      'e_declare_out',
+    ])
   })
 
   it('should reject renaming a TOOL', async () => {
@@ -597,7 +691,7 @@ describe('updateTypebot', () => {
 
     const savedGroups =
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      vi.mocked(prisma.typebot.update).mock.calls[0][0].data.groups as any[]
+      vi.mocked(prisma.typebot.updateMany).mock.calls[0][0].data.groups as any[]
     expect(savedGroups).toHaveLength(1)
     expect(savedGroups[0].title).toBe('Variáveis pré-preenchidas pela ClaudIA')
     expect(savedGroups[0].blocks).toHaveLength(1)
@@ -653,7 +747,7 @@ describe('updateTypebot', () => {
       } as any,
     })
 
-    const savedData = vi.mocked(prisma.typebot.update).mock.calls[0][0].data
+    const savedData = vi.mocked(prisma.typebot.updateMany).mock.calls[0][0].data
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const savedGroups = savedData.groups as any[]
     expect(savedGroups).toHaveLength(1)

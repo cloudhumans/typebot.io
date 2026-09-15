@@ -4,6 +4,7 @@ import { publishTypebot } from './publishTypebot'
 import { WorkspaceRole, Plan } from '@typebot.io/prisma'
 import prisma from '@typebot.io/lib/prisma'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
+import { computeRiskLevel } from '@typebot.io/radar'
 
 vi.mock('@typebot.io/lib/prisma', () => ({
   default: {
@@ -121,6 +122,7 @@ describe('publishTypebot', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(isWriteTypebotForbidden).mockResolvedValue(false)
+    vi.mocked(computeRiskLevel).mockReturnValue(0)
   })
 
   it('publishes a consistent draft', async () => {
@@ -134,6 +136,30 @@ describe('publishTypebot', () => {
     })
     expect(prisma.publicTypebot.createMany).toHaveBeenCalledTimes(1)
     expect(prisma.typebotHistory.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('still takes down the published version of a high-risk draft before refusing it for broken references', async () => {
+    vi.mocked(computeRiskLevel).mockReturnValue(100)
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue(
+      existingTypebot({
+        groups: [groups[1]],
+        riskLevel: null,
+        publishedTypebot: { id: 'pub-1' },
+        workspace: {
+          ...existingTypebot().workspace,
+          isVerified: false,
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    await expect(caller()({ typebotId: 'tb-1' })).rejects.toThrow(
+      /Radar detected/
+    )
+    expect(prisma.publicTypebot.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'pub-1' },
+    })
+    expect(prisma.typebotHistory.create).not.toHaveBeenCalled()
   })
 
   it('refuses to publish a draft whose edges point at missing groups', async () => {
