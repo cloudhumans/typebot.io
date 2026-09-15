@@ -26,6 +26,7 @@ import {
   normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
 } from '../helpers/enrichmentVariables'
+import { assertFlowIntegrity } from '../helpers/flowIntegrity'
 
 const omittedProps = {
   id: true,
@@ -184,6 +185,15 @@ export const importTypebot = authenticatedProcedure
             variables,
           })
         : { groups, edges: migratedTypebot.edges ?? [] }
+
+    assertFlowIntegrity(
+      {
+        groups: finalGroups,
+        edges: finalEdges,
+        events: migratedTypebot.events,
+      },
+      'create'
+    )
 
     const newTypebot = await prisma.typebot.create({
       data: {

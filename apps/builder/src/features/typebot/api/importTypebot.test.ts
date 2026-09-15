@@ -112,12 +112,36 @@ describe('importTypebot', () => {
     ).rejects.toThrow('Tenant and Tool description are mandatory')
   })
 
+  it('rejects an import whose edges point at groups that do not exist', async () => {
+    const typebot = parseTestTypebot({
+      version: '6',
+      name: 'Broken Flow',
+    })
+
+    await expect(
+      caller()({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: typebot as any,
+      })
+    ).rejects.toThrow(/Flow is inconsistent/)
+    expect(prisma.typebot.create).not.toHaveBeenCalled()
+  })
+
   it('seeds the five built-in variables when importing a CONTEXT_ENRICHMENT flow', async () => {
     const typebot = parseTestTypebot({
       version: '6',
       name: 'Enrichment Flow',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       settings: { general: { type: 'CONTEXT_ENRICHMENT' } } as any,
+      groups: [
+        {
+          id: 'group1',
+          title: 'Group #1',
+          graphCoordinates: { x: 0, y: 0 },
+          blocks: [],
+        },
+      ],
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(prisma.typebot.create).mockResolvedValue(typebot as any)

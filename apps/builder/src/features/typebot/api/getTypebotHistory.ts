@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { isReadTypebotForbidden } from '../helpers/isReadTypebotForbidden'
 import { TypebotHistoryOrigin } from '@typebot.io/prisma'
+import { findDanglingReferences } from '../helpers/flowIntegrity'
 
 export const getTypebotHistory = authenticatedProcedure
   .meta({
@@ -47,6 +48,7 @@ export const getTypebotHistory = authenticatedProcedure
               image: z.string().nullable(),
             })
             .nullable(),
+          hasDanglingReferences: z.boolean().optional(),
           content: z
             .object({
               name: z.string(),
@@ -180,6 +182,12 @@ export const getTypebotHistory = authenticatedProcedure
           author: item.author,
           ...(!excludeContent && 'name' in item
             ? {
+                hasDanglingReferences:
+                  findDanglingReferences({
+                    groups: item.groups,
+                    edges: item.edges,
+                    events: item.events,
+                  }).length > 0,
                 content: {
                   name: item.name,
                   icon: item.icon,

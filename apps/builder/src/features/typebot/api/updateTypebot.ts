@@ -19,6 +19,7 @@ import {
   sanitizeVariables,
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
+import { assertUpdatePreservesIntegrity } from '../helpers/flowIntegrity'
 import {
   normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
@@ -99,6 +100,9 @@ export const updateTypebot = authenticatedProcedure
         publicId: true,
         settings: true,
         variables: true,
+        groups: true,
+        edges: true,
+        events: true,
         collaborators: {
           select: {
             userId: true,
@@ -255,6 +259,24 @@ export const updateTypebot = authenticatedProcedure
     const groups = typebot.groups
       ? await sanitizeGroups(existingTypebot.workspace.id)(typebot.groups)
       : undefined
+
+    if (
+      groups !== undefined ||
+      typebot.edges !== undefined ||
+      typebot.events !== undefined
+    )
+      assertUpdatePreservesIntegrity({
+        existing: {
+          groups: existingTypebot.groups,
+          edges: existingTypebot.edges,
+          events: existingTypebot.events,
+        },
+        resulting: {
+          groups: groups ?? existingTypebot.groups,
+          edges: typebot.edges ?? existingTypebot.edges,
+          events: typebot.events ?? existingTypebot.events,
+        },
+      })
 
     let updatedSettings = typebot.settings
       ? sanitizeSettings(

@@ -16,7 +16,7 @@ const doc = generateOpenApiDocument(claudiaAdminRouter, {
 // here instead. The MCP server derives each tool's description from these
 // summary/description fields, so this directly shapes what the GAD sees.
 doc.info.description =
-  "Authoring API for CloudHumans-managed Typebot flows, exposed to the AI Companion (GAD). Create, edit, publish, and inspect flows using Typebot's canonical contract — payloads are validated server-side, so a flow is born valid or rejected with an actionable error. Authorized as the logged-in user (you can only act on workspaces your account has access to). Authoring-only — does not run or test flows. Your target workspace is provided in the [SYSTEM CONTEXT] as `eddie_workspace_id` — pass it directly as `workspaceId` to createTypebot and listTypebots; do not attempt to look it up. Typical flow: listTypebots(workspaceId) to find a flow's id -> getTypebot to read it -> createTypebot/updateTypebot to author -> publishTypebot to go live."
+  "Authoring API for CloudHumans-managed Typebot flows, exposed to the AI Companion (GAD). Create, edit, publish, and inspect flows using Typebot's canonical contract — payloads are validated server-side, so a flow is born valid or rejected with an actionable error. Authorized as the logged-in user (you can only act on workspaces your account has access to). Authoring-only — does not run or test flows. Your target workspace is provided in the [SYSTEM CONTEXT] as `eddie_workspace_id` — pass it directly as `workspaceId` to createTypebot and listTypebots; do not attempt to look it up. Typical flow: listTypebots(workspaceId) to find a flow's id -> getTypebot to read it -> createTypebot/updateTypebot to author -> publishTypebot to go live. updateTypebot replaces every field it receives wholesale (arrays included), and the server rejects any update or publish that would leave edges pointing at groups that no longer exist; getTypebotHistory + rollbackTypebot restore a previous draft."
 
 const OPERATION_DOCS: Record<string, { summary: string; description: string }> =
   {
@@ -28,17 +28,17 @@ const OPERATION_DOCS: Record<string, { summary: string; description: string }> =
     updateTypebot: {
       summary: 'Update a Typebot flow',
       description:
-        'Edit an existing flow identified by `typebotId` — its groups/blocks, settings, theme, or name. Partial: send only the fields you want to change; read current state with getTypebot first to avoid overwriting. Changes affect the DRAFT only — call publishTypebot to make them live. Get the `typebotId` from listTypebots.',
+        'Edit an existing flow identified by `typebotId` — its groups/blocks, settings, theme, or name. Field-level replace: every field you send replaces the stored one entirely, and `groups`, `edges`, `variables` and `events` are arrays that are never merged — a `groups` array with one group leaves the flow with exactly one group. Always read the flow with getTypebot first and resend the COMPLETE array with your change applied (same number of groups unless the user explicitly asked to remove one); fields you omit keep their stored value. The server rejects with 400 any update that would leave edges pointing at groups or blocks that no longer exist, or outgoingEdgeIds pointing at edges that no longer exist; fix it by resending the full arrays, never by deleting edges. Changes affect the DRAFT only — call publishTypebot to make them live. Get the `typebotId` from listTypebots.',
     },
     publishTypebot: {
       summary: 'Publish a Typebot flow',
       description:
-        'Make the current draft of `{typebotId}` the live version. createTypebot and updateTypebot leave changes in draft; call this once the draft is complete. Republishing overwrites the previously published version.',
+        'Make the current draft of `{typebotId}` the live version. createTypebot and updateTypebot leave changes in draft; call this once the draft is complete. Republishing overwrites the previously published version. Rejected with 400 when the draft has edges pointing at groups or blocks that do not exist — restore the flow (rollbackTypebot or updateTypebot with the complete arrays) before publishing.',
     },
     getTypebot: {
       summary: 'Get a Typebot flow',
       description:
-        'Fetch a single flow by `typebotId`, including its full definition (groups, blocks, settings, theme). Use to read current state before updateTypebot. Get the `typebotId` from listTypebots.',
+        'Fetch a single flow by `typebotId`, including its full definition (groups, edges, events, variables, settings, theme). Use to read current state before updateTypebot: the response is the complete object to send back, with your change applied, because updateTypebot replaces arrays wholesale. Get the `typebotId` from listTypebots.',
     },
     listTypebots: {
       summary: 'List Typebot flows (by workspace id)',
@@ -53,7 +53,12 @@ const OPERATION_DOCS: Record<string, { summary: string; description: string }> =
     getTypebotHistory: {
       summary: 'Get Typebot version history',
       description:
-        'Return the version history of `{typebotId}` — read-only, for reviewing past versions. There is no rollback endpoint; to revert, read a past version and re-apply it via updateTypebot.',
+        'Return the version history of `{typebotId}` (one snapshot per publish or restore, newest first). Each item carries `hasDanglingReferences`: true means the snapshot itself has edges pointing at missing groups and cannot be restored. To revert the draft, pass a consistent snapshot id to rollbackTypebot.',
+    },
+    rollbackTypebot: {
+      summary: 'Roll back a Typebot draft to a history snapshot',
+      description:
+        'Overwrite the DRAFT of `{typebotId}` with the groups, edges, events, variables, settings and theme of the history snapshot `{historyId}` (from getTypebotHistory). Rejected with 400 if that snapshot has `hasDanglingReferences` = true. The rollback only touches the draft — call publishTypebot to make it live — and does not restore `tenant` or `toolDescription`, which history does not store.',
     },
   }
 

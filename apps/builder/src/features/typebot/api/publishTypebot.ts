@@ -21,6 +21,7 @@ import { z } from 'zod'
 import { parseDefaultPublicId } from '@/features/publish/helpers/parseDefaultPublicId'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 import { isPublicIdNotAvailable } from '../helpers/sanitizers'
+import { assertFlowIntegrity } from '../helpers/flowIntegrity'
 
 export const publishTypebot = authenticatedProcedure
   .meta({
@@ -77,6 +78,15 @@ export const publishTypebot = authenticatedProcedure
       (await isWriteTypebotForbidden(existingTypebot, user))
     )
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Typebot not found' })
+
+    assertFlowIntegrity(
+      {
+        groups: existingTypebot.groups,
+        edges: existingTypebot.edges,
+        events: existingTypebot.events,
+      },
+      'publish'
+    )
 
     const hasFileUploadBlocks = parseGroups(existingTypebot.groups, {
       typebotVersion: existingTypebot.version,

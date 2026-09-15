@@ -125,6 +125,260 @@ describe('updateTypebot', () => {
     router({ updateTypebot }).createCaller({ user: mockUser } as never)
       .updateTypebot
 
+  const textBlock = (id: string, outgoingEdgeId?: string) => ({
+    id,
+    type: 'text',
+    content: { richText: [] },
+    outgoingEdgeId,
+  })
+  const flowGroup = (id: string, blocks: ReturnType<typeof textBlock>[]) => ({
+    id,
+    title: id,
+    graphCoordinates: { x: 0, y: 0 },
+    blocks,
+  })
+  const storedFlow = () => ({
+    events: [
+      {
+        id: 'ev_start',
+        type: 'start',
+        graphCoordinates: { x: 0, y: 0 },
+        outgoingEdgeId: 'e_start_a',
+      },
+    ],
+    groups: [
+      flowGroup('grp_a', [textBlock('blk_a', 'e_a_b')]),
+      flowGroup('grp_b', [textBlock('blk_b', 'e_b_c')]),
+      flowGroup('grp_c', [textBlock('blk_c', 'e_c_d')]),
+      flowGroup('grp_d', [textBlock('blk_d')]),
+    ],
+    edges: [
+      {
+        id: 'e_start_a',
+        from: { eventId: 'ev_start' },
+        to: { groupId: 'grp_a' },
+      },
+      {
+        id: 'e_a_b',
+        from: { blockId: 'blk_a' },
+        to: { groupId: 'grp_b', blockId: 'blk_b' },
+      },
+      { id: 'e_b_c', from: { blockId: 'blk_b' }, to: { groupId: 'grp_c' } },
+      {
+        id: 'e_c_d',
+        from: { blockId: 'blk_c' },
+        to: { groupId: 'grp_d', blockId: 'blk_d' },
+      },
+    ],
+  })
+  const mockStoredFlow = (flow = storedFlow()) =>
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asTool,
+      ...flow,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+  const savedData = () => vi.mocked(prisma.typebot.update).mock.calls[0][0].data
+
+  it('rejects a partial groups array (the GAD payload) with a message about removed groups, without writing', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+
+    let message = ''
+    try {
+      await caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          updatedAt: new Date('2026-01-01'),
+          groups: [{ ...flow.groups[1], title: 'Grupo B (editado)' }],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    } catch (error) {
+      message = (error as Error).message
+    }
+
+    expect(message).toContain(
+      "This update would replace the flow's 4 groups with 1, removing grp_a, grp_c, grp_d"
+    )
+    expect(message).toContain('replaced wholesale')
+    expect(message).toContain('Do not delete edges')
+    expect(message).not.toMatch(/edge e_/)
+    expect(prisma.typebot.update).not.toHaveBeenCalled()
+  })
+
+  it('rejects a partial groups array even when the orphan edges have no to.blockId', async () => {
+    const flow = storedFlow()
+    flow.edges = flow.edges.map((edge) => ({
+      ...edge,
+      to: { groupId: edge.to.groupId },
+    }))
+    mockStoredFlow(flow)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { groups: [flow.groups[1]] } as any,
+      })
+    ).rejects.toThrow(/removing grp_a, grp_c, grp_d/)
+    expect(prisma.typebot.update).not.toHaveBeenCalled()
+  })
+
+  it('rejects partial groups sent together with partial edges', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: [flow.groups[1]],
+          edges: [flow.edges[1]],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow(/removing grp_a, grp_c, grp_d/)
+  })
+
+  it('rejects edges pointing at a block that is not in the target group', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+    flow.edges[1].to = { groupId: 'grp_b', blockId: 'blk_gone' }
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { edges: flow.edges } as any,
+      })
+    ).rejects.toThrow(/would leave 1 references/)
+  })
+
+  it('rejects outgoingEdgeIds (event, block, item) that point at edges the payload drops', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(flow.groups[3].blocks as any[]).push({
+      id: 'blk_choice',
+      type: 'choice input',
+      items: [{ id: 'item_1', outgoingEdgeId: 'e_item' }],
+    })
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { groups: flow.groups, edges: [] } as any,
+      })
+    ).rejects.toThrow(/would leave 5 references/)
+  })
+
+  it('accepts the complete arrays read from getTypebot with one group edited', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+    flow.groups[1].title = 'Grupo B (editado)'
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          updatedAt: new Date('2026-01-01'),
+          groups: flow.groups,
+          edges: flow.edges,
+          events: flow.events,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).resolves.toBeDefined()
+    expect(savedData().groups).toHaveLength(4)
+  })
+
+  it('accepts the complete groups array with edges and events omitted (they keep their stored value)', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+    flow.groups[1].title = 'Grupo B (editado)'
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { groups: flow.groups } as any,
+      })
+    ).resolves.toBeDefined()
+    expect(savedData().edges).toBeUndefined()
+  })
+
+  it('accepts a deliberate group removal when its edges and outgoingEdgeIds go with it (what the builder UI sends)', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: [
+            flow.groups[0],
+            flowGroup('grp_b', [textBlock('blk_b')]),
+            flow.groups[3],
+          ],
+          edges: [flow.edges[0], flow.edges[1]],
+          events: flow.events,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).resolves.toBeDefined()
+    expect(savedData().groups).toHaveLength(3)
+  })
+
+  it('accepts an update that leaves a legacy dangling edge untouched', async () => {
+    const flow = storedFlow()
+    flow.edges.push({
+      id: 'e_legacy',
+      from: { blockId: 'blk_gone' },
+      to: { groupId: 'grp_gone' },
+    })
+    mockStoredFlow(flow)
+    flow.groups[1].title = 'renamed'
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: flow.groups,
+          edges: flow.edges,
+          events: flow.events,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).resolves.toBeDefined()
+  })
+
+  it('skips the integrity check when the payload carries no groups, edges or events (dashboard rename/move)', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
+      ...baseExistingTypebot,
+      ...asFlow,
+      groups: [flowGroup('grp_only', [])],
+      edges: [
+        {
+          id: 'e_legacy',
+          from: { blockId: 'blk_gone' },
+          to: { groupId: 'grp_gone' },
+        },
+      ],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { name: 'Moved', folderId: 'folder-1' } as any,
+      })
+    ).resolves.toBeDefined()
+    expect(savedData().folderId).toBe('folder-1')
+  })
+
   it('should reject renaming a TOOL', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,
