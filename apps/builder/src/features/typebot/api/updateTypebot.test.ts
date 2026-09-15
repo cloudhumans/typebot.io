@@ -426,7 +426,7 @@ describe('updateTypebot', () => {
       graphCoordinates: { x: 0, y: 0 },
       blocks: [declareBlock('b_extra')],
     }
-    const output = flowGroup('g_out', [textBlock('b_out')])
+    const output = flowGroup('g_out', [textBlock('b_out', 'e_to_extra')])
     const storedEdges = [
       {
         id: 'e_declare_out',
@@ -471,6 +471,10 @@ describe('updateTypebot', () => {
     expect((data.edges as { id: string }[]).map((e) => e.id)).toEqual([
       'e_declare_out',
     ])
+    const savedOutput = (
+      data.groups as { id: string; blocks: { outgoingEdgeId?: string }[] }[]
+    ).find((g) => g.id === 'g_out')
+    expect(savedOutput?.blocks[0].outgoingEdgeId).toBeUndefined()
   })
 
   it('should reject renaming a TOOL', async () => {

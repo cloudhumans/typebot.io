@@ -237,6 +237,71 @@ describe('normalizeEnrichmentDeclareVariables', () => {
     expect(edges.map((e) => e.id)).toEqual(['e-in-carrier'])
   })
 
+  it('unwires outgoingEdgeIds of user blocks and items whose edge reached a removed declare-only group', () => {
+    const carrier = {
+      id: 'g-carrier',
+      title: ENRICHMENT_VARIABLES_GROUP_TITLE,
+      graphCoordinates: { x: 0, y: 0 },
+      blocks: [declareBlock('b-carrier')],
+    }
+    const duplicate = {
+      id: 'g-dup',
+      title: 'Copy of readonly group',
+      graphCoordinates: { x: 400, y: 0 },
+      blocks: [declareBlock('b-dup')],
+    }
+    const user = {
+      id: 'g-user',
+      title: 'User group',
+      graphCoordinates: { x: 800, y: 0 },
+      blocks: [
+        { id: 'b-text', type: 'text', outgoingEdgeId: 'e-text-dup' },
+        {
+          id: 'b-choice',
+          type: 'choice input',
+          items: [
+            { id: 'i-1', outgoingEdgeId: 'e-item-dup' },
+            { id: 'i-2', outgoingEdgeId: 'e-item-carrier' },
+          ],
+        },
+      ],
+    }
+
+    const { groups, edges } = normalizeEnrichmentDeclareVariables({
+      groups: [carrier, duplicate, user],
+      edges: [
+        {
+          id: 'e-text-dup',
+          from: { blockId: 'b-text' },
+          to: { groupId: 'g-dup' },
+        },
+        {
+          id: 'e-item-dup',
+          from: { blockId: 'b-choice', itemId: 'i-1' },
+          to: { groupId: 'g-dup' },
+        },
+        {
+          id: 'e-item-carrier',
+          from: { blockId: 'b-choice', itemId: 'i-2' },
+          to: { groupId: 'g-carrier' },
+        },
+      ],
+      variables: builtInVariables,
+    })
+
+    expect(groups.map((g) => g.id)).toEqual(['g-carrier', 'g-user'])
+    expect(edges.map((e) => e.id)).toEqual(['e-item-carrier'])
+    const userBlocks = groups.find((g) => g.id === 'g-user')?.blocks as {
+      outgoingEdgeId?: string
+      items?: { outgoingEdgeId?: string }[]
+    }[]
+    expect(userBlocks[0].outgoingEdgeId).toBeUndefined()
+    expect(userBlocks[1].items?.map((i) => i.outgoingEdgeId)).toEqual([
+      undefined,
+      'e-item-carrier',
+    ])
+  })
+
   it('drops the canonical outgoingEdgeId when its edge led to a removed declare-only group', () => {
     const carrier = {
       id: 'g-carrier',
