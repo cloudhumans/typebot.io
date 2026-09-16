@@ -16,6 +16,7 @@ type Props = {
   prefilledVariables?: Record<string, unknown>
   sessionId?: string
   textBubbleContentFormat: 'richText' | 'markdown'
+  headless?: boolean
 }
 
 export const startChatPreview = async ({
@@ -29,6 +30,7 @@ export const startChatPreview = async ({
   prefilledVariables,
   sessionId,
   textBubbleContentFormat,
+  headless,
 }: Props) => {
   const {
     typebot,
@@ -53,6 +55,7 @@ export const startChatPreview = async ({
       prefilledVariables,
       sessionId,
       textBubbleContentFormat,
+      headless,
     },
     message,
   })

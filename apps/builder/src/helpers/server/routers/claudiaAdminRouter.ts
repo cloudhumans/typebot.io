@@ -1,3 +1,4 @@
+import type { typebotRouter } from '@/features/typebot/api/router'
 import { router } from '../trpc'
 import { createTypebot } from '@/features/typebot/api/createTypebot'
 import { updateTypebot } from '@/features/typebot/api/updateTypebot'
@@ -6,6 +7,7 @@ import { getTypebot } from '@/features/typebot/api/getTypebot'
 import { listTypebots } from '@/features/typebot/api/listTypebots'
 import { listTypebotsClaudia } from '@/features/typebot/api/listTypebotsClaudia'
 import { getTypebotHistory } from '@/features/typebot/api/getTypebotHistory'
+import { runTypebotDraft } from '@/features/typebot/api/runTypebotDraft'
 
 // Curated subset exposed to the GAD via the typebot-admin MCP slug.
 // Authoring only (create/update/publish/get/list/history). Excludes
@@ -20,6 +22,16 @@ export const claudiaAdminRouter = router({
   listTypebots,
   listTypebotsClaudia,
   getTypebotHistory,
+  runTypebotDraft,
 })
 
 export type ClaudiaAdminRouter = typeof claudiaAdminRouter
+
+type ServedOperationId = keyof (typeof typebotRouter)['_def']['procedures']
+type UnservedCuratedOperation = Exclude<
+  keyof ClaudiaAdminRouter['_def']['procedures'],
+  ServedOperationId
+>
+export const curatedOperationsAreServed: UnservedCuratedOperation extends never
+  ? true
+  : never = true
