@@ -137,6 +137,28 @@ describe('postTypebotValidation', () => {
     )
   })
 
+  it('does not warn about an edge leaving the start event when events are provided', async () => {
+    const { errors } = await caller()({
+      typebot: {
+        variables: [],
+        groups: returnOutputGroups as never,
+        edges,
+        events: [
+          {
+            id: 'event-1',
+            type: 'start',
+            graphCoordinates: { x: 0, y: 0 },
+            outgoingEdgeId: 'edge-1',
+          },
+        ],
+        settings: { general: { type: 'TOOL' } },
+      },
+    })
+
+    expect(errors.filter((e) => e.type === 'staleEdgeReference')).toEqual([])
+    expect(errors.filter((e) => e.type === 'danglingEdgeTarget')).toEqual([])
+  })
+
   it('should flag a controlled flow whose branch never reaches a ClaudIA block', async () => {
     const { errors } = await validate('default')
 

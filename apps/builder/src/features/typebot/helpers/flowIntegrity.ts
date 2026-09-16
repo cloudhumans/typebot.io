@@ -29,6 +29,16 @@ type LooseEdge = {
 
 const MAX_LISTED_IDS = 10
 
+export const FLOW_INTEGRITY_CAUSE = { _flowIntegrity: true } as const
+
+export const isFlowIntegrityCause = (
+  cause: unknown
+): cause is typeof FLOW_INTEGRITY_CAUSE =>
+  typeof cause === 'object' &&
+  cause !== null &&
+  '_flowIntegrity' in cause &&
+  (cause as { _flowIntegrity: unknown })._flowIntegrity === true
+
 const asArray = <T>(value: unknown): T[] =>
   Array.isArray(value) ? (value as T[]) : []
 
@@ -321,6 +331,7 @@ export const assertUpdatePreservesIntegrity = ({
   throw new TRPCError({
     code: 'BAD_REQUEST',
     message: `${headline} ${WHOLESALE_RULE}`,
+    cause: FLOW_INTEGRITY_CAUSE,
   })
 }
 
@@ -365,5 +376,6 @@ export const assertFlowIntegrity = (
         dangling
       )}`
     ),
+    cause: FLOW_INTEGRITY_CAUSE,
   })
 }

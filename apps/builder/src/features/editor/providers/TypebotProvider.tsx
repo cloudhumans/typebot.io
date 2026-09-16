@@ -281,9 +281,10 @@ export const TypebotProvider = ({
         })
         setUpdateDate(updatedAt)
       } catch (error) {
-        const status = (error as { data?: { httpStatus?: number } } | null)
-          ?.data?.httpStatus
-        if (status === 400) {
+        const isIntegrityRejection =
+          (error as { data?: { flowIntegrity?: boolean } } | null)?.data
+            ?.flowIntegrity === true
+        if (isIntegrityRejection) {
           setLocalTypebot({ ...typebot })
           setGroupsCoordinates(typebot.groups)
           flush()

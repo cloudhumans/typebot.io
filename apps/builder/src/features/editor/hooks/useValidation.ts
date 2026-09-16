@@ -19,6 +19,7 @@ export const useValidation = () => {
       variables: Variable[]
       groups: Group[]
       edges: Edge[]
+      events?: unknown[]
       settings: Settings | undefined
       workspaceId?: string
       whatsAppCredentialsId?: string | null

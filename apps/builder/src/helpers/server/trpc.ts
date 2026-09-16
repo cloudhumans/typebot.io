@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/nextjs'
 import { ZodError } from 'zod'
 import { createDatadogLoggerMiddleware } from '@typebot.io/lib/trpc/createDatadogLoggerMiddleware'
 import { User } from '@typebot.io/prisma'
+import { isFlowIntegrityCause } from '@/features/typebot/helpers/flowIntegrity'
 
 // Discriminates a TRPCError cause produced by the credential-in-use guard,
 // so the errorFormatter only forwards `usages` for that intentional code path
@@ -34,6 +35,7 @@ const t = initTRPC
           usages: isCredentialInUseCause(error.cause)
             ? error.cause.usages
             : null,
+          flowIntegrity: isFlowIntegrityCause(error.cause) ? true : null,
         },
       }
     },

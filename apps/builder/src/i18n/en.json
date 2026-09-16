@@ -570,7 +570,7 @@
   "validationErrors.danglingEdgeTarget.title": "Connection to a missing group or block",
   "validationErrors.danglingEdgeTarget.description": "An arrow in this flow points to a group or block that no longer exists. The flow will stop there at runtime and cannot be published. Reconnect or delete the arrow, or restore an earlier version from the history.",
   "validationErrors.staleEdgeReference.title": "Leftover connection reference",
-  "validationErrors.staleEdgeReference.description": "A block or arrow here references a connection that no longer exists. It is ignored at runtime and does not block publishing; saving the flow again cleans it up.",
+  "validationErrors.staleEdgeReference.description": "A block or arrow here references a connection that no longer exists. It is harmless: ignored at runtime and never blocks publishing.",
   "validationErrors.missingCredential.description": "A credential referenced here no longer exists. Open the flagged block (or flow settings) and select a valid credential — otherwise it will fail at runtime.",
   "validationErrors.missingCredential.title": "Missing credential",
   "validationErrors.missingWorkflowEndInFlowBranches.description": "All flow branches must pass through at least one Tool Output block before ending.",

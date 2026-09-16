@@ -569,7 +569,7 @@
   "validationErrors.danglingEdgeTarget.title": "Conexión a un grupo o bloque inexistente",
   "validationErrors.danglingEdgeTarget.description": "Una flecha de este flujo apunta a un grupo o bloque que ya no existe. El flujo se detendrá ahí en producción y no se puede publicar. Reconecta o elimina la flecha, o restaura una versión anterior desde el historial.",
   "validationErrors.staleEdgeReference.title": "Referencia de conexión sobrante",
-  "validationErrors.staleEdgeReference.description": "Un bloque o flecha de aquí referencia una conexión que ya no existe. Se ignora en producción y no bloquea la publicación; guardar el flujo de nuevo la limpia.",
+  "validationErrors.staleEdgeReference.description": "Un bloque o flecha de aquí referencia una conexión que ya no existe. Es inofensiva: se ignora en producción y no bloquea la publicación.",
   "validationErrors.missingCredential.description": "Una credencial referenciada aquí ya no existe. Abre el bloque señalado (o la configuración del flujo) y selecciona una credencial válida — de lo contrario fallará en producción.",
   "validationErrors.missingCredential.title": "Falta la credencial",
   "validationErrors.missingTextBeforeClaudia.description": "Se requiere algún texto junto al bloque ClaudIA. ",

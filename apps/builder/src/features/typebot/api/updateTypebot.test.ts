@@ -381,7 +381,7 @@ describe('updateTypebot', () => {
     ).resolves.toBeDefined()
   })
 
-  it('cleans pre-existing stale outgoingEdgeIds and sourceless edges on write once the delta passes', async () => {
+  it('writes the payload as received, tolerating pre-existing stale references and pointers to edges that never existed', async () => {
     const flow = storedFlow()
     flow.groups[3].blocks[0].outgoingEdgeId = 'e_legacy_gone'
     flow.edges.push({
@@ -390,61 +390,33 @@ describe('updateTypebot', () => {
       to: { groupId: 'grp_a' },
     })
     mockStoredFlow(flow)
+    flow.groups[1].title = 'edited'
 
     await expect(
       caller()({
         typebotId: 'tb-1',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        typebot: { groups: flow.groups } as any,
+        typebot: {
+          groups: flow.groups,
+          edges: flow.edges,
+          events: flow.events,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       })
     ).resolves.toBeDefined()
 
     const data = savedData()
     const savedGroups = data.groups as {
       id: string
-      blocks: { outgoingEdgeId?: string }[]
-    }[]
-    expect(
-      savedGroups.find((g) => g.id === 'grp_d')?.blocks[0]
-    ).not.toHaveProperty('outgoingEdgeId')
-    expect((data.edges as { id: string }[]).map((e) => e.id)).toEqual([
-      'e_start_a',
-      'e_a_b',
-      'e_b_c',
-      'e_c_d',
-    ])
-    expect(data.events).toBeUndefined()
-  })
-
-  it('accepts a client copy that still carries a stale outgoingEdgeId after the stored flow was cleaned, and cleans it again', async () => {
-    mockStoredFlow()
-    const stale = storedFlow()
-    stale.groups[3].blocks[0].outgoingEdgeId = 'e_legacy_gone'
-    stale.groups[1].title = 'edited twice'
-
-    await expect(
-      caller()({
-        typebotId: 'tb-1',
-        typebot: {
-          groups: stale.groups,
-          edges: stale.edges,
-          events: stale.events,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      })
-    ).resolves.toBeDefined()
-
-    const savedGroups = savedData().groups as {
-      id: string
       title: string
       blocks: { outgoingEdgeId?: string }[]
     }[]
-    expect(savedGroups.find((g) => g.id === 'grp_b')?.title).toBe(
-      'edited twice'
-    )
+    expect(savedGroups.find((g) => g.id === 'grp_b')?.title).toBe('edited')
     expect(
-      savedGroups.find((g) => g.id === 'grp_d')?.blocks[0]
-    ).not.toHaveProperty('outgoingEdgeId')
+      savedGroups.find((g) => g.id === 'grp_d')?.blocks[0].outgoingEdgeId
+    ).toBe('e_legacy_gone')
+    expect((data.edges as { id: string }[]).map((e) => e.id)).toContain(
+      'e_legacy'
+    )
   })
 
   it('still rejects a payload that drops an edge the stored flow has while its source keeps pointing at it', async () => {
@@ -463,41 +435,6 @@ describe('updateTypebot', () => {
       })
     ).rejects.toThrow(/would leave 1 references/)
     expect(prisma.typebot.updateMany).not.toHaveBeenCalled()
-  })
-
-  it('keeps a working connection whose edge lost its source block, repairing the edge instead of dropping it', async () => {
-    const flow = storedFlow()
-    flow.edges[1].from = { blockId: 'blk_deleted_long_ago' }
-    mockStoredFlow(flow)
-
-    await expect(
-      caller()({
-        typebotId: 'tb-1',
-        typebot: {
-          groups: flow.groups,
-          edges: flow.edges,
-          events: flow.events,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      })
-    ).resolves.toBeDefined()
-
-    const data = savedData()
-    const edges = data.edges as { id: string; from: unknown }[]
-    expect(edges.map((e) => e.id)).toEqual([
-      'e_start_a',
-      'e_a_b',
-      'e_b_c',
-      'e_c_d',
-    ])
-    expect(edges[1].from).toEqual({ blockId: 'blk_a' })
-    const savedGroups = data.groups as
-      | { id: string; blocks: { outgoingEdgeId?: string }[] }[]
-      | undefined
-    expect(
-      savedGroups?.find((g) => g.id === 'grp_a')?.blocks[0].outgoingEdgeId ??
-        'e_a_b'
-    ).toBe('e_a_b')
   })
 
   it('skips the integrity check when the payload carries no groups, edges or events (dashboard rename/move)', async () => {

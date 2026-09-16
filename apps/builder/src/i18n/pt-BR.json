@@ -569,7 +569,7 @@
   "validationErrors.danglingEdgeTarget.title": "Conexão para grupo ou bloco inexistente",
   "validationErrors.danglingEdgeTarget.description": "Uma seta deste fluxo aponta para um grupo ou bloco que não existe mais. O fluxo vai parar ali em produção e não pode ser publicado. Reconecte ou apague a seta, ou restaure uma versão anterior pelo histórico.",
   "validationErrors.staleEdgeReference.title": "Referência de conexão sobrando",
-  "validationErrors.staleEdgeReference.description": "Um bloco ou seta daqui referencia uma conexão que não existe mais. É ignorada em produção e não bloqueia a publicação; salvar o fluxo de novo limpa isso.",
+  "validationErrors.staleEdgeReference.description": "Um bloco ou seta daqui referencia uma conexão que não existe mais. É inofensiva: ignorada em produção e nunca bloqueia a publicação.",
   "validationErrors.missingCredential.description": "Uma credencial referenciada aqui não existe mais. Abra o bloco sinalizado (ou as configurações do fluxo) e selecione uma credencial válida — caso contrário vai falhar em produção.",
   "validationErrors.missingCredential.title": "Credencial ausente",
   "validationErrors.missingTextBeforeClaudia.description": "É necessário adicionar algum texto junto do bloco ClaudIA. ",

@@ -19,10 +19,7 @@ import {
   sanitizeVariables,
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
-import {
-  assertUpdatePreservesIntegrity,
-  sanitizeSoftReferences,
-} from '../helpers/flowIntegrity'
+import { assertUpdatePreservesIntegrity } from '../helpers/flowIntegrity'
 import {
   normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
@@ -262,40 +259,23 @@ export const updateTypebot = authenticatedProcedure
       ? await sanitizeGroups(existingTypebot.workspace.id)(typebot.groups)
       : undefined
 
-    let groupsToWrite = groups
-    let edgesToWrite = typebot.edges
-    let eventsToWrite = typebot.events ?? undefined
     if (
       groups !== undefined ||
       typebot.edges !== undefined ||
       typebot.events !== undefined
-    ) {
-      const resulting = {
-        groups: groups ?? existingTypebot.groups,
-        edges: typebot.edges ?? existingTypebot.edges,
-        events: typebot.events ?? existingTypebot.events,
-      }
+    )
       assertUpdatePreservesIntegrity({
         existing: {
           groups: existingTypebot.groups,
           edges: existingTypebot.edges,
           events: existingTypebot.events,
         },
-        resulting,
+        resulting: {
+          groups: groups ?? existingTypebot.groups,
+          edges: typebot.edges ?? existingTypebot.edges,
+          events: typebot.events ?? existingTypebot.events,
+        },
       })
-      const sanitized = sanitizeSoftReferences(resulting)
-      const differs = (a: unknown, b: unknown) =>
-        JSON.stringify(a) !== JSON.stringify(b)
-      if (differs(sanitized.groups, resulting.groups))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        groupsToWrite = sanitized.groups as any
-      if (differs(sanitized.edges, resulting.edges))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        edgesToWrite = sanitized.edges as any
-      if (differs(sanitized.events, resulting.events))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        eventsToWrite = sanitized.events as any
-    }
 
     let updatedSettings = typebot.settings
       ? sanitizeSettings(
@@ -335,8 +315,8 @@ export const updateTypebot = authenticatedProcedure
         name: typebot.name,
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
-        events: eventsToWrite,
-        groups: groupsToWrite,
+        events: typebot.events ?? undefined,
+        groups,
         theme: typebot.theme ? typebot.theme : undefined,
         settings: updatedSettings,
         folderId: typebot.folderId,
@@ -347,7 +327,7 @@ export const updateTypebot = authenticatedProcedure
                 groups,
               })
             : undefined,
-        edges: edgesToWrite,
+        edges: typebot.edges,
         resultsTablePreferences:
           typebot.resultsTablePreferences === null
             ? Prisma.DbNull
