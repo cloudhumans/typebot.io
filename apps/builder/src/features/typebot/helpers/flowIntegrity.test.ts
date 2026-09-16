@@ -157,6 +157,62 @@ describe('sanitizeSoftReferences', () => {
     ])
   })
 
+  it('keeps an edge whose source is gone when a live block still points at it, repairing its from', () => {
+    const flow = consistentFlow()
+    flow.edges[1].from = { blockId: 'blk_deleted_long_ago' }
+
+    const sanitized = sanitizeSoftReferences(flow)
+
+    const edges = sanitized.edges as { id: string; from: unknown }[]
+    expect(edges.map((e) => e.id)).toEqual(['e_start_a', 'e_a_b', 'e_b_c'])
+    expect(edges[1].from).toEqual({ blockId: 'blk_a' })
+    const groups = sanitized.groups as {
+      blocks: { outgoingEdgeId?: string }[]
+    }[]
+    expect(groups[0].blocks[0].outgoingEdgeId).toBe('e_a_b')
+    expect(findDanglingReferences(sanitized)).toEqual([])
+  })
+
+  it('repairs the from of an edge owned by a condition item, keeping blockId and itemId', () => {
+    const flow = consistentFlow()
+    flow.groups[1].blocks = [
+      {
+        id: 'blk_cond',
+        type: 'Condition',
+        items: [{ id: 'item_yes', outgoingEdgeId: 'e_b_c' }],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    ]
+    flow.edges[1].to = { groupId: 'grp_b', blockId: 'blk_cond' }
+    flow.edges[2].from = { blockId: 'blk_b_deleted' }
+
+    const sanitized = sanitizeSoftReferences(flow)
+
+    const edges = sanitized.edges as { id: string; from: unknown }[]
+    expect(edges.find((e) => e.id === 'e_b_c')?.from).toEqual({
+      blockId: 'blk_cond',
+      itemId: 'item_yes',
+    })
+    expect(findDanglingReferences(sanitized)).toEqual([])
+  })
+
+  it('still drops an edge without a source that nothing points at', () => {
+    const flow = consistentFlow()
+    flow.edges.push({
+      id: 'e_unreferenced',
+      from: { blockId: 'blk_gone' },
+      to: { groupId: 'grp_c' },
+    })
+
+    const sanitized = sanitizeSoftReferences(flow)
+
+    expect((sanitized.edges as { id: string }[]).map((e) => e.id)).toEqual([
+      'e_start_a',
+      'e_a_b',
+      'e_b_c',
+    ])
+  })
+
   it('leaves non-array collections untouched', () => {
     expect(
       sanitizeSoftReferences({ groups: null, edges: null, events: undefined })

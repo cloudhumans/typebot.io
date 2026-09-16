@@ -185,12 +185,49 @@ const stripOutgoing = <T extends LooseEdgeOwner>(
   return rest
 }
 
+type EdgeSource =
+  | { eventId: string }
+  | { blockId: string }
+  | { blockId: string; itemId: string }
+
+const collectOutgoingOwners = ({
+  groups,
+  events,
+}: FlowSnapshot): Map<string, EdgeSource> => {
+  const owners = new Map<string, EdgeSource>()
+  const claim = (owner: LooseEdgeOwner, source: EdgeSource) => {
+    const edgeId = asString(owner.outgoingEdgeId)
+    if (edgeId && !owners.has(edgeId)) owners.set(edgeId, source)
+  }
+  for (const event of asArray<LooseEdgeOwner>(events)) {
+    const eventId = asString(event.id)
+    if (eventId) claim(event, { eventId })
+  }
+  for (const group of asArray<LooseGroup>(groups))
+    for (const block of asArray<LooseBlock>(group.blocks)) {
+      const blockId = asString(block.id)
+      if (!blockId) continue
+      claim(block, { blockId })
+      for (const item of asArray<LooseEdgeOwner>(block.items)) {
+        const itemId = asString(item.id)
+        if (itemId) claim(item, { blockId, itemId })
+      }
+    }
+  return owners
+}
+
 export const dropSourcelessEdges = (flow: FlowSnapshot): unknown => {
   if (!Array.isArray(flow.edges)) return flow.edges
   const index = indexFlow(flow)
-  const edges = asArray<LooseEdge>(flow.edges)
-  const kept = edges.filter((edge) => edgeSourceResolves(edge, index))
-  return kept.length === edges.length ? flow.edges : kept
+  const owners = collectOutgoingOwners(flow)
+  let changed = false
+  const kept = asArray<LooseEdge>(flow.edges).flatMap((edge) => {
+    if (edgeSourceResolves(edge, index)) return [edge]
+    changed = true
+    const owner = asString(edge.id) ? owners.get(asString(edge.id)!) : undefined
+    return owner ? [{ ...edge, from: owner }] : []
+  })
+  return changed ? kept : flow.edges
 }
 
 export const sanitizeSoftReferences = (flow: FlowSnapshot): FlowSnapshot => {

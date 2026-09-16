@@ -163,7 +163,9 @@ describe('importTypebot', () => {
     const data = vi.mocked(prisma.typebot.create).mock.calls[0][0].data
     const groups = data.groups as { blocks: { outgoingEdgeId?: string }[] }[]
     expect(groups[0].blocks[0]).not.toHaveProperty('outgoingEdgeId')
-    expect((data.edges as { id: string }[]).map((e) => e.id)).toEqual([])
+    const edges = data.edges as { id: string; from: unknown }[]
+    expect(edges.map((e) => e.id)).toEqual(['edge1'])
+    expect(edges[0].from).toEqual({ eventId: 'group1' })
   })
 
   it('seeds the five built-in variables when importing a CONTEXT_ENRICHMENT flow', async () => {
