@@ -84,6 +84,7 @@ describe('findDanglingReferences', () => {
         kind: 'target',
         reference: 'edge e_a_b -> block blk_gone',
         groupId: 'grp_a',
+        edgeId: undefined,
       },
     ])
   })
@@ -216,6 +217,26 @@ describe('assertUpdatePreservesIntegrity', () => {
         resulting: removedButStillReachable,
       })
     ).toThrow(/removing grp_a/)
+  })
+
+  it('tolerates a stale outgoingEdgeId whose edge never existed in the stored flow, even after the stored copy was cleaned', () => {
+    const existing = consistentFlow()
+    const resulting = consistentFlow()
+    resulting.groups[2].blocks[0].outgoingEdgeId = 'e_never_existed'
+    expect(() =>
+      assertUpdatePreservesIntegrity({ existing, resulting })
+    ).not.toThrow()
+  })
+
+  it('still rejects removing an edge while its source keeps pointing at it', () => {
+    const existing = consistentFlow()
+    const resulting = {
+      ...existing,
+      edges: existing.edges.filter((e) => e.id !== 'e_b_c'),
+    }
+    expect(() =>
+      assertUpdatePreservesIntegrity({ existing, resulting })
+    ).toThrow(/would leave 1 references .*block blk_b -> edge e_b_c/)
   })
 
   it('rejects stale edges with a message that does not blame removed groups', () => {

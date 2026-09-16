@@ -15,6 +15,7 @@ export type DanglingReference = {
   kind: DanglingKind
   reference: string
   groupId?: string
+  edgeId?: string
 }
 
 type LooseEdgeOwner = { id?: unknown; outgoingEdgeId?: unknown }
@@ -153,6 +154,7 @@ export const findDanglingReferences = (
         kind: 'outgoing',
         reference: `${kind} ${asString(owner.id) ?? '?'} -> edge ${edgeId}`,
         groupId,
+        edgeId,
       })
   }
 
@@ -242,8 +244,18 @@ export const assertUpdatePreservesIntegrity = ({
   const before = new Set(
     findDanglingReferences(existing).map((item) => item.reference)
   )
+  const existingEdgeIds = new Set(
+    asArray<LooseEdge>(existing.edges)
+      .map((edge) => asString(edge.id))
+      .filter((id): id is string => id !== undefined)
+  )
   const introduced = findDanglingReferences(resulting)
     .filter((item) => item.kind !== 'source')
+    .filter(
+      (item) =>
+        item.kind !== 'outgoing' ||
+        (item.edgeId !== undefined && existingEdgeIds.has(item.edgeId))
+    )
     .map((item) => item.reference)
     .filter((reference) => !before.has(reference))
   if (introduced.length === 0) return

@@ -298,7 +298,7 @@ describe('updateTypebot', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: { groups: flow.groups, edges: [] } as any,
       })
-    ).rejects.toThrow(/would leave 5 references/)
+    ).rejects.toThrow(/would leave 4 references/)
   })
 
   it('accepts the complete arrays read from getTypebot with one group edited', async () => {
@@ -414,6 +414,55 @@ describe('updateTypebot', () => {
       'e_c_d',
     ])
     expect(data.events).toBeUndefined()
+  })
+
+  it('accepts a client copy that still carries a stale outgoingEdgeId after the stored flow was cleaned, and cleans it again', async () => {
+    mockStoredFlow()
+    const stale = storedFlow()
+    stale.groups[3].blocks[0].outgoingEdgeId = 'e_legacy_gone'
+    stale.groups[1].title = 'edited twice'
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: stale.groups,
+          edges: stale.edges,
+          events: stale.events,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).resolves.toBeDefined()
+
+    const savedGroups = savedData().groups as {
+      id: string
+      title: string
+      blocks: { outgoingEdgeId?: string }[]
+    }[]
+    expect(savedGroups.find((g) => g.id === 'grp_b')?.title).toBe(
+      'edited twice'
+    )
+    expect(
+      savedGroups.find((g) => g.id === 'grp_d')?.blocks[0]
+    ).not.toHaveProperty('outgoingEdgeId')
+  })
+
+  it('still rejects a payload that drops an edge the stored flow has while its source keeps pointing at it', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: flow.groups,
+          edges: flow.edges.filter((e) => e.id !== 'e_b_c'),
+          events: flow.events,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow(/would leave 1 references/)
+    expect(prisma.typebot.updateMany).not.toHaveBeenCalled()
   })
 
   it('skips the integrity check when the payload carries no groups, edges or events (dashboard rename/move)', async () => {
