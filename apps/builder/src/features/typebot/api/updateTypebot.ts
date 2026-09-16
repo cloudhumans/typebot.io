@@ -21,7 +21,7 @@ import {
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 import {
   assertUpdatePreservesIntegrity,
-  dropSourcelessEdges,
+  sanitizeSoftReferences,
 } from '../helpers/flowIntegrity'
 import {
   normalizeEnrichmentDeclareVariables,
@@ -262,7 +262,9 @@ export const updateTypebot = authenticatedProcedure
       ? await sanitizeGroups(existingTypebot.workspace.id)(typebot.groups)
       : undefined
 
+    let groupsToWrite = groups
     let edgesToWrite = typebot.edges
+    let eventsToWrite = typebot.events ?? undefined
     if (
       groups !== undefined ||
       typebot.edges !== undefined ||
@@ -281,10 +283,18 @@ export const updateTypebot = authenticatedProcedure
         },
         resulting,
       })
-      const cleanedEdges = dropSourcelessEdges(resulting)
-      if (cleanedEdges !== resulting.edges)
+      const sanitized = sanitizeSoftReferences(resulting)
+      const differs = (a: unknown, b: unknown) =>
+        JSON.stringify(a) !== JSON.stringify(b)
+      if (differs(sanitized.groups, resulting.groups))
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        edgesToWrite = cleanedEdges as any
+        groupsToWrite = sanitized.groups as any
+      if (differs(sanitized.edges, resulting.edges))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        edgesToWrite = sanitized.edges as any
+      if (differs(sanitized.events, resulting.events))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        eventsToWrite = sanitized.events as any
     }
 
     let updatedSettings = typebot.settings
@@ -325,8 +335,8 @@ export const updateTypebot = authenticatedProcedure
         name: typebot.name,
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
-        events: typebot.events ?? undefined,
-        groups,
+        events: eventsToWrite,
+        groups: groupsToWrite,
         theme: typebot.theme ? typebot.theme : undefined,
         settings: updatedSettings,
         folderId: typebot.folderId,

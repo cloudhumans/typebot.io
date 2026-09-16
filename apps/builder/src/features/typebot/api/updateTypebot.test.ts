@@ -381,6 +381,41 @@ describe('updateTypebot', () => {
     ).resolves.toBeDefined()
   })
 
+  it('cleans pre-existing stale outgoingEdgeIds and sourceless edges on write once the delta passes', async () => {
+    const flow = storedFlow()
+    flow.groups[3].blocks[0].outgoingEdgeId = 'e_legacy_gone'
+    flow.edges.push({
+      id: 'e_legacy',
+      from: { blockId: 'blk_gone' },
+      to: { groupId: 'grp_a' },
+    })
+    mockStoredFlow(flow)
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: { groups: flow.groups } as any,
+      })
+    ).resolves.toBeDefined()
+
+    const data = savedData()
+    const savedGroups = data.groups as {
+      id: string
+      blocks: { outgoingEdgeId?: string }[]
+    }[]
+    expect(
+      savedGroups.find((g) => g.id === 'grp_d')?.blocks[0]
+    ).not.toHaveProperty('outgoingEdgeId')
+    expect((data.edges as { id: string }[]).map((e) => e.id)).toEqual([
+      'e_start_a',
+      'e_a_b',
+      'e_b_c',
+      'e_c_d',
+    ])
+    expect(data.events).toBeUndefined()
+  })
+
   it('skips the integrity check when the payload carries no groups, edges or events (dashboard rename/move)', async () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,
