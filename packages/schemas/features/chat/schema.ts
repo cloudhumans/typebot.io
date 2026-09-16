@@ -335,6 +335,10 @@ export const debugVariableSchema = z.object({
   id: z.string(),
   name: z.string(),
   value: z.unknown(),
+  // Result of `typeof` on the value the variable holds now, captured when it was
+  // written (see `previewMetadata.variableTypes`). Sent from the server because
+  // the value travels as text and the type cannot be recovered from it.
+  type: z.string().optional(),
 })
 export type DebugVariable = z.infer<typeof debugVariableSchema>
 
