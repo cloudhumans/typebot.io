@@ -78,10 +78,21 @@ const ERROR_CONFIGS: Record<
     titleKey: 'validationErrors.deprecatedCredential.title',
     descriptionKey: 'validationErrors.deprecatedCredential.description',
   },
+  danglingEdgeTarget: {
+    titleKey: 'validationErrors.danglingEdgeTarget.title',
+    descriptionKey: 'validationErrors.danglingEdgeTarget.description',
+  },
+  staleEdgeReference: {
+    titleKey: 'validationErrors.staleEdgeReference.title',
+    descriptionKey: 'validationErrors.staleEdgeReference.description',
+  },
 }
 
 // Warning-type errors render in amber and don't block publishing.
-const WARNING_ERROR_TYPES = new Set<ErrorType>(['deprecatedCredential'])
+const WARNING_ERROR_TYPES = new Set<ErrorType>([
+  'deprecatedCredential',
+  'staleEdgeReference',
+])
 
 type Props = {
   onClose: () => void

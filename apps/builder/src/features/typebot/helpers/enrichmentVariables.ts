@@ -31,6 +31,7 @@ type BlockLike = {
   type?: string
   options?: unknown
   outgoingEdgeId?: string
+  items?: { outgoingEdgeId?: string }[]
 }
 
 type GroupLike = {
@@ -48,6 +49,21 @@ type EdgeLike = {
 
 const isDeclareVariablesBlock = (block: BlockLike) =>
   block.type === LogicBlockType.DECLARE_VARIABLES
+
+const unwirePrunedEdges = <B extends BlockLike>(
+  block: B,
+  prunedEdgeIds: Set<string>
+): B => {
+  const keeps = (edgeId?: string) => !edgeId || !prunedEdgeIds.has(edgeId)
+  const items = block.items?.map((item) =>
+    keeps(item.outgoingEdgeId) ? item : { ...item, outgoingEdgeId: undefined }
+  )
+  return {
+    ...block,
+    ...(items ? { items } : {}),
+    ...(keeps(block.outgoingEdgeId) ? {} : { outgoingEdgeId: undefined }),
+  }
+}
 
 export const normalizeEnrichmentDeclareVariables = <
   G extends GroupLike,
@@ -126,9 +142,12 @@ export const normalizeEnrichmentDeclareVariables = <
     )
 
   const survivingEdgeIds = new Set(finalEdges.map((edge) => edge.id))
+  const prunedEdgeIds = new Set(
+    edges.map((edge) => edge.id).filter((id) => !survivingEdgeIds.has(id))
+  )
   const wiredCanonicalBlock =
     canonicalBlock.outgoingEdgeId &&
-    !survivingEdgeIds.has(canonicalBlock.outgoingEdgeId)
+    prunedEdgeIds.has(canonicalBlock.outgoingEdgeId)
       ? {
           id: canonicalBlock.id,
           type: canonicalBlock.type,
@@ -141,7 +160,9 @@ export const normalizeEnrichmentDeclareVariables = <
       ? { ...group, blocks: [wiredCanonicalBlock] }
       : {
           ...group,
-          blocks: group.blocks.filter((b) => !isDeclareVariablesBlock(b)),
+          blocks: group.blocks
+            .filter((b) => !isDeclareVariablesBlock(b))
+            .map((b) => unwirePrunedEdges(b, prunedEdgeIds)),
         }
   )
 

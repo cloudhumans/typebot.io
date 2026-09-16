@@ -4,6 +4,7 @@ import prisma from '@typebot.io/lib/prisma'
 import { Prisma } from '@typebot.io/prisma'
 import { z } from 'zod'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
+import { assertFlowIntegrity } from '../helpers/flowIntegrity'
 
 export const rollbackTypebot = authenticatedProcedure
   .meta({
@@ -106,6 +107,15 @@ export const rollbackTypebot = authenticatedProcedure
         code: 'NOT_FOUND',
         message: 'History snapshot not found',
       })
+
+    assertFlowIntegrity(
+      {
+        groups: historySnapshot.groups,
+        edges: historySnapshot.edges,
+        events: historySnapshot.events,
+      },
+      'rollback'
+    )
 
     const currentSettings =
       (historySnapshot.settings as Record<string, unknown>) || {}

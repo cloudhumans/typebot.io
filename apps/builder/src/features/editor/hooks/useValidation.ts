@@ -19,6 +19,7 @@ export const useValidation = () => {
       variables: Variable[]
       groups: Group[]
       edges: Edge[]
+      events?: unknown[] | null
       settings: Settings | undefined
       workspaceId?: string
       whatsAppCredentialsId?: string | null
@@ -27,7 +28,7 @@ export const useValidation = () => {
       setIsValidating(true)
       try {
         const validation = await mutateAsyncRef.current({
-          typebot,
+          typebot: { ...typebot, events: typebot.events ?? undefined },
         })
         setValidationErrors(validation)
         return validation

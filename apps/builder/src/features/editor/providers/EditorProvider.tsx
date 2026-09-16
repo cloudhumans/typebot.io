@@ -24,6 +24,7 @@ type MinimalTypebot = Pick<
   | 'variables'
   | 'groups'
   | 'edges'
+  | 'events'
   | 'settings'
   | 'workspaceId'
   | 'whatsAppCredentialsId'
@@ -196,6 +197,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       variables: typebot.variables,
       groups: typebot.groups,
       edges: typebot.edges,
+      events: typebot.events,
       settings: typebot.settings,
       workspaceId: typebot.workspaceId,
       whatsAppCredentialsId: typebot.whatsAppCredentialsId,
@@ -205,6 +207,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [
     validationKey,
     typebot?.edges,
+    typebot?.events,
     typebot?.groups,
     typebot?.variables,
     typebot?.settings,
@@ -222,6 +225,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       variables: typebot.variables,
       groups: typebot.groups,
       edges: typebot.edges,
+      events: typebot.events,
       settings: typebot.settings,
       workspaceId: typebot.workspaceId,
       whatsAppCredentialsId: typebot.whatsAppCredentialsId,

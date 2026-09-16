@@ -164,7 +164,11 @@ export const duplicateBlockDraft = (block: BlockV6): BlockV6 => {
 
 export const deleteGroupDraft =
   (typebot: Draft<TypebotV6>) => (groupIndex: number) => {
-    deleteConnectedEdgesDraft(typebot, typebot.groups[groupIndex].id)
+    const group = typebot.groups[groupIndex]
+    deleteConnectedEdgesDraft(typebot, group.id)
+    group.blocks.forEach((block) =>
+      deleteConnectedEdgesDraft(typebot, block.id)
+    )
     typebot.groups.splice(groupIndex, 1)
   }
 

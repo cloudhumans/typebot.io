@@ -280,7 +280,16 @@ export const TypebotProvider = ({
           typebot: newParsedTypebot,
         })
         setUpdateDate(updatedAt)
-      } catch {
+      } catch (error) {
+        const isIntegrityRejection =
+          (error as { data?: { flowIntegrity?: boolean } } | null)?.data
+            ?.flowIntegrity === true
+        if (isIntegrityRejection) {
+          setLocalTypebot({ ...typebot })
+          setGroupsCoordinates(typebot.groups)
+          flush()
+          return
+        }
         setLocalTypebot({
           ...localTypebot,
         })
@@ -290,6 +299,8 @@ export const TypebotProvider = ({
       isReadOnly,
       localTypebot,
       setLocalTypebot,
+      setGroupsCoordinates,
+      flush,
       setUpdateDate,
       typebot,
       updateTypebot,

@@ -112,12 +112,76 @@ describe('importTypebot', () => {
     ).rejects.toThrow('Tenant and Tool description are mandatory')
   })
 
+  it('rejects an import whose edges point at groups that do not exist', async () => {
+    const typebot = parseTestTypebot({
+      version: '6',
+      name: 'Broken Flow',
+    })
+
+    await expect(
+      caller()({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: typebot as any,
+      })
+    ).rejects.toThrow(/Cannot import this flow/)
+    expect(prisma.typebot.create).not.toHaveBeenCalled()
+  })
+
+  it('imports a flow whose only orphans are stale outgoingEdgeIds and cleans them up', async () => {
+    const typebot = parseTestTypebot({
+      version: '6',
+      name: 'Legacy Flow',
+      groups: [
+        {
+          id: 'group1',
+          title: 'Group #1',
+          graphCoordinates: { x: 0, y: 0 },
+          blocks: [
+            {
+              id: 'block1',
+              type: 'text',
+              content: { richText: [] },
+              outgoingEdgeId: 'edge-gone',
+            },
+          ],
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ] as any,
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(prisma.typebot.create).mockResolvedValue(typebot as any)
+
+    await expect(
+      caller()({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: typebot as any,
+      })
+    ).resolves.toBeDefined()
+
+    const data = vi.mocked(prisma.typebot.create).mock.calls[0][0].data
+    const groups = data.groups as { blocks: { outgoingEdgeId?: string }[] }[]
+    expect(groups[0].blocks[0]).not.toHaveProperty('outgoingEdgeId')
+    const edges = data.edges as { id: string; from: unknown }[]
+    expect(edges.map((e) => e.id)).toEqual(['edge1'])
+    expect(edges[0].from).toEqual({ eventId: 'group1' })
+  })
+
   it('seeds the five built-in variables when importing a CONTEXT_ENRICHMENT flow', async () => {
     const typebot = parseTestTypebot({
       version: '6',
       name: 'Enrichment Flow',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       settings: { general: { type: 'CONTEXT_ENRICHMENT' } } as any,
+      groups: [
+        {
+          id: 'group1',
+          title: 'Group #1',
+          graphCoordinates: { x: 0, y: 0 },
+          blocks: [],
+        },
+      ],
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(prisma.typebot.create).mockResolvedValue(typebot as any)

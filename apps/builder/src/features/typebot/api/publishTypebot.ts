@@ -21,6 +21,7 @@ import { z } from 'zod'
 import { parseDefaultPublicId } from '@/features/publish/helpers/parseDefaultPublicId'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
 import { isPublicIdNotAvailable } from '../helpers/sanitizers'
+import { assertFlowIntegrity } from '../helpers/flowIntegrity'
 
 export const publishTypebot = authenticatedProcedure
   .meta({
@@ -141,6 +142,15 @@ export const publishTypebot = authenticatedProcedure
         })
       }
     }
+
+    assertFlowIntegrity(
+      {
+        groups: existingTypebot.groups,
+        edges: existingTypebot.edges,
+        events: existingTypebot.events,
+      },
+      'publish'
+    )
 
     const publishEvents = await parseTypebotPublishEvents({
       existingTypebot,

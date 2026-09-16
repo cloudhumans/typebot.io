@@ -22,6 +22,7 @@ import {
   normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
 } from '../helpers/enrichmentVariables'
+import { assertFlowIntegrity } from '../helpers/flowIntegrity'
 
 const typebotCreateSchemaPick = {
   name: true,
@@ -170,6 +171,20 @@ export const createTypebot = authenticatedProcedure
         })
       : { groups, edges: typebot.edges ?? [] }
 
+    const events = (starterFlow?.events as TypebotV6['events'] | undefined) ??
+      typebot.events ?? [
+        {
+          type: EventType.START,
+          graphCoordinates: { x: 0, y: 0 },
+          id: createId(),
+        },
+      ]
+
+    assertFlowIntegrity(
+      { groups: finalGroups, edges: finalEdges, events },
+      'create'
+    )
+
     const newTypebot = await prisma.typebot.create({
       data: {
         version: '6',
@@ -178,14 +193,7 @@ export const createTypebot = authenticatedProcedure
         icon: typebot.icon,
         selectedThemeTemplateId: typebot.selectedThemeTemplateId,
         groups: finalGroups,
-        events: (starterFlow?.events as TypebotV6['events'] | undefined) ??
-          typebot.events ?? [
-            {
-              type: EventType.START,
-              graphCoordinates: { x: 0, y: 0 },
-              id: createId(),
-            },
-          ],
+        events,
         theme: typebot.theme ? typebot.theme : {},
         settings: typebot.settings
           ? sanitizeSettings(typebot.settings, workspace.plan, 'create')

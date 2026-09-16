@@ -84,6 +84,81 @@ describe('postTypebotValidation', () => {
     vi.clearAllMocks()
   })
 
+  it('flags an edge into a missing group as a blocking error and a stale outgoingEdgeId as a warning', async () => {
+    const { isValid, errors } = await caller()({
+      typebot: {
+        variables: [],
+        groups: [
+          {
+            id: 'group-1',
+            title: 'Group #1',
+            graphCoordinates: { x: 0, y: 0 },
+            blocks: [
+              {
+                id: 'block-1',
+                type: 'text',
+                content: { richText: [] },
+                outgoingEdgeId: 'edge-to-nowhere',
+              },
+              {
+                id: 'block-2',
+                type: 'text',
+                content: { richText: [] },
+                outgoingEdgeId: 'edge-gone',
+              },
+            ],
+          },
+        ] as never,
+        edges: [
+          {
+            id: 'edge-to-nowhere',
+            from: { blockId: 'block-1' },
+            to: { groupId: 'group-gone' },
+          },
+        ],
+        settings: { general: { type: 'TOOL' } },
+      },
+    })
+
+    expect(isValid).toBe(false)
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'danglingEdgeTarget',
+          severity: 'error',
+          groupId: 'group-1',
+        }),
+        expect.objectContaining({
+          type: 'staleEdgeReference',
+          severity: 'warning',
+          groupId: 'group-1',
+        }),
+      ])
+    )
+  })
+
+  it('does not warn about an edge leaving the start event when events are provided', async () => {
+    const { errors } = await caller()({
+      typebot: {
+        variables: [],
+        groups: returnOutputGroups as never,
+        edges,
+        events: [
+          {
+            id: 'event-1',
+            type: 'start',
+            graphCoordinates: { x: 0, y: 0 },
+            outgoingEdgeId: 'edge-1',
+          },
+        ],
+        settings: { general: { type: 'TOOL' } },
+      },
+    })
+
+    expect(errors.filter((e) => e.type === 'staleEdgeReference')).toEqual([])
+    expect(errors.filter((e) => e.type === 'danglingEdgeTarget')).toEqual([])
+  })
+
   it('should flag a controlled flow whose branch never reaches a ClaudIA block', async () => {
     const { errors } = await validate('default')
 

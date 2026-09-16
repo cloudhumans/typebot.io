@@ -33,6 +33,7 @@ import {
   ValidationErrorItem,
   validationErrorSchema,
 } from '../constants/errorTypes'
+import { findDanglingReferences } from '../helpers/flowIntegrity'
 
 const PREFILLED_VARIABLES = [
   'helpdeskId',
@@ -727,6 +728,8 @@ const getErrorMessage = (type: string, groupTitle?: string): string => {
       'Missing Tool Output block in flow branches',
     missingCredential: 'Missing credential',
     deprecatedCredential: 'Deprecated credential',
+    danglingEdgeTarget: 'Connection to a group or block that no longer exists',
+    staleEdgeReference: 'Leftover connection reference',
   }
   const baseMessage =
     errorMessages[type as keyof typeof errorMessages] || 'Validation Error'
@@ -737,10 +740,42 @@ const createGroupTitleMap = (groups: Group[]): Map<string, string> => {
   return new Map(groups.map((group) => [group.id, group.title]))
 }
 
+const collectDanglingReferenceErrors = (
+  groups: Group[],
+  edges: Edge[],
+  events: unknown,
+  groupTitleMap: Map<string, string>
+): ValidationErrorItem[] => {
+  const seen = new Set<string>()
+  return findDanglingReferences({ groups, edges, events }).flatMap(
+    (reference) => {
+      const type =
+        reference.severity === 'hard'
+          ? 'danglingEdgeTarget'
+          : 'staleEdgeReference'
+      const key = `${type}:${reference.groupId ?? ''}`
+      if (seen.has(key)) return []
+      seen.add(key)
+      return [
+        {
+          type,
+          severity: reference.severity === 'hard' ? 'error' : 'warning',
+          groupId: reference.groupId,
+          message: getErrorMessage(
+            type,
+            reference.groupId ? groupTitleMap.get(reference.groupId) : undefined
+          ),
+        } satisfies ValidationErrorItem,
+      ]
+    }
+  )
+}
+
 const validateTypebot = async ({
   variables,
   groups,
   edges,
+  events,
   settings,
   isSecondaryFlow = false,
   workspaceId,
@@ -749,6 +784,7 @@ const validateTypebot = async ({
   variables: Variable[]
   groups: Group[]
   edges: Edge[]
+  events?: unknown
   settings?: Settings
   isSecondaryFlow?: boolean
   workspaceId?: string
@@ -859,9 +895,17 @@ const validateTypebot = async ({
     )
   }
 
+  const danglingErrors = collectDanglingReferenceErrors(
+    groups,
+    safeEdges,
+    events,
+    groupTitleMap
+  )
+
   const errors = [
     ...invalidGroupsErrors,
     ...brokenLinksErrors,
+    ...danglingErrors,
     ...missingCredentialErrors,
     ...deprecatedCredentialErrors,
     ...missingTextBeforeClaudiaErrors,
@@ -898,6 +942,7 @@ export const getTypebotValidation = publicProcedure
         variables: true,
         groups: true,
         edges: true,
+        events: true,
         settings: true,
         isSecondaryFlow: true,
         workspaceId: true,
@@ -910,6 +955,7 @@ export const getTypebotValidation = publicProcedure
       variables: Variable[]
       groups: Group[]
       edges: Edge[]
+      events: unknown
       settings: Settings
       isSecondaryFlow: boolean
       workspaceId: string
@@ -955,6 +1001,7 @@ export const postTypebotValidation = publicProcedure
           variables: z.array(variableSchema),
           edges: z.array(edgeSchema),
           groups: z.array(groupV6Schema.or(groupV5Schema)),
+          events: z.array(z.unknown()).optional(),
           settings: settingsSchema.optional(),
           isSecondaryFlow: z.boolean().optional().default(false),
           workspaceId: z.string().optional(),
@@ -971,6 +1018,7 @@ export const postTypebotValidation = publicProcedure
       variables,
       groups,
       edges,
+      events,
       settings,
       isSecondaryFlow,
       workspaceId,
@@ -997,6 +1045,7 @@ export const postTypebotValidation = publicProcedure
       variables,
       groups,
       edges,
+      events,
       settings,
       isSecondaryFlow,
       workspaceId: scopedWorkspaceId,

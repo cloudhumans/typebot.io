@@ -87,6 +87,136 @@ describe('createTypebot', () => {
     vi.mocked(getUserRoleInWorkspace).mockReturnValue(WorkspaceRole.ADMIN)
   })
 
+  it('rejects a flow whose edges point at groups that do not exist', async () => {
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        typebot: {
+          name: 'My Bot',
+          groups: [
+            {
+              id: 'grp_a',
+              title: 'A',
+              graphCoordinates: { x: 0, y: 0 },
+              blocks: [],
+            },
+          ],
+          edges: [
+            {
+              id: 'e_1',
+              from: { blockId: 'blk_x' },
+              to: { groupId: 'grp_missing' },
+            },
+          ],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow(/Flow is inconsistent/)
+    expect(prisma.typebot.create).not.toHaveBeenCalled()
+  })
+
+  it('rejects edges leaving a start event when events are omitted, instead of fabricating a disconnected START', async () => {
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        typebot: {
+          name: 'My Bot',
+          groups: [
+            {
+              id: 'grp_a',
+              title: 'A',
+              graphCoordinates: { x: 0, y: 0 },
+              blocks: [
+                { id: 'blk_a', type: 'text', content: { richText: [] } },
+              ],
+            },
+          ],
+          edges: [
+            {
+              id: 'e_start',
+              from: { eventId: 'ev_client' },
+              to: { groupId: 'grp_a' },
+            },
+          ],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow(/edge e_start <- event ev_client/)
+    expect(prisma.typebot.create).not.toHaveBeenCalled()
+  })
+
+  it('creates a flow whose groups, edges and events reference each other consistently', async () => {
+    vi.mocked(prisma.typebot.create).mockResolvedValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      validCreatedTypebot() as any
+    )
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        typebot: {
+          name: 'My Bot',
+          events: [
+            {
+              id: 'ev',
+              type: 'start',
+              graphCoordinates: { x: 0, y: 0 },
+              outgoingEdgeId: 'e_start',
+            },
+          ],
+          groups: [
+            {
+              id: 'grp_a',
+              title: 'A',
+              graphCoordinates: { x: 0, y: 0 },
+              blocks: [
+                {
+                  id: 'blk_a',
+                  type: 'text',
+                  content: { richText: [] },
+                  outgoingEdgeId: 'e_a_b',
+                },
+              ],
+            },
+            {
+              id: 'grp_b',
+              title: 'B',
+              graphCoordinates: { x: 0, y: 0 },
+              blocks: [
+                { id: 'blk_b', type: 'text', content: { richText: [] } },
+              ],
+            },
+          ],
+          edges: [
+            {
+              id: 'e_start',
+              from: { eventId: 'ev' },
+              to: { groupId: 'grp_a' },
+            },
+            {
+              id: 'e_a_b',
+              from: { blockId: 'blk_a' },
+              to: { groupId: 'grp_b', blockId: 'blk_b' },
+            },
+          ],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).resolves.toBeDefined()
+    expect(prisma.typebot.create).toHaveBeenCalledTimes(1)
+  })
+
   it('should throw if TOOL is missing tenant', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

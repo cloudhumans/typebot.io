@@ -6,6 +6,7 @@ import { getTypebot } from '@/features/typebot/api/getTypebot'
 import { listTypebots } from '@/features/typebot/api/listTypebots'
 import { listTypebotsClaudia } from '@/features/typebot/api/listTypebotsClaudia'
 import { getTypebotHistory } from '@/features/typebot/api/getTypebotHistory'
+import { rollbackTypebot } from '@/features/typebot/api/rollbackTypebot'
 
 // Curated subset exposed to the GAD via the typebot-admin MCP slug.
 // Authoring only (create/update/publish/get/list/history). Excludes
@@ -20,6 +21,7 @@ export const claudiaAdminRouter = router({
   listTypebots,
   listTypebotsClaudia,
   getTypebotHistory,
+  rollbackTypebot,
 })
 
 export type ClaudiaAdminRouter = typeof claudiaAdminRouter

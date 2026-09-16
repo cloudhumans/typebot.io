@@ -3,7 +3,7 @@ import { authenticatedProcedure } from '@/helpers/server/trpc'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 import { isReadTypebotForbidden } from '../helpers/isReadTypebotForbidden'
-import { TypebotHistoryOrigin } from '@typebot.io/prisma'
+import { Prisma, TypebotHistoryOrigin } from '@typebot.io/prisma'
 
 export const getTypebotHistory = authenticatedProcedure
   .meta({
@@ -47,6 +47,7 @@ export const getTypebotHistory = authenticatedProcedure
               image: z.string().nullable(),
             })
             .nullable(),
+          hasDanglingReferences: z.boolean(),
           content: z
             .object({
               name: z.string(),
@@ -168,6 +169,46 @@ export const getTypebotHistory = authenticatedProcedure
         nextCursor = nextItem!.id
       }
 
+      const snapshotIds = history.map((item) => item.id)
+      const danglingRows =
+        snapshotIds.length === 0
+          ? []
+          : await prisma.$queryRaw<
+              { id: string; hasDanglingReferences: boolean }[]
+            >(Prisma.sql`
+              SELECT h.id,
+                EXISTS (
+                  SELECT 1
+                  FROM jsonb_array_elements(
+                    CASE WHEN jsonb_typeof(h.edges) = 'array' THEN h.edges ELSE '[]'::jsonb END
+                  ) AS e
+                  WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements(
+                      CASE WHEN jsonb_typeof(h.groups) = 'array' THEN h.groups ELSE '[]'::jsonb END
+                    ) AS g
+                    WHERE g->>'id' = e->'to'->>'groupId'
+                      AND (
+                        e->'to'->>'blockId' IS NULL
+                        OR EXISTS (
+                          SELECT 1
+                          FROM jsonb_array_elements(
+                            CASE WHEN jsonb_typeof(g->'blocks') = 'array' THEN g->'blocks' ELSE '[]'::jsonb END
+                          ) AS b
+                          WHERE b->>'id' = e->'to'->>'blockId'
+                        )
+                      )
+                  )
+                ) AS "hasDanglingReferences"
+              FROM "TypebotHistory" h
+              WHERE h.id IN (${Prisma.join(snapshotIds)})
+            `)
+      const danglingSnapshotIds = new Set(
+        danglingRows
+          .filter((row) => row.hasDanglingReferences)
+          .map((row) => row.id)
+      )
+
       return {
         history: history.map((item) => ({
           id: item.id,
@@ -178,6 +219,7 @@ export const getTypebotHistory = authenticatedProcedure
           restoredFromId: item.restoredFromId,
           publishedAt: item.publishedAt,
           author: item.author,
+          hasDanglingReferences: danglingSnapshotIds.has(item.id),
           ...(!excludeContent && 'name' in item
             ? {
                 content: {
