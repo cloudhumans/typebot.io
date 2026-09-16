@@ -9,6 +9,8 @@ export const errorTypeEnum = z.enum([
   'missingWorkflowEndInFlowBranches',
   'missingCredential',
   'deprecatedCredential',
+  'danglingEdgeTarget',
+  'staleEdgeReference',
 ])
 export type ErrorType = z.infer<typeof errorTypeEnum>
 

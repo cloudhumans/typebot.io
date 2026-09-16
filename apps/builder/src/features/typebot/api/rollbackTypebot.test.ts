@@ -99,6 +99,33 @@ describe('rollbackTypebot', () => {
     expect(prisma.typebot.update).toHaveBeenCalledTimes(1)
   })
 
+  it('restores a snapshot whose only orphans are stale outgoingEdgeIds', async () => {
+    vi.mocked(prisma.typebotHistory.findFirst).mockResolvedValue(
+      snapshot({
+        groups: [
+          {
+            id: 'grp_a',
+            title: 'A',
+            graphCoordinates: { x: 0, y: 0 },
+            blocks: [
+              {
+                id: 'blk_a',
+                type: 'text',
+                content: { richText: [] },
+                outgoingEdgeId: 'e_gone',
+              },
+            ],
+          },
+        ],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    await expect(
+      caller()({ typebotId: 'tb-1', historyId: 'hist-1' })
+    ).resolves.toMatchObject({ historyId: 'hist-1' })
+  })
+
   it('refuses a snapshot whose edges point at missing groups', async () => {
     vi.mocked(prisma.typebotHistory.findFirst).mockResolvedValue(
       snapshot({

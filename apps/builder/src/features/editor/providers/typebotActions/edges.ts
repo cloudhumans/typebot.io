@@ -158,15 +158,10 @@ const deleteOutgoingEdgeIdProps = ({
   }
   const fromGroupIndex =
     groupIndex ??
-    typebot.groups.findIndex(
-      (g) =>
-        edge.to.groupId === g.id ||
-        g.blocks.some(
-          (b) =>
-            'blockId' in edge.from &&
-            (b.id === edge.from.blockId || b.id === edge.to.blockId)
-        )
+    typebot.groups.findIndex((g) =>
+      g.blocks.some((b) => 'blockId' in edge.from && b.id === edge.from.blockId)
     )
+  if (fromGroupIndex === -1) return
   const fromBlockIndex = typebot.groups[fromGroupIndex].blocks.findIndex(
     byId(edge.from.blockId)
   )

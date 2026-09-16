@@ -119,6 +119,40 @@ describe('createTypebot', () => {
     expect(prisma.typebot.create).not.toHaveBeenCalled()
   })
 
+  it('rejects edges leaving a start event when events are omitted, instead of fabricating a disconnected START', async () => {
+    const caller = router({ createTypebot }).createCaller({
+      user: mockUser,
+    } as never)
+
+    await expect(
+      caller.createTypebot({
+        workspaceId: mockWorkspace.id,
+        typebot: {
+          name: 'My Bot',
+          groups: [
+            {
+              id: 'grp_a',
+              title: 'A',
+              graphCoordinates: { x: 0, y: 0 },
+              blocks: [
+                { id: 'blk_a', type: 'text', content: { richText: [] } },
+              ],
+            },
+          ],
+          edges: [
+            {
+              id: 'e_start',
+              from: { eventId: 'ev_client' },
+              to: { groupId: 'grp_a' },
+            },
+          ],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow(/edge e_start <- event ev_client/)
+    expect(prisma.typebot.create).not.toHaveBeenCalled()
+  })
+
   it('creates a flow whose groups, edges and events reference each other consistently', async () => {
     vi.mocked(prisma.typebot.create).mockResolvedValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

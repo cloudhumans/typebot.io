@@ -19,7 +19,10 @@ import {
   sanitizeVariables,
 } from '../helpers/sanitizers'
 import { isWriteTypebotForbidden } from '../helpers/isWriteTypebotForbidden'
-import { assertUpdatePreservesIntegrity } from '../helpers/flowIntegrity'
+import {
+  assertUpdatePreservesIntegrity,
+  dropSourcelessEdges,
+} from '../helpers/flowIntegrity'
 import {
   normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
@@ -259,23 +262,30 @@ export const updateTypebot = authenticatedProcedure
       ? await sanitizeGroups(existingTypebot.workspace.id)(typebot.groups)
       : undefined
 
+    let edgesToWrite = typebot.edges
     if (
       groups !== undefined ||
       typebot.edges !== undefined ||
       typebot.events !== undefined
-    )
+    ) {
+      const resulting = {
+        groups: groups ?? existingTypebot.groups,
+        edges: typebot.edges ?? existingTypebot.edges,
+        events: typebot.events ?? existingTypebot.events,
+      }
       assertUpdatePreservesIntegrity({
         existing: {
           groups: existingTypebot.groups,
           edges: existingTypebot.edges,
           events: existingTypebot.events,
         },
-        resulting: {
-          groups: groups ?? existingTypebot.groups,
-          edges: typebot.edges ?? existingTypebot.edges,
-          events: typebot.events ?? existingTypebot.events,
-        },
+        resulting,
       })
+      const cleanedEdges = dropSourcelessEdges(resulting)
+      if (cleanedEdges !== resulting.edges)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        edgesToWrite = cleanedEdges as any
+    }
 
     let updatedSettings = typebot.settings
       ? sanitizeSettings(
@@ -327,7 +337,7 @@ export const updateTypebot = authenticatedProcedure
                 groups,
               })
             : undefined,
-        edges: typebot.edges,
+        edges: edgesToWrite,
         resultsTablePreferences:
           typebot.resultsTablePreferences === null
             ? Prisma.DbNull

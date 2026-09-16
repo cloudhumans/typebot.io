@@ -235,6 +235,23 @@ describe('updateTypebot', () => {
     expect(prisma.typebot.updateMany).not.toHaveBeenCalled()
   })
 
+  it('rejects removing a source group while keeping the edges that left it', async () => {
+    mockStoredFlow()
+    const flow = storedFlow()
+
+    await expect(
+      caller()({
+        typebotId: 'tb-1',
+        typebot: {
+          groups: flow.groups.slice(1),
+          edges: flow.edges,
+          events: flow.events,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    ).rejects.toThrow(/removing grp_a/)
+  })
+
   it('rejects partial groups sent together with partial edges', async () => {
     mockStoredFlow()
     const flow = storedFlow()
@@ -753,6 +770,9 @@ describe('updateTypebot', () => {
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue({
       ...baseExistingTypebot,
       ...asEnrichment,
+      events: [
+        { id: 'start', type: 'start', graphCoordinates: { x: 0, y: 0 } },
+      ],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 

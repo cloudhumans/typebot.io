@@ -138,6 +138,27 @@ describe('publishTypebot', () => {
     expect(prisma.typebotHistory.create).toHaveBeenCalledTimes(1)
   })
 
+  it('publishes a draft whose only orphans are stale outgoingEdgeIds', async () => {
+    vi.mocked(prisma.typebot.findFirst).mockResolvedValue(
+      existingTypebot({
+        groups: [
+          {
+            ...groups[0],
+            blocks: [{ ...groups[0].blocks[0], outgoingEdgeId: 'e_gone' }],
+          },
+          groups[1],
+        ],
+        edges: [edges[0]],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    await expect(caller()({ typebotId: 'tb-1' })).resolves.toEqual({
+      message: 'success',
+    })
+    expect(prisma.publicTypebot.createMany).toHaveBeenCalledTimes(1)
+  })
+
   it('still takes down the published version of a high-risk draft before refusing it for broken references', async () => {
     vi.mocked(computeRiskLevel).mockReturnValue(100)
     vi.mocked(prisma.typebot.findFirst).mockResolvedValue(

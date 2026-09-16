@@ -14,6 +14,7 @@ vi.mock('@typebot.io/lib/prisma', () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
+    $queryRaw: vi.fn(),
   },
 }))
 vi.mock('../helpers/isReadTypebotForbidden', () => ({
@@ -33,18 +34,6 @@ describe('getTypebotHistory', () => {
     restoredFromId: null,
     publishedAt: createdAt,
     author: null,
-    groups: [
-      {
-        id: 'grp_a',
-        title: 'A',
-        graphCoordinates: { x: 0, y: 0 },
-        blocks: [],
-      },
-    ],
-    events: [],
-    edges: [
-      { id: 'e_gone', from: { blockId: 'blk' }, to: { groupId: 'grp_gone' } },
-    ],
     ...overrides,
   })
 
@@ -74,10 +63,13 @@ describe('getTypebotHistory', () => {
     )
   })
 
-  it('flags an inconsistent snapshot even when content is excluded', async () => {
+  it('flags an inconsistent snapshot from SQL without loading its arrays when content is excluded', async () => {
     vi.mocked(prisma.typebotHistory.findMany).mockResolvedValue([
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       snapshot({}) as any,
+    ])
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
+      { id: 'hist-1', hasDanglingReferences: true },
     ])
 
     const result = await caller()({
@@ -90,9 +82,9 @@ describe('getTypebotHistory', () => {
     expect(result.history[0].content).toBeUndefined()
     const select = vi.mocked(prisma.typebotHistory.findMany).mock.calls[0][0]
       ?.select as Record<string, unknown>
-    expect(select.groups).toBe(true)
-    expect(select.edges).toBe(true)
-    expect(select.name).toBeUndefined()
+    expect(select.groups).toBeUndefined()
+    expect(select.edges).toBeUndefined()
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1)
   })
 
   it('returns hasDanglingReferences false alongside content for a consistent snapshot', async () => {
@@ -100,17 +92,33 @@ describe('getTypebotHistory', () => {
       snapshot({
         name: 'Flow',
         icon: null,
+        groups: [],
+        events: [],
         variables: [],
+        edges: [],
         theme: {},
         settings: {},
-        edges: [],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
+    ])
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
+      { id: 'hist-1', hasDanglingReferences: false },
     ])
 
     const result = await caller()({ typebotId: 'tb-1', limit: 20 })
 
     expect(result.history[0].hasDanglingReferences).toBe(false)
     expect(result.history[0].content?.name).toBe('Flow')
+  })
+
+  it('skips the SQL lookup when the page is empty', async () => {
+    vi.mocked(prisma.typebotHistory.findMany).mockResolvedValue([])
+    vi.mocked(prisma.typebotHistory.count).mockResolvedValue(0)
+    vi.mocked(prisma.typebotHistory.findFirst).mockResolvedValue(null)
+
+    const result = await caller()({ typebotId: 'tb-1', limit: 20 })
+
+    expect(result.history).toEqual([])
+    expect(prisma.$queryRaw).not.toHaveBeenCalled()
   })
 })

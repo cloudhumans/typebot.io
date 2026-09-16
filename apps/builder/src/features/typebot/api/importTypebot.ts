@@ -26,7 +26,10 @@ import {
   normalizeEnrichmentDeclareVariables,
   withBuiltInEnrichmentVariables,
 } from '../helpers/enrichmentVariables'
-import { assertFlowIntegrity } from '../helpers/flowIntegrity'
+import {
+  assertFlowIntegrity,
+  sanitizeSoftReferences,
+} from '../helpers/flowIntegrity'
 
 const omittedProps = {
   id: true,
@@ -192,8 +195,14 @@ export const importTypebot = authenticatedProcedure
         edges: finalEdges,
         events: migratedTypebot.events,
       },
-      'create'
+      'import'
     )
+
+    const sanitized = sanitizeSoftReferences({
+      groups: finalGroups,
+      edges: finalEdges,
+      events: migratedTypebot.events,
+    })
 
     const newTypebot = await prisma.typebot.create({
       data: {
@@ -202,8 +211,9 @@ export const importTypebot = authenticatedProcedure
         name: migratedTypebot.name,
         icon: migratedTypebot.icon,
         selectedThemeTemplateId: migratedTypebot.selectedThemeTemplateId,
-        groups: finalGroups,
-        events: migratedTypebot.events ?? undefined,
+        groups: sanitized.groups as TypebotV6['groups'],
+        events:
+          (sanitized.events as TypebotV6['events'] | undefined) ?? undefined,
         theme: migratedTypebot.theme ? migratedTypebot.theme : {},
         settings: migratedTypebot.settings
           ? sanitizeSettings(migratedTypebot.settings, workspace.plan, 'create')
@@ -219,7 +229,7 @@ export const importTypebot = authenticatedProcedure
           workspaceId: workspace.id,
         }),
         variables,
-        edges: finalEdges,
+        edges: sanitized.edges as TypebotV6['edges'],
         resultsTablePreferences:
           migratedTypebot.resultsTablePreferences ?? undefined,
         tenant: migratedTypebot.tenant ?? undefined,

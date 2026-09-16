@@ -33,6 +33,7 @@ import {
   ValidationErrorItem,
   validationErrorSchema,
 } from '../constants/errorTypes'
+import { findDanglingReferences } from '../helpers/flowIntegrity'
 
 const PREFILLED_VARIABLES = [
   'helpdeskId',
@@ -727,6 +728,8 @@ const getErrorMessage = (type: string, groupTitle?: string): string => {
       'Missing Tool Output block in flow branches',
     missingCredential: 'Missing credential',
     deprecatedCredential: 'Deprecated credential',
+    danglingEdgeTarget: 'Connection to a group or block that no longer exists',
+    staleEdgeReference: 'Leftover connection reference',
   }
   const baseMessage =
     errorMessages[type as keyof typeof errorMessages] || 'Validation Error'
@@ -735,6 +738,34 @@ const getErrorMessage = (type: string, groupTitle?: string): string => {
 
 const createGroupTitleMap = (groups: Group[]): Map<string, string> => {
   return new Map(groups.map((group) => [group.id, group.title]))
+}
+
+const collectDanglingReferenceErrors = (
+  groups: Group[],
+  edges: Edge[],
+  groupTitleMap: Map<string, string>
+): ValidationErrorItem[] => {
+  const seen = new Set<string>()
+  return findDanglingReferences({ groups, edges }).flatMap((reference) => {
+    const type =
+      reference.severity === 'hard'
+        ? 'danglingEdgeTarget'
+        : 'staleEdgeReference'
+    const key = `${type}:${reference.groupId ?? ''}`
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [
+      {
+        type,
+        severity: reference.severity === 'hard' ? 'error' : 'warning',
+        groupId: reference.groupId,
+        message: getErrorMessage(
+          type,
+          reference.groupId ? groupTitleMap.get(reference.groupId) : undefined
+        ),
+      } satisfies ValidationErrorItem,
+    ]
+  })
 }
 
 const validateTypebot = async ({
@@ -859,9 +890,16 @@ const validateTypebot = async ({
     )
   }
 
+  const danglingErrors = collectDanglingReferenceErrors(
+    groups,
+    safeEdges,
+    groupTitleMap
+  )
+
   const errors = [
     ...invalidGroupsErrors,
     ...brokenLinksErrors,
+    ...danglingErrors,
     ...missingCredentialErrors,
     ...deprecatedCredentialErrors,
     ...missingTextBeforeClaudiaErrors,

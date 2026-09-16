@@ -124,8 +124,46 @@ describe('importTypebot', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typebot: typebot as any,
       })
-    ).rejects.toThrow(/Flow is inconsistent/)
+    ).rejects.toThrow(/Cannot import this flow/)
     expect(prisma.typebot.create).not.toHaveBeenCalled()
+  })
+
+  it('imports a flow whose only orphans are stale outgoingEdgeIds and cleans them up', async () => {
+    const typebot = parseTestTypebot({
+      version: '6',
+      name: 'Legacy Flow',
+      groups: [
+        {
+          id: 'group1',
+          title: 'Group #1',
+          graphCoordinates: { x: 0, y: 0 },
+          blocks: [
+            {
+              id: 'block1',
+              type: 'text',
+              content: { richText: [] },
+              outgoingEdgeId: 'edge-gone',
+            },
+          ],
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ] as any,
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(prisma.typebot.create).mockResolvedValue(typebot as any)
+
+    await expect(
+      caller()({
+        workspaceId: mockWorkspace.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typebot: typebot as any,
+      })
+    ).resolves.toBeDefined()
+
+    const data = vi.mocked(prisma.typebot.create).mock.calls[0][0].data
+    const groups = data.groups as { blocks: { outgoingEdgeId?: string }[] }[]
+    expect(groups[0].blocks[0]).not.toHaveProperty('outgoingEdgeId')
+    expect((data.edges as { id: string }[]).map((e) => e.id)).toEqual([])
   })
 
   it('seeds the five built-in variables when importing a CONTEXT_ENRICHMENT flow', async () => {

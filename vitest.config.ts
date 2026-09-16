@@ -25,6 +25,7 @@ export default defineConfig({
       'apps/builder/src/features/auth/**/*.test.ts',
       'apps/builder/src/features/preview/helpers/*.test.ts',
       'apps/builder/src/features/typebot/**/*.test.ts',
+      'apps/builder/src/features/editor/providers/typebotActions/*.test.ts',
     ],
     exclude: [
       '**/node_modules/**',

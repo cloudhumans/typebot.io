@@ -280,7 +280,15 @@ export const TypebotProvider = ({
           typebot: newParsedTypebot,
         })
         setUpdateDate(updatedAt)
-      } catch {
+      } catch (error) {
+        const status = (error as { data?: { httpStatus?: number } } | null)
+          ?.data?.httpStatus
+        if (status === 400) {
+          setLocalTypebot({ ...typebot })
+          setGroupsCoordinates(typebot.groups)
+          flush()
+          return
+        }
         setLocalTypebot({
           ...localTypebot,
         })
@@ -290,6 +298,8 @@ export const TypebotProvider = ({
       isReadOnly,
       localTypebot,
       setLocalTypebot,
+      setGroupsCoordinates,
+      flush,
       setUpdateDate,
       typebot,
       updateTypebot,
