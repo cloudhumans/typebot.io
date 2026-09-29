@@ -54,6 +54,9 @@ COPY turbo.json turbo.json
 RUN SKIP_ENV_CHECK=true pnpm turbo run build --filter=${SCOPE}...
 
 FROM base AS runner
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
+ENV DD_GIT_REPOSITORY_URL=$DD_GIT_REPOSITORY_URL DD_GIT_COMMIT_SHA=$DD_GIT_COMMIT_SHA
 WORKDIR /app
 
 COPY --from=builder --chown=node:node /app/apps/${SCOPE}/.next/standalone ./
