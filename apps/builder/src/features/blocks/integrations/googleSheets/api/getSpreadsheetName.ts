@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
 import { getAuthenticatedGoogleClient } from '@typebot.io/lib/google'
 import { GoogleSpreadsheet } from 'google-spreadsheet'
+import { classifyGoogleSheetsError } from '../helpers/classifyGoogleSheetsError'
 
 export const getSpreadsheetName = authenticatedProcedure
   .input(
@@ -32,6 +33,7 @@ export const getSpreadsheetName = authenticatedProcedure
             },
             select: {
               id: true,
+              name: true,
               data: true,
               iv: true,
             },
@@ -66,7 +68,11 @@ export const getSpreadsheetName = authenticatedProcedure
 
         return { name: googleSheet.title }
       } catch (e) {
-        return { name: '' }
+        return {
+          name: '',
+          error: classifyGoogleSheetsError(e),
+          accountEmail: credentials.name,
+        }
       }
     }
   )

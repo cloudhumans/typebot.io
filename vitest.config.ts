@@ -24,6 +24,7 @@ export default defineConfig({
       'packages/**/*.test.ts',
       'apps/builder/src/features/auth/**/*.test.ts',
       'apps/builder/src/features/preview/helpers/*.test.ts',
+      'apps/builder/src/features/blocks/integrations/googleSheets/helpers/*.test.ts',
       'apps/builder/src/features/typebot/**/*.test.ts',
       'apps/builder/src/features/editor/providers/typebotActions/*.test.ts',
     ],

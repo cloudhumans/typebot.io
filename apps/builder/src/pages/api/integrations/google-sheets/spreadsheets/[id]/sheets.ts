@@ -10,6 +10,7 @@ import {
 import { setUser } from '@sentry/nextjs'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import logger from '@/helpers/logger'
+import { classifyGoogleSheetsError } from '@/features/blocks/integrations/googleSheets/helpers/classifyGoogleSheetsError'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const user = await getAuthenticatedUser(req, res)
@@ -26,7 +27,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         .status(404)
         .send({ message: "Couldn't find credentials in database" })
     const doc = new GoogleSpreadsheet(spreadsheetId, auth.client)
-    await doc.loadInfo()
+    try {
+      await doc.loadInfo()
+    } catch (err) {
+      const accessError = classifyGoogleSheetsError(err)
+      logger.warn('Could not load Google spreadsheet', {
+        spreadsheetId,
+        credentialsId,
+        accessError,
+      })
+      if (accessError === 'FORBIDDEN')
+        return res.status(403).send({
+          message: `${auth.credentials.name} has no access to this spreadsheet`,
+        })
+      if (accessError === 'NOT_FOUND')
+        return res.status(404).send({ message: 'Spreadsheet not found' })
+      return res.status(502).send({ message: "Couldn't load the spreadsheet" })
+    }
     return res.send({
       sheets: (
         await Promise.all(

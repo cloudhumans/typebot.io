@@ -67,6 +67,9 @@ export const GoogleSheetsSettings = ({
       credentialsId,
     })
 
+  const handleSpreadsheetIdChange = (spreadsheetId: string) =>
+    onOptionsChange({ ...options, spreadsheetId })
+
   // Both popup results (connect credentialsId, picked spreadsheetId) are applied
   // by a durable listener mounted at the editor root
   // (useGoogleSheetsOAuthListener), which targets the block by id even if this
@@ -114,6 +117,7 @@ export const GoogleSheetsSettings = ({
           workspaceId={workspace.id}
           credentialsId={options.credentialsId}
           blockId={blockId}
+          onSpreadsheetIdChange={handleSpreadsheetIdChange}
         />
       )}
       {options?.spreadsheetId && options.credentialsId && (
