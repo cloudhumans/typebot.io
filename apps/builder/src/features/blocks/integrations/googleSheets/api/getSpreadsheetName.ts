@@ -69,13 +69,14 @@ export const getSpreadsheetName = authenticatedProcedure
 
         return { name: googleSheet.title }
       } catch (e) {
+        const error = classifyGoogleSheetsError(e)
         return {
           name: '',
-          error: classifyGoogleSheetsError(e),
-          accountEmail: await getCredentialsAccountEmail(
-            client,
-            credentials.name
-          ),
+          error,
+          accountEmail:
+            error === 'FORBIDDEN'
+              ? await getCredentialsAccountEmail(client, credentials.name)
+              : credentials.name,
         }
       }
     }
