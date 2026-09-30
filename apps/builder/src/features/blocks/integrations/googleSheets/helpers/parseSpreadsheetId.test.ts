@@ -1,0 +1,96 @@
+import { describe, expect, it } from 'vitest'
+import {
+  isPublishedSpreadsheetLink,
+  isSpreadsheetId,
+  parseSpreadsheetId,
+} from './parseSpreadsheetId'
+
+const id = '14kFHPRHb9_lXkbVHxhY4obaxWwghaZjobqB3TrAqX1Y'
+
+describe('parseSpreadsheetId', () => {
+  it('accepts a bare spreadsheet id', () => {
+    expect(parseSpreadsheetId(id)).toBe(id)
+  })
+
+  it('trims surrounding whitespace', () => {
+    expect(parseSpreadsheetId(`  ${id}\n`)).toBe(id)
+  })
+
+  it('extracts the id from an edit link', () => {
+    expect(
+      parseSpreadsheetId(
+        `https://docs.google.com/spreadsheets/d/${id}/edit?gid=1063004136#gid=1063004136`
+      )
+    ).toBe(id)
+  })
+
+  it('extracts the id from a link without a trailing path', () => {
+    expect(
+      parseSpreadsheetId(`https://docs.google.com/spreadsheets/d/${id}`)
+    ).toBe(id)
+  })
+
+  it('extracts the id from a multi-account link', () => {
+    expect(
+      parseSpreadsheetId(
+        `https://docs.google.com/spreadsheets/u/1/d/${id}/edit#gid=0`
+      )
+    ).toBe(id)
+  })
+
+  it('rejects empty input', () => {
+    expect(parseSpreadsheetId('   ')).toBeNull()
+  })
+
+  it('rejects links that are not spreadsheets', () => {
+    expect(
+      parseSpreadsheetId(`https://docs.google.com/document/d/${id}/edit`)
+    ).toBeNull()
+  })
+
+  it('rejects arbitrary text', () => {
+    expect(parseSpreadsheetId('minha planilha')).toBeNull()
+  })
+
+  it('rejects ids that are too short to be real', () => {
+    expect(
+      parseSpreadsheetId('https://docs.google.com/spreadsheets/d/abc/edit')
+    ).toBeNull()
+  })
+})
+
+describe('isSpreadsheetId', () => {
+  it('accepts a real spreadsheet id', () => {
+    expect(isSpreadsheetId(id)).toBe(true)
+  })
+
+  it('rejects path traversal and query injection', () => {
+    expect(isSpreadsheetId('../../drive/v3/files')).toBe(false)
+    expect(isSpreadsheetId(`${id}?fields=*`)).toBe(false)
+  })
+
+  it('rejects ids that are too short to be real', () => {
+    expect(isSpreadsheetId('abc')).toBe(false)
+  })
+})
+
+describe('isPublishedSpreadsheetLink', () => {
+  const published =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vQx9fAkeFakeFakeFakeFakeFakeFakeFakeFake/pubhtml'
+
+  it('detects a "publish to the web" link', () => {
+    expect(isPublishedSpreadsheetLink(published)).toBe(true)
+  })
+
+  it('is not parsed as a spreadsheet id', () => {
+    expect(parseSpreadsheetId(published)).toBeNull()
+  })
+
+  it('does not flag an edit link', () => {
+    expect(
+      isPublishedSpreadsheetLink(
+        `https://docs.google.com/spreadsheets/d/${id}/edit`
+      )
+    ).toBe(false)
+  })
+})

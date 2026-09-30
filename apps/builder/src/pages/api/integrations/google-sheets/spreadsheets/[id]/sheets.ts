@@ -10,6 +10,8 @@ import {
 import { setUser } from '@sentry/nextjs'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import logger from '@/helpers/logger'
+import { describeSpreadsheetAccessFailure } from '@/features/blocks/integrations/googleSheets/helpers/describeSpreadsheetAccessFailure'
+import { isSpreadsheetId } from '@/features/blocks/integrations/googleSheets/helpers/parseSpreadsheetId'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const user = await getAuthenticatedUser(req, res)
@@ -20,13 +22,45 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const credentialsId = req.query.credentialsId as string | undefined
     if (!credentialsId) return badRequest(res)
     const spreadsheetId = req.query.id as string
+    if (!isSpreadsheetId(spreadsheetId)) return badRequest(res)
     const auth = await getAuthenticatedGoogleClient(user, credentialsId)
     if (!auth)
       return res
         .status(404)
         .send({ message: "Couldn't find credentials in database" })
     const doc = new GoogleSpreadsheet(spreadsheetId, auth.client)
-    await doc.loadInfo()
+    try {
+      await doc.loadInfo()
+    } catch (err) {
+      const { error: accessError, accountEmail } =
+        await describeSpreadsheetAccessFailure(
+          err,
+          auth.client,
+          auth.credentials.name
+        )
+      logger.warn('Could not load Google spreadsheet', {
+        spreadsheetId,
+        credentialsId,
+        accessError,
+      })
+      if (accessError === 'FORBIDDEN')
+        return res.status(403).send({
+          message: `${
+            accountEmail ?? auth.credentials.name
+          } has no access to this spreadsheet`,
+        })
+      if (accessError === 'NOT_FOUND')
+        return res.status(404).send({ message: 'Spreadsheet not found' })
+      if (accessError === 'UNAUTHORIZED')
+        return res.status(401).send({
+          message: 'Google account connection expired, reconnect it',
+        })
+      if (accessError === 'UNSUPPORTED_DOCUMENT')
+        return res
+          .status(400)
+          .send({ message: 'File is not a native Google Sheets spreadsheet' })
+      return res.status(502).send({ message: "Couldn't load the spreadsheet" })
+    }
     return res.send({
       sheets: (
         await Promise.all(

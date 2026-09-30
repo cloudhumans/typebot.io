@@ -5,13 +5,17 @@ import { z } from 'zod'
 import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
 import { getAuthenticatedGoogleClient } from '@typebot.io/lib/google'
 import { GoogleSpreadsheet } from 'google-spreadsheet'
+import { describeSpreadsheetAccessFailure } from '../helpers/describeSpreadsheetAccessFailure'
+import { isSpreadsheetId } from '../helpers/parseSpreadsheetId'
 
 export const getSpreadsheetName = authenticatedProcedure
   .input(
     z.object({
       workspaceId: z.string(),
       credentialsId: z.string(),
-      spreadsheetId: z.string(),
+      spreadsheetId: z
+        .string()
+        .refine(isSpreadsheetId, { message: 'Invalid spreadsheet id' }),
     })
   )
   .query(
@@ -32,6 +36,7 @@ export const getSpreadsheetName = authenticatedProcedure
             },
             select: {
               id: true,
+              name: true,
               data: true,
               iv: true,
             },
@@ -66,7 +71,14 @@ export const getSpreadsheetName = authenticatedProcedure
 
         return { name: googleSheet.title }
       } catch (e) {
-        return { name: '' }
+        return {
+          name: '',
+          ...(await describeSpreadsheetAccessFailure(
+            e,
+            client,
+            credentials.name
+          )),
+        }
       }
     }
   )
