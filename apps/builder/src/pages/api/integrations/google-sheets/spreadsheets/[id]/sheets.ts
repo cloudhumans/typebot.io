@@ -10,8 +10,7 @@ import {
 import { setUser } from '@sentry/nextjs'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import logger from '@/helpers/logger'
-import { classifyGoogleSheetsError } from '@/features/blocks/integrations/googleSheets/helpers/classifyGoogleSheetsError'
-import { getCredentialsAccountEmail } from '@/features/blocks/integrations/googleSheets/helpers/getCredentialsAccountEmail'
+import { describeSpreadsheetAccessFailure } from '@/features/blocks/integrations/googleSheets/helpers/describeSpreadsheetAccessFailure'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const user = await getAuthenticatedUser(req, res)
@@ -31,7 +30,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       await doc.loadInfo()
     } catch (err) {
-      const accessError = classifyGoogleSheetsError(err)
+      const { error: accessError, accountEmail } =
+        await describeSpreadsheetAccessFailure(
+          err,
+          auth.client,
+          auth.credentials.name
+        )
       logger.warn('Could not load Google spreadsheet', {
         spreadsheetId,
         credentialsId,
@@ -39,10 +43,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
       if (accessError === 'FORBIDDEN')
         return res.status(403).send({
-          message: `${await getCredentialsAccountEmail(
-            auth.client,
-            auth.credentials.name
-          )} has no access to this spreadsheet`,
+          message: `${accountEmail} has no access to this spreadsheet`,
         })
       if (accessError === 'NOT_FOUND')
         return res.status(404).send({ message: 'Spreadsheet not found' })

@@ -5,8 +5,7 @@ import { z } from 'zod'
 import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWorkspaceFobidden'
 import { getAuthenticatedGoogleClient } from '@typebot.io/lib/google'
 import { GoogleSpreadsheet } from 'google-spreadsheet'
-import { classifyGoogleSheetsError } from '../helpers/classifyGoogleSheetsError'
-import { getCredentialsAccountEmail } from '../helpers/getCredentialsAccountEmail'
+import { describeSpreadsheetAccessFailure } from '../helpers/describeSpreadsheetAccessFailure'
 
 export const getSpreadsheetName = authenticatedProcedure
   .input(
@@ -69,14 +68,13 @@ export const getSpreadsheetName = authenticatedProcedure
 
         return { name: googleSheet.title }
       } catch (e) {
-        const error = classifyGoogleSheetsError(e)
         return {
           name: '',
-          error,
-          accountEmail:
-            error === 'FORBIDDEN'
-              ? await getCredentialsAccountEmail(client, credentials.name)
-              : credentials.name,
+          ...(await describeSpreadsheetAccessFailure(
+            e,
+            client,
+            credentials.name
+          )),
         }
       }
     }
