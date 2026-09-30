@@ -32,20 +32,13 @@ const HANDLE_WIDTH = 24
 const HANDLE_HEIGHT = 120
 const VALUE_MAX_CHARS = 40
 
-const getVariableType = (value: unknown): string => {
-  if (value === null || value === undefined) return 'Null'
-  if (Array.isArray(value)) return 'List'
-  switch (typeof value) {
-    case 'number':
-      return 'Number'
-    case 'boolean':
-      return 'Boolean'
-    case 'object':
-      return 'Object'
-    default:
-      return 'String'
-  }
-}
+// The Type column is JS `typeof`, verbatim — no relabelling on top, so arrays
+// read 'object' like they do in a Code block. The server captures it on every
+// write and sends it, because the value travels as text: see
+// `previewMetadata.variableTypes`. `typeof` on the received value is only the
+// fallback, for variables the run never wrote.
+const getVariableType = (variable: DebugVariable): string =>
+  variable.type ?? typeof variable.value
 
 const formatValue = (value: unknown): string => {
   if (value === null || value === undefined) return ''
@@ -206,9 +199,7 @@ export const DebugVariablesPanel = ({ variables }: Props) => {
                             </Button>
                           )}
                         </Td>
-                        <Td color={mutedColor}>
-                          {getVariableType(variable.value)}
-                        </Td>
+                        <Td color={mutedColor}>{getVariableType(variable)}</Td>
                       </Tr>
                     )
                   })}
