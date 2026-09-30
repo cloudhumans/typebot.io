@@ -43,6 +43,7 @@ export const GoogleSpreadsheetPicker = ({
   const trpcContext = trpc.useContext()
   const [linkErrorMessage, setLinkErrorMessage] = useState<string>()
   const [isCheckingLink, setIsCheckingLink] = useState(false)
+  const linkCheckId = useRef(0)
   const latestCredentialsId = useRef(credentialsId)
   const latestOnSpreadsheetIdChange = useRef(onSpreadsheetIdChange)
   useEffect(() => {
@@ -119,6 +120,10 @@ export const GoogleSpreadsheetPicker = ({
     }
     setLinkErrorMessage(undefined)
     setIsCheckingLink(true)
+    const checkId = ++linkCheckId.current
+    const isSuperseded = () =>
+      checkId !== linkCheckId.current ||
+      latestCredentialsId.current !== credentialsId
     try {
       const pastedSpreadsheet =
         await trpcContext.sheets.getSpreadsheetName.fetch({
@@ -126,7 +131,7 @@ export const GoogleSpreadsheetPicker = ({
           credentialsId,
           spreadsheetId: pastedSpreadsheetId,
         })
-      if (latestCredentialsId.current !== credentialsId) return false
+      if (isSuperseded()) return false
       const accessError = toAccessErrorMessage(pastedSpreadsheet)
       if (accessError) {
         setLinkErrorMessage(accessError)
@@ -135,13 +140,20 @@ export const GoogleSpreadsheetPicker = ({
       latestOnSpreadsheetIdChange.current(pastedSpreadsheetId)
       return true
     } catch {
+      if (isSuperseded()) return false
       setLinkErrorMessage(
         t('blocks.integrations.googleSheets.picker.error.unknown')
       )
       return false
     } finally {
-      setIsCheckingLink(false)
+      if (checkId === linkCheckId.current) setIsCheckingLink(false)
     }
+  }
+
+  const cancelLinkCheck = () => {
+    linkCheckId.current++
+    setIsCheckingLink(false)
+    setLinkErrorMessage(undefined)
   }
 
   const accessErrorMessage = spreadsheetData
@@ -153,7 +165,8 @@ export const GoogleSpreadsheetPicker = ({
       isCollapsible={isCollapsible}
       isLoading={isCheckingLink}
       errorMessage={linkErrorMessage}
-      onChange={() => setLinkErrorMessage(undefined)}
+      onChange={cancelLinkCheck}
+      onCancel={cancelLinkCheck}
       onSubmit={applySpreadsheetLink}
     />
   )

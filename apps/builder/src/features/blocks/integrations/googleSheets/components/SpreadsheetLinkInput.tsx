@@ -7,6 +7,7 @@ type Props = {
   isLoading: boolean
   errorMessage?: string
   onChange: () => void
+  onCancel: () => void
   onSubmit: (link: string) => Promise<boolean>
 }
 
@@ -15,6 +16,7 @@ export const SpreadsheetLinkInput = ({
   isLoading,
   errorMessage,
   onChange,
+  onCancel,
   onSubmit,
 }: Props) => {
   const { t } = useTranslate()
@@ -70,7 +72,7 @@ export const SpreadsheetLinkInput = ({
             onClick={() => {
               setLink('')
               setIsExpanded(false)
-              onChange()
+              onCancel()
             }}
           >
             {t('cancel')}
