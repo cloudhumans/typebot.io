@@ -83,9 +83,9 @@ export const GoogleSpreadsheetPicker = ({
     // A null handle means the browser blocked the popup; warn the user.
     if (!popup)
       showToast({
-        description: 'Please allow popups for this site to pick a spreadsheet.',
+        description: t('blocks.integrations.googleSheets.picker.popupBlocked'),
       })
-  }, [workspaceId, credentialsId, blockId, searchParams, showToast])
+  }, [workspaceId, credentialsId, blockId, searchParams, showToast, t])
 
   const toAccessErrorMessage = (
     data: NonNullable<typeof spreadsheetData>
@@ -205,7 +205,9 @@ export const GoogleSpreadsheetPicker = ({
             size="sm"
             icon={<FileIcon />}
             onClick={openPicker}
-            aria-label={'Pick another spreadsheet'}
+            aria-label={t(
+              'blocks.integrations.googleSheets.picker.pickAnother'
+            )}
           />
         </Flex>
         {pasteLinkInput}
@@ -217,7 +219,7 @@ export const GoogleSpreadsheetPicker = ({
         onClick={openPicker}
         isLoading={isDefined(spreadsheetId) && status === 'loading'}
       >
-        Pick a spreadsheet
+        {t('blocks.integrations.googleSheets.picker.pickButton')}
       </Button>
       {accessErrorMessage && (
         <Text fontSize="sm" color="red.500">
