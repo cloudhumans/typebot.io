@@ -6,13 +6,16 @@ import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWork
 import { getAuthenticatedGoogleClient } from '@typebot.io/lib/google'
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { describeSpreadsheetAccessFailure } from '../helpers/describeSpreadsheetAccessFailure'
+import { isSpreadsheetId } from '../helpers/parseSpreadsheetId'
 
 export const getSpreadsheetName = authenticatedProcedure
   .input(
     z.object({
       workspaceId: z.string(),
       credentialsId: z.string(),
-      spreadsheetId: z.string(),
+      spreadsheetId: z
+        .string()
+        .refine(isSpreadsheetId, { message: 'Invalid spreadsheet id' }),
     })
   )
   .query(

@@ -11,6 +11,7 @@ import { setUser } from '@sentry/nextjs'
 import { getAuthenticatedUser } from '@/features/auth/helpers/getAuthenticatedUser'
 import logger from '@/helpers/logger'
 import { describeSpreadsheetAccessFailure } from '@/features/blocks/integrations/googleSheets/helpers/describeSpreadsheetAccessFailure'
+import { isSpreadsheetId } from '@/features/blocks/integrations/googleSheets/helpers/parseSpreadsheetId'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const user = await getAuthenticatedUser(req, res)
@@ -21,6 +22,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const credentialsId = req.query.credentialsId as string | undefined
     if (!credentialsId) return badRequest(res)
     const spreadsheetId = req.query.id as string
+    if (!isSpreadsheetId(spreadsheetId)) return badRequest(res)
     const auth = await getAuthenticatedGoogleClient(user, credentialsId)
     if (!auth)
       return res

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSpreadsheetId } from './parseSpreadsheetId'
+import { isSpreadsheetId, parseSpreadsheetId } from './parseSpreadsheetId'
 
 const id = '14kFHPRHb9_lXkbVHxhY4obaxWwghaZjobqB3TrAqX1Y'
 
@@ -52,5 +52,20 @@ describe('parseSpreadsheetId', () => {
     expect(
       parseSpreadsheetId('https://docs.google.com/spreadsheets/d/abc/edit')
     ).toBeNull()
+  })
+})
+
+describe('isSpreadsheetId', () => {
+  it('accepts a real spreadsheet id', () => {
+    expect(isSpreadsheetId(id)).toBe(true)
+  })
+
+  it('rejects path traversal and query injection', () => {
+    expect(isSpreadsheetId('../../drive/v3/files')).toBe(false)
+    expect(isSpreadsheetId(`${id}?fields=*`)).toBe(false)
+  })
+
+  it('rejects ids that are too short to be real', () => {
+    expect(isSpreadsheetId('abc')).toBe(false)
   })
 })

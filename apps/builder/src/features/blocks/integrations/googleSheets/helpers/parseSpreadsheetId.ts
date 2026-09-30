@@ -2,6 +2,9 @@ const SPREADSHEET_ID_PATTERN = /^[a-zA-Z0-9_-]{25,}$/
 const SPREADSHEET_URL_PATTERN =
   /\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/
 
+export const isSpreadsheetId = (value: string): boolean =>
+  SPREADSHEET_ID_PATTERN.test(value)
+
 export const parseSpreadsheetId = (input: string): string | null => {
   const value = input.trim()
   if (!value) return null
