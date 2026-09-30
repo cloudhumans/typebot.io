@@ -34,10 +34,4 @@ export const applyDatadogError = <T extends object>(info: T): T => {
   return info
 }
 
-export const splitErrorArgument = (args: unknown[]) => {
-  const error = args.find(isError)
-  return {
-    error,
-    rest: error ? args.filter((arg) => arg !== error) : args,
-  }
-}
+export const findError = (args: unknown[]) => args.find(isError)

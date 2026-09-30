@@ -1,4 +1,5 @@
-import { applyDatadogError, splitErrorArgument } from './datadogError'
+import { findError } from './datadogError'
+import { createLogFormat } from './loggerFormat'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let logger: any
@@ -15,24 +16,6 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
     process.env.LOG_LEVEL ||
     (process.env.NODE_ENV === 'production' ? 'info' : 'debug')
 
-  const baseFormats = [
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-  ]
-
-  const jsonFormat = winston.format.combine(
-    winston.format(applyDatadogError)(),
-    winston.format.json()
-  )
-  const prettyFormat = winston.format.combine(
-    winston.format.colorize({ all: true }),
-    winston.format.printf((info: any) => {
-      const { timestamp, level, message, stack, ...rest } = info
-      const restStr = Object.keys(rest).length ? ' ' + JSON.stringify(rest) : ''
-      return `${stack ? stack : message}${restStr}`
-    })
-  )
-
   logger = winston.createLogger({
     level,
     exitOnError: false,
@@ -42,10 +25,7 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
       ddsource: 'nodejs',
       service: process.env.DD_SERVICE ?? 'typebot-runner',
     },
-    format: winston.format.combine(
-      ...baseFormats,
-      prettyEnabled ? prettyFormat : jsonFormat
-    ),
+    format: createLogFormat(winston, prettyEnabled),
     transports: [new winston.transports.Console()],
   })
 
@@ -57,9 +37,9 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
   console.info = (...args: unknown[]) => logger.info(util.format(...args))
   console.warn = (...args: unknown[]) => logger.warn(util.format(...args))
   console.error = (...args: unknown[]) => {
-    const { error, rest } = splitErrorArgument(args)
+    const error = findError(args)
     if (!error) return logger.error(util.format(...args))
-    logger.error(rest.length ? util.format(...rest) : error.message, { error })
+    logger.error(util.format(...args), { error })
   }
   console.debug = (...args: unknown[]) => logger.debug(util.format(...args))
 } else {

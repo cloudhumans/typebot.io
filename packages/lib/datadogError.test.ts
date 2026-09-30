@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyDatadogError, splitErrorArgument } from './datadogError'
+import { applyDatadogError, findError } from './datadogError'
 
 describe('applyDatadogError', () => {
   it('maps an Error under `error` into kind, message and stack', () => {
@@ -48,19 +48,14 @@ describe('applyDatadogError', () => {
   })
 })
 
-describe('splitErrorArgument', () => {
-  it('separates the first Error from the other console arguments', () => {
+describe('findError', () => {
+  it('returns the first Error among the console arguments', () => {
     const error = new Error('bad')
-    const { error: found, rest } = splitErrorArgument(['Health check failed', error])
 
-    expect(found).toBe(error)
-    expect(rest).toEqual(['Health check failed'])
+    expect(findError(['Health check failed', error])).toBe(error)
   })
 
-  it('returns no error when none of the arguments is an Error', () => {
-    const { error, rest } = splitErrorArgument(['a', 1])
-
-    expect(error).toBeUndefined()
-    expect(rest).toEqual(['a', 1])
+  it('returns undefined when none of the arguments is an Error', () => {
+    expect(findError(['a', 1])).toBeUndefined()
   })
 })
