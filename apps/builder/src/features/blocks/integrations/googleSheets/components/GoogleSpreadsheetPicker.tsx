@@ -15,7 +15,10 @@ import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
 import { useToast } from '@/hooks/useToast'
 import { useTranslate } from '@tolgee/react'
-import { parseSpreadsheetId } from '../helpers/parseSpreadsheetId'
+import {
+  isPublishedSpreadsheetLink,
+  parseSpreadsheetId,
+} from '../helpers/parseSpreadsheetId'
 import {
   appendEmbeddedAuthParams,
   readEmbeddedAuthParams,
@@ -109,6 +112,12 @@ export const GoogleSpreadsheetPicker = ({
   }
 
   const applySpreadsheetLink = async () => {
+    if (isPublishedSpreadsheetLink(spreadsheetLink)) {
+      setLinkErrorMessage(
+        t('blocks.integrations.googleSheets.picker.pasteLink.publishedLink')
+      )
+      return
+    }
     const pastedSpreadsheetId = parseSpreadsheetId(spreadsheetLink)
     if (!pastedSpreadsheetId) {
       setLinkErrorMessage(

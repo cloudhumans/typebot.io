@@ -257,6 +257,7 @@
   "blocks.integrations.googleSheets.picker.pasteLink.placeholder": "https://docs.google.com/spreadsheets/d/...",
   "blocks.integrations.googleSheets.picker.pasteLink.apply": "Use this spreadsheet",
   "blocks.integrations.googleSheets.picker.pasteLink.invalid": "This doesn't look like a Google Sheets link",
+  "blocks.integrations.googleSheets.picker.pasteLink.publishedLink": "This is a \"Publish to the web\" link. Paste the link from the address bar while editing the spreadsheet instead.",
   "blocks.integrations.googleSheets.picker.error.forbidden": "{email} has no access to this spreadsheet. Share it with this account and try again.",
   "blocks.integrations.googleSheets.picker.error.notFound": "Spreadsheet not found. Check the link and try again.",
   "blocks.integrations.googleSheets.picker.error.unknown": "Couldn't load this spreadsheet. Try again in a moment.",

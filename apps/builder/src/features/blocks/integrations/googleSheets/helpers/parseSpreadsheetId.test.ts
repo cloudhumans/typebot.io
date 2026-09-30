@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { isSpreadsheetId, parseSpreadsheetId } from './parseSpreadsheetId'
+import {
+  isPublishedSpreadsheetLink,
+  isSpreadsheetId,
+  parseSpreadsheetId,
+} from './parseSpreadsheetId'
 
 const id = '14kFHPRHb9_lXkbVHxhY4obaxWwghaZjobqB3TrAqX1Y'
 
@@ -67,5 +71,26 @@ describe('isSpreadsheetId', () => {
 
   it('rejects ids that are too short to be real', () => {
     expect(isSpreadsheetId('abc')).toBe(false)
+  })
+})
+
+describe('isPublishedSpreadsheetLink', () => {
+  const published =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vQx9fAkeFakeFakeFakeFakeFakeFakeFakeFake/pubhtml'
+
+  it('detects a "publish to the web" link', () => {
+    expect(isPublishedSpreadsheetLink(published)).toBe(true)
+  })
+
+  it('is not parsed as a spreadsheet id', () => {
+    expect(parseSpreadsheetId(published)).toBeNull()
+  })
+
+  it('does not flag an edit link', () => {
+    expect(
+      isPublishedSpreadsheetLink(
+        `https://docs.google.com/spreadsheets/d/${id}/edit`
+      )
+    ).toBe(false)
   })
 })

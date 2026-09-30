@@ -257,6 +257,7 @@
   "blocks.integrations.googleSheets.picker.pasteLink.placeholder": "https://docs.google.com/spreadsheets/d/...",
   "blocks.integrations.googleSheets.picker.pasteLink.apply": "Usar esta planilha",
   "blocks.integrations.googleSheets.picker.pasteLink.invalid": "Isso não parece um link do Google Planilhas",
+  "blocks.integrations.googleSheets.picker.pasteLink.publishedLink": "Este é um link de \"Publicar na Web\". Cole o link da barra de endereço com a planilha aberta para edição.",
   "blocks.integrations.googleSheets.picker.error.forbidden": "{email} não tem acesso a esta planilha. Compartilhe a planilha com essa conta e tente de novo.",
   "blocks.integrations.googleSheets.picker.error.notFound": "Planilha não encontrada. Confira o link e tente de novo.",
   "blocks.integrations.googleSheets.picker.error.unknown": "Não foi possível carregar esta planilha. Tente de novo em instantes.",
