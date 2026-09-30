@@ -186,7 +186,7 @@ export const GoogleSpreadsheetPicker = ({
       >
         {t('blocks.integrations.googleSheets.picker.pickButton')}
       </Button>
-      {accessErrorMessage && (
+      {accessErrorMessage && !linkErrorMessage && (
         <Text fontSize="sm" color="red.500">
           {accessErrorMessage}
         </Text>
