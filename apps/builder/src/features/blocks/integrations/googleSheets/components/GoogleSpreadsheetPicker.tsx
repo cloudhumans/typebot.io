@@ -9,7 +9,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
 import { isDefined } from '@typebot.io/lib'
@@ -48,6 +48,12 @@ export const GoogleSpreadsheetPicker = ({
   const [spreadsheetLink, setSpreadsheetLink] = useState('')
   const [linkErrorMessage, setLinkErrorMessage] = useState<string>()
   const [isCheckingLink, setIsCheckingLink] = useState(false)
+  const latestCredentialsId = useRef(credentialsId)
+  const latestOnSpreadsheetIdChange = useRef(onSpreadsheetIdChange)
+  useEffect(() => {
+    latestCredentialsId.current = credentialsId
+    latestOnSpreadsheetIdChange.current = onSpreadsheetIdChange
+  })
   const { data: spreadsheetData, status } =
     trpc.sheets.getSpreadsheetName.useQuery(
       {
@@ -111,13 +117,14 @@ export const GoogleSpreadsheetPicker = ({
           credentialsId,
           spreadsheetId: pastedSpreadsheetId,
         })
+      if (latestCredentialsId.current !== credentialsId) return
       const accessError = toAccessErrorMessage(pastedSpreadsheet)
       if (accessError) {
         setLinkErrorMessage(accessError)
         return
       }
       setSpreadsheetLink('')
-      onSpreadsheetIdChange(pastedSpreadsheetId)
+      latestOnSpreadsheetIdChange.current(pastedSpreadsheetId)
     } catch {
       setLinkErrorMessage(
         t('blocks.integrations.googleSheets.picker.error.unknown')
