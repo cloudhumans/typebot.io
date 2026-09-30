@@ -1,17 +1,10 @@
 import { FileIcon } from '@/components/icons'
 import { trpc } from '@/lib/trpc'
-import {
-  Button,
-  Flex,
-  HStack,
-  IconButton,
-  Input,
-  Stack,
-  Text,
-} from '@chakra-ui/react'
+import { Button, Flex, HStack, IconButton, Stack, Text } from '@chakra-ui/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { GoogleSheetsLogo } from './GoogleSheetsLogo'
+import { SpreadsheetLinkInput } from './SpreadsheetLinkInput'
 import { isDefined } from '@typebot.io/lib'
 import { useToast } from '@/hooks/useToast'
 import { useTranslate } from '@tolgee/react'
@@ -48,7 +41,6 @@ export const GoogleSpreadsheetPicker = ({
   const { showToast } = useToast()
   const { t } = useTranslate()
   const trpcContext = trpc.useContext()
-  const [spreadsheetLink, setSpreadsheetLink] = useState('')
   const [linkErrorMessage, setLinkErrorMessage] = useState<string>()
   const [isCheckingLink, setIsCheckingLink] = useState(false)
   const latestCredentialsId = useRef(credentialsId)
@@ -111,19 +103,19 @@ export const GoogleSpreadsheetPicker = ({
     }
   }
 
-  const applySpreadsheetLink = async () => {
-    if (isPublishedSpreadsheetLink(spreadsheetLink)) {
+  const applySpreadsheetLink = async (link: string): Promise<boolean> => {
+    if (isPublishedSpreadsheetLink(link)) {
       setLinkErrorMessage(
         t('blocks.integrations.googleSheets.picker.pasteLink.publishedLink')
       )
-      return
+      return false
     }
-    const pastedSpreadsheetId = parseSpreadsheetId(spreadsheetLink)
+    const pastedSpreadsheetId = parseSpreadsheetId(link)
     if (!pastedSpreadsheetId) {
       setLinkErrorMessage(
         t('blocks.integrations.googleSheets.picker.pasteLink.invalid')
       )
-      return
+      return false
     }
     setLinkErrorMessage(undefined)
     setIsCheckingLink(true)
@@ -134,18 +126,19 @@ export const GoogleSpreadsheetPicker = ({
           credentialsId,
           spreadsheetId: pastedSpreadsheetId,
         })
-      if (latestCredentialsId.current !== credentialsId) return
+      if (latestCredentialsId.current !== credentialsId) return false
       const accessError = toAccessErrorMessage(pastedSpreadsheet)
       if (accessError) {
         setLinkErrorMessage(accessError)
-        return
+        return false
       }
-      setSpreadsheetLink('')
       latestOnSpreadsheetIdChange.current(pastedSpreadsheetId)
+      return true
     } catch {
       setLinkErrorMessage(
         t('blocks.integrations.googleSheets.picker.error.unknown')
       )
+      return false
     } finally {
       setIsCheckingLink(false)
     }
@@ -155,42 +148,14 @@ export const GoogleSpreadsheetPicker = ({
     ? toAccessErrorMessage(spreadsheetData)
     : undefined
 
-  const pasteLinkInput = (
-    <Stack spacing={1}>
-      <Text fontSize="sm" color="gray.500">
-        {t('blocks.integrations.googleSheets.picker.pasteLink.label')}
-      </Text>
-      <HStack>
-        <Input
-          size="sm"
-          value={spreadsheetLink}
-          placeholder={t(
-            'blocks.integrations.googleSheets.picker.pasteLink.placeholder'
-          )}
-          onChange={(e) => {
-            setSpreadsheetLink(e.target.value)
-            setLinkErrorMessage(undefined)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !isCheckingLink) applySpreadsheetLink()
-          }}
-        />
-        <Button
-          size="sm"
-          flexShrink={0}
-          onClick={applySpreadsheetLink}
-          isLoading={isCheckingLink}
-          isDisabled={spreadsheetLink.trim() === ''}
-        >
-          {t('blocks.integrations.googleSheets.picker.pasteLink.apply')}
-        </Button>
-      </HStack>
-      {linkErrorMessage && (
-        <Text fontSize="sm" color="red.500">
-          {linkErrorMessage}
-        </Text>
-      )}
-    </Stack>
+  const renderLinkInput = (isCollapsible: boolean) => (
+    <SpreadsheetLinkInput
+      isCollapsible={isCollapsible}
+      isLoading={isCheckingLink}
+      errorMessage={linkErrorMessage}
+      onChange={() => setLinkErrorMessage(undefined)}
+      onSubmit={applySpreadsheetLink}
+    />
   )
 
   if (spreadsheetData && spreadsheetData.name !== '')
@@ -210,7 +175,7 @@ export const GoogleSpreadsheetPicker = ({
             )}
           />
         </Flex>
-        {pasteLinkInput}
+        {renderLinkInput(true)}
       </Stack>
     )
   return (
@@ -226,7 +191,7 @@ export const GoogleSpreadsheetPicker = ({
           {accessErrorMessage}
         </Text>
       )}
-      {pasteLinkInput}
+      {renderLinkInput(false)}
     </Stack>
   )
 }
