@@ -17,7 +17,11 @@ describe('describeSpreadsheetAccessFailure', () => {
         googleClient,
         'Custom name'
       )
-    ).toEqual({ error: 'FORBIDDEN', accountEmail: 'owner@acme.com' })
+    ).toEqual({
+      error: 'FORBIDDEN',
+      credentialsName: 'Custom name',
+      accountEmail: 'owner@acme.com',
+    })
   })
 
   it.each([
@@ -35,7 +39,7 @@ describe('describeSpreadsheetAccessFailure', () => {
     const googleClient = client()
     expect(
       await describeSpreadsheetAccessFailure(err, googleClient, 'Custom name')
-    ).toEqual({ error: expectedError, accountEmail: 'Custom name' })
+    ).toEqual({ error: expectedError, credentialsName: 'Custom name' })
     expect(googleClient.getAccessToken).not.toHaveBeenCalled()
   })
 })

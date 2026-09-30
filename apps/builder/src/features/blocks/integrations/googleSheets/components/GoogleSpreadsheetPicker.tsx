@@ -93,7 +93,7 @@ export const GoogleSpreadsheetPicker = ({
         return t('blocks.integrations.googleSheets.picker.error.notFound')
       case 'UNAUTHORIZED':
         return t('blocks.integrations.googleSheets.picker.error.unauthorized', {
-          email: data.accountEmail,
+          name: data.credentialsName,
         })
       case 'UNSUPPORTED_DOCUMENT':
         return t(

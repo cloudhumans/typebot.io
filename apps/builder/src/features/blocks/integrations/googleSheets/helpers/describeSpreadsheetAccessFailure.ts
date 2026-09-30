@@ -7,7 +7,8 @@ import { getCredentialsAccountEmail } from './getCredentialsAccountEmail'
 
 export type SpreadsheetAccessFailure = {
   error: GoogleSheetsAccessError
-  accountEmail: string
+  credentialsName: string
+  accountEmail?: string
 }
 
 export const describeSpreadsheetAccessFailure = async (
@@ -16,11 +17,10 @@ export const describeSpreadsheetAccessFailure = async (
   credentialsName: string
 ): Promise<SpreadsheetAccessFailure> => {
   const error = classifyGoogleSheetsError(err)
+  if (error !== 'FORBIDDEN') return { error, credentialsName }
   return {
     error,
-    accountEmail:
-      error === 'FORBIDDEN'
-        ? await getCredentialsAccountEmail(client, credentialsName)
-        : credentialsName,
+    credentialsName,
+    accountEmail: await getCredentialsAccountEmail(client, credentialsName),
   }
 }

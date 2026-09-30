@@ -45,7 +45,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
       if (accessError === 'FORBIDDEN')
         return res.status(403).send({
-          message: `${accountEmail} has no access to this spreadsheet`,
+          message: `${
+            accountEmail ?? auth.credentials.name
+          } has no access to this spreadsheet`,
         })
       if (accessError === 'NOT_FOUND')
         return res.status(404).send({ message: 'Spreadsheet not found' })

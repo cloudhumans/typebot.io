@@ -264,7 +264,7 @@
   "blocks.integrations.googleSheets.picker.error.forbidden": "{email} não tem acesso a esta planilha. Compartilhe a planilha com essa conta e tente de novo.",
   "blocks.integrations.googleSheets.picker.error.notFound": "Planilha não encontrada. Confira o link e tente de novo.",
   "blocks.integrations.googleSheets.picker.error.unknown": "Não foi possível carregar esta planilha. Tente de novo em instantes.",
-  "blocks.integrations.googleSheets.picker.error.unauthorized": "A conexão com {email} expirou ou foi revogada. Reconecte a conta e tente de novo.",
+  "blocks.integrations.googleSheets.picker.error.unauthorized": "A conexão \"{name}\" expirou ou foi revogada. Reconecte essa conta Google e tente de novo.",
   "blocks.integrations.googleSheets.picker.error.unsupportedDocument": "Este arquivo não é uma planilha do Google Planilhas (por exemplo, um .xlsx enviado). Abra no Google Planilhas, use Arquivo > Salvar como Planilhas Google e cole o novo link.",
   "cancel": "Cancelar",
   "clickToEdit": "Clique para editar...",
