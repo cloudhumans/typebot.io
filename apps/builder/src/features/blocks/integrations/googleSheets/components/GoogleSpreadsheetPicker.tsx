@@ -44,8 +44,10 @@ export const GoogleSpreadsheetPicker = ({
   const searchParams = useSearchParams()
   const { showToast } = useToast()
   const { t } = useTranslate()
+  const trpcContext = trpc.useContext()
   const [spreadsheetLink, setSpreadsheetLink] = useState('')
-  const [isLinkInvalid, setIsLinkInvalid] = useState(false)
+  const [linkErrorMessage, setLinkErrorMessage] = useState<string>()
+  const [isCheckingLink, setIsCheckingLink] = useState(false)
   const { data: spreadsheetData, status } =
     trpc.sheets.getSpreadsheetName.useQuery(
       {
@@ -76,30 +78,58 @@ export const GoogleSpreadsheetPicker = ({
       })
   }, [workspaceId, credentialsId, blockId, searchParams, showToast])
 
-  const applySpreadsheetLink = () => {
-    const pastedSpreadsheetId = parseSpreadsheetId(spreadsheetLink)
-    if (!pastedSpreadsheetId) {
-      setIsLinkInvalid(true)
-      return
-    }
-    setIsLinkInvalid(false)
-    setSpreadsheetLink('')
-    onSpreadsheetIdChange(pastedSpreadsheetId)
-  }
-
-  const accessErrorMessage = (() => {
-    if (!spreadsheetData || !('error' in spreadsheetData)) return
-    switch (spreadsheetData.error) {
+  const toAccessErrorMessage = (
+    data: NonNullable<typeof spreadsheetData>
+  ): string | undefined => {
+    if (!('error' in data)) return
+    switch (data.error) {
       case 'FORBIDDEN':
         return t('blocks.integrations.googleSheets.picker.error.forbidden', {
-          email: spreadsheetData.accountEmail,
+          email: data.accountEmail,
         })
       case 'NOT_FOUND':
         return t('blocks.integrations.googleSheets.picker.error.notFound')
       default:
         return t('blocks.integrations.googleSheets.picker.error.unknown')
     }
-  })()
+  }
+
+  const applySpreadsheetLink = async () => {
+    const pastedSpreadsheetId = parseSpreadsheetId(spreadsheetLink)
+    if (!pastedSpreadsheetId) {
+      setLinkErrorMessage(
+        t('blocks.integrations.googleSheets.picker.pasteLink.invalid')
+      )
+      return
+    }
+    setLinkErrorMessage(undefined)
+    setIsCheckingLink(true)
+    try {
+      const pastedSpreadsheet =
+        await trpcContext.sheets.getSpreadsheetName.fetch({
+          workspaceId,
+          credentialsId,
+          spreadsheetId: pastedSpreadsheetId,
+        })
+      const accessError = toAccessErrorMessage(pastedSpreadsheet)
+      if (accessError) {
+        setLinkErrorMessage(accessError)
+        return
+      }
+      setSpreadsheetLink('')
+      onSpreadsheetIdChange(pastedSpreadsheetId)
+    } catch {
+      setLinkErrorMessage(
+        t('blocks.integrations.googleSheets.picker.error.unknown')
+      )
+    } finally {
+      setIsCheckingLink(false)
+    }
+  }
+
+  const accessErrorMessage = spreadsheetData
+    ? toAccessErrorMessage(spreadsheetData)
+    : undefined
 
   const pasteLinkInput = (
     <Stack spacing={1}>
@@ -115,24 +145,25 @@ export const GoogleSpreadsheetPicker = ({
           )}
           onChange={(e) => {
             setSpreadsheetLink(e.target.value)
-            setIsLinkInvalid(false)
+            setLinkErrorMessage(undefined)
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') applySpreadsheetLink()
+            if (e.key === 'Enter' && !isCheckingLink) applySpreadsheetLink()
           }}
         />
         <Button
           size="sm"
           flexShrink={0}
           onClick={applySpreadsheetLink}
+          isLoading={isCheckingLink}
           isDisabled={spreadsheetLink.trim() === ''}
         >
           {t('blocks.integrations.googleSheets.picker.pasteLink.apply')}
         </Button>
       </HStack>
-      {isLinkInvalid && (
+      {linkErrorMessage && (
         <Text fontSize="sm" color="red.500">
-          {t('blocks.integrations.googleSheets.picker.pasteLink.invalid')}
+          {linkErrorMessage}
         </Text>
       )}
     </Stack>
