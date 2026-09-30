@@ -260,6 +260,8 @@
   "blocks.integrations.googleSheets.picker.error.forbidden": "{email} has no access to this spreadsheet. Share it with this account and try again.",
   "blocks.integrations.googleSheets.picker.error.notFound": "Spreadsheet not found. Check the link and try again.",
   "blocks.integrations.googleSheets.picker.error.unknown": "Couldn't load this spreadsheet. Try again in a moment.",
+  "blocks.integrations.googleSheets.picker.error.unauthorized": "The connection with {email} expired or was revoked. Reconnect the account and try again.",
+  "blocks.integrations.googleSheets.picker.error.unsupportedDocument": "This file is not a Google Sheets spreadsheet (e.g. an uploaded .xlsx). Open it in Google Sheets, use File > Save as Google Sheets and paste the new link.",
   "cancel": "Cancel",
   "clickToEdit": "Click to edit...",
   "collaboration.roles.edit.label": "Can edit",

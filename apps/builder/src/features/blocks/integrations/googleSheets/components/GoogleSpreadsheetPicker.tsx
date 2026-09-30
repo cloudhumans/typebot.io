@@ -95,6 +95,14 @@ export const GoogleSpreadsheetPicker = ({
         })
       case 'NOT_FOUND':
         return t('blocks.integrations.googleSheets.picker.error.notFound')
+      case 'UNAUTHORIZED':
+        return t('blocks.integrations.googleSheets.picker.error.unauthorized', {
+          email: data.accountEmail,
+        })
+      case 'UNSUPPORTED_DOCUMENT':
+        return t(
+          'blocks.integrations.googleSheets.picker.error.unsupportedDocument'
+        )
       default:
         return t('blocks.integrations.googleSheets.picker.error.unknown')
     }

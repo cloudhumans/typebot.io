@@ -46,6 +46,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         })
       if (accessError === 'NOT_FOUND')
         return res.status(404).send({ message: 'Spreadsheet not found' })
+      if (accessError === 'UNAUTHORIZED')
+        return res.status(401).send({
+          message: 'Google account connection expired, reconnect it',
+        })
+      if (accessError === 'UNSUPPORTED_DOCUMENT')
+        return res
+          .status(400)
+          .send({ message: 'File is not a native Google Sheets spreadsheet' })
       return res.status(502).send({ message: "Couldn't load the spreadsheet" })
     }
     return res.send({
