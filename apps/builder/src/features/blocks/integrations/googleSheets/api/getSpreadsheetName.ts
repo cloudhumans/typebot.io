@@ -6,6 +6,7 @@ import { isReadWorkspaceFobidden } from '@/features/workspace/helpers/isReadWork
 import { getAuthenticatedGoogleClient } from '@typebot.io/lib/google'
 import { GoogleSpreadsheet } from 'google-spreadsheet'
 import { classifyGoogleSheetsError } from '../helpers/classifyGoogleSheetsError'
+import { getCredentialsAccountEmail } from '../helpers/getCredentialsAccountEmail'
 
 export const getSpreadsheetName = authenticatedProcedure
   .input(
@@ -71,7 +72,10 @@ export const getSpreadsheetName = authenticatedProcedure
         return {
           name: '',
           error: classifyGoogleSheetsError(e),
-          accountEmail: credentials.name,
+          accountEmail: await getCredentialsAccountEmail(
+            client,
+            credentials.name
+          ),
         }
       }
     }
