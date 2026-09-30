@@ -180,8 +180,7 @@ export const startChat = async ({
   } catch (error) {
     logger.error('Error in startChat', {
       publicId,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
+      error: error instanceof Error ? error : String(error),
       origin,
       isOnlyRegistering,
     })

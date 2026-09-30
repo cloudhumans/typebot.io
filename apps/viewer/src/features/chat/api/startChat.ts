@@ -49,8 +49,7 @@ export const startChat = authenticatedProcedure
     } catch (error) {
       logger.error('Error in startChat API endpoint', {
         publicId: input.publicId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        error: error instanceof Error ? error : String(error),
         origin,
       })
       throw error

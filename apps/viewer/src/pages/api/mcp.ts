@@ -302,8 +302,7 @@ export default async function handler(
         tenant,
         method: req.body?.method,
         requestId: req.body?.id,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        error: error instanceof Error ? error : String(error),
       })
       // Propagate the real error message: errors raised during tool execution
       // (e.g. `Missing required variable "X" for TOOL workflow` thrown by

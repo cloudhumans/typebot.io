@@ -15,7 +15,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     onError({ error }) {
       if (error.code === 'INTERNAL_SERVER_ERROR') {
         Sentry.captureException(error)
-        logger.error('Something went wrong', { error })
+        logger.error('Something went wrong', {
+          error: error.cause instanceof Error ? error.cause : error,
+          trpcCode: error.code,
+        })
       }
     },
   })(req, res)

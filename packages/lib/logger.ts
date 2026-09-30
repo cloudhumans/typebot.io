@@ -1,3 +1,5 @@
+import { applyDatadogError, splitErrorArgument } from './datadogError'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let logger: any
 
@@ -18,7 +20,10 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
     winston.format.errors({ stack: true }),
   ]
 
-  const jsonFormat = winston.format.json()
+  const jsonFormat = winston.format.combine(
+    winston.format(applyDatadogError)(),
+    winston.format.json()
+  )
   const prettyFormat = winston.format.combine(
     winston.format.colorize({ all: true }),
     winston.format.printf((info: any) => {
@@ -51,7 +56,11 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
   console.log = (...args: unknown[]) => logger.info(util.format(...args))
   console.info = (...args: unknown[]) => logger.info(util.format(...args))
   console.warn = (...args: unknown[]) => logger.warn(util.format(...args))
-  console.error = (...args: unknown[]) => logger.error(util.format(...args))
+  console.error = (...args: unknown[]) => {
+    const { error, rest } = splitErrorArgument(args)
+    if (!error) return logger.error(util.format(...args))
+    logger.error(rest.length ? util.format(...rest) : error.message, { error })
+  }
   console.debug = (...args: unknown[]) => logger.debug(util.format(...args))
 } else {
   // No client, logger é um objeto fake
