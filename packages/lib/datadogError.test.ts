@@ -97,7 +97,7 @@ describe('markErrorLogged / wasErrorLogged', () => {
 })
 
 describe('logFailureOnce', () => {
-  const makeLogger = () => ({ warn: vi.fn(), error: vi.fn() })
+  const makeLogger = () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })
 
   it('logs a caller error as one warn and no error across the whole chain', () => {
     const log = makeLogger()
@@ -112,6 +112,27 @@ describe('logFailureOnce', () => {
     expect(log.warn).toHaveBeenCalledWith('Error in startChat', {
       publicId: 'p',
       error,
+    })
+  })
+
+  it('keeps the outer context at info when the error was already logged', () => {
+    const log = makeLogger()
+    const error = new Error('connect ECONNREFUSED')
+
+    logFailureOnce(log, 'Error in startChat', { publicId: 'p' }, error)
+    logFailureOnce(
+      log,
+      'MCP request failed',
+      { tenant: 't', method: 'tools/call', requestId: 7 },
+      error
+    )
+
+    expect(log.error).toHaveBeenCalledTimes(1)
+    expect(log.info).toHaveBeenCalledWith('MCP request failed', {
+      tenant: 't',
+      method: 'tools/call',
+      requestId: 7,
+      errorMessage: 'connect ECONNREFUSED',
     })
   })
 

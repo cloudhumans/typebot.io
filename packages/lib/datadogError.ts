@@ -53,6 +53,7 @@ export const wasErrorLogged = (error: unknown) =>
   typeof error === 'object' && error !== null && loggedErrors.has(error)
 
 type FailureLogger = {
+  info: (message: string, meta: Record<string, unknown>) => void
   warn: (message: string, meta: Record<string, unknown>) => void
   error: (message: string, meta: Record<string, unknown>) => void
 }
@@ -63,7 +64,13 @@ export const logFailureOnce = (
   fields: Record<string, unknown>,
   error: unknown
 ) => {
-  if (wasErrorLogged(error)) return
+  if (wasErrorLogged(error)) {
+    log.info(message, {
+      ...fields,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    })
+    return
+  }
   const level = error instanceof ToolInputError ? 'warn' : 'error'
   log[level](message, {
     ...fields,
