@@ -5,6 +5,7 @@ import {
 } from '@typebot.io/schemas/features/chat/schema'
 import { startChat as startChatFn } from '@typebot.io/bot-engine/apiHandlers/startChat'
 import logger from '@/helpers/logger'
+import { logFailureOnce } from '@typebot.io/lib/datadogError'
 
 export const startChat = authenticatedProcedure
   .meta({
@@ -47,11 +48,12 @@ export const startChat = authenticatedProcedure
       if (corsOrigin) res.setHeader('Access-Control-Allow-Origin', corsOrigin)
       return response
     } catch (error) {
-      logger.error('Error in startChat API endpoint', {
-        publicId: input.publicId,
-        error: error instanceof Error ? error : String(error),
-        origin,
-      })
+      logFailureOnce(
+        logger,
+        'Error in startChat API endpoint',
+        { publicId: input.publicId, origin },
+        error
+      )
       throw error
     }
   })

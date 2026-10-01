@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { executeDeclareVariables } from './executeDeclareVariables'
+import { ToolInputError } from '@typebot.io/lib/datadogError'
 import { DeclareVariablesBlock, SessionState } from '@typebot.io/schemas'
 import { LogicBlockType } from '@typebot.io/schemas/features/blocks/logic/constants'
 
@@ -59,6 +60,17 @@ describe('executeDeclareVariables', () => {
       await expect(executeDeclareVariables(state, block)).rejects.toThrow(
         /Missing required variable "requiredParam"/
       )
+    })
+
+    it('throws a ToolInputError so callers can tell it from a server failure', async () => {
+      const state = makeState([{ id: 'v1', name: 'requiredParam' }], true)
+      const block = makeBlock([
+        { variableId: 'v1', description: 'a required param', required: true },
+      ])
+
+      await expect(
+        executeDeclareVariables(state, block)
+      ).rejects.toBeInstanceOf(ToolInputError)
     })
   })
 

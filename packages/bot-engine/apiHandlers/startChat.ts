@@ -4,6 +4,7 @@ import { restartSession } from '../queries/restartSession'
 import { saveStateToDatabase } from '../saveStateToDatabase'
 import { startSession } from '../startSession'
 import logger from '@typebot.io/lib/logger'
+import { logFailureOnce } from '@typebot.io/lib/datadogError'
 
 type Props = {
   origin: string | undefined
@@ -178,12 +179,12 @@ export const startChat = async ({
       : undefined,
   }
   } catch (error) {
-    logger.error('Error in startChat', {
-      publicId,
-      error: error instanceof Error ? error : String(error),
-      origin,
-      isOnlyRegistering,
-    })
+    logFailureOnce(
+      logger,
+      'Error in startChat',
+      { publicId, origin, isOnlyRegistering },
+      error
+    )
     throw error
   }
 }

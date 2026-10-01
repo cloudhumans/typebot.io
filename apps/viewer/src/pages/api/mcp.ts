@@ -8,6 +8,7 @@ import {
 } from '@typebot.io/mcp-tools'
 import { env } from '@typebot.io/env'
 import logger from '@/helpers/logger'
+import { jsonRpcCodeFor, logFailureOnce } from '@typebot.io/lib/datadogError'
 
 /**
  * MCP (Model Context Protocol) endpoint.
@@ -298,12 +299,16 @@ export default async function handler(
         id,
       })
     } catch (error) {
-      logger.error('MCP request failed', {
-        tenant,
-        method: req.body?.method,
-        requestId: req.body?.id,
-        error: error instanceof Error ? error : String(error),
-      })
+      logFailureOnce(
+        logger,
+        'MCP request failed',
+        {
+          tenant,
+          method: req.body?.method,
+          requestId: req.body?.id,
+        },
+        error
+      )
       // Propagate the real error message: errors raised during tool execution
       // (e.g. `Missing required variable "X" for TOOL workflow` thrown by
       // executeDeclareVariables) are addressed to the calling agent, which
@@ -314,7 +319,7 @@ export default async function handler(
       return res.status(200).json({
         jsonrpc: '2.0',
         error: {
-          code: -32603,
+          code: jsonRpcCodeFor(error),
           message: error instanceof Error ? error.message : 'Internal error',
         },
         id: req.body?.id ?? null,

@@ -35,3 +35,42 @@ export const applyDatadogError = <T extends object>(info: T): T => {
 }
 
 export const findError = (args: unknown[]) => args.find(isError)
+
+export class ToolInputError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ToolInputError'
+  }
+}
+
+const loggedErrors = new WeakSet<object>()
+
+export const markErrorLogged = (error: unknown) => {
+  if (typeof error === 'object' && error !== null) loggedErrors.add(error)
+}
+
+export const wasErrorLogged = (error: unknown) =>
+  typeof error === 'object' && error !== null && loggedErrors.has(error)
+
+type FailureLogger = {
+  warn: (message: string, meta: Record<string, unknown>) => void
+  error: (message: string, meta: Record<string, unknown>) => void
+}
+
+export const logFailureOnce = (
+  log: FailureLogger,
+  message: string,
+  fields: Record<string, unknown>,
+  error: unknown
+) => {
+  if (wasErrorLogged(error)) return
+  const level = error instanceof ToolInputError ? 'warn' : 'error'
+  log[level](message, {
+    ...fields,
+    error: error instanceof Error ? error : String(error),
+  })
+  markErrorLogged(error)
+}
+
+export const jsonRpcCodeFor = (error: unknown) =>
+  error instanceof ToolInputError ? -32602 : -32603

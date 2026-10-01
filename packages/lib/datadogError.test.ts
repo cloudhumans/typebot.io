@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
-import { applyDatadogError, findError } from './datadogError'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  ToolInputError,
+  applyDatadogError,
+  findError,
+  jsonRpcCodeFor,
+  logFailureOnce,
+  markErrorLogged,
+  wasErrorLogged,
+} from './datadogError'
 
 describe('applyDatadogError', () => {
   it('maps an Error under `error` into kind, message and stack', () => {
@@ -57,5 +65,92 @@ describe('findError', () => {
 
   it('returns undefined when none of the arguments is an Error', () => {
     expect(findError(['a', 1])).toBeUndefined()
+  })
+})
+
+describe('ToolInputError', () => {
+  it('is an Error named ToolInputError', () => {
+    const error = new ToolInputError('Missing required variable "x"')
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error.name).toBe('ToolInputError')
+    expect(error.message).toBe('Missing required variable "x"')
+  })
+})
+
+describe('markErrorLogged / wasErrorLogged', () => {
+  it('reports only errors that were marked', () => {
+    const marked = new Error('a')
+    const other = new Error('a')
+    markErrorLogged(marked)
+
+    expect(wasErrorLogged(marked)).toBe(true)
+    expect(wasErrorLogged(other)).toBe(false)
+  })
+
+  it('ignores primitives', () => {
+    markErrorLogged('boom')
+
+    expect(wasErrorLogged('boom')).toBe(false)
+    expect(wasErrorLogged(undefined)).toBe(false)
+  })
+})
+
+describe('logFailureOnce', () => {
+  const makeLogger = () => ({ warn: vi.fn(), error: vi.fn() })
+
+  it('logs a caller error as one warn and no error across the whole chain', () => {
+    const log = makeLogger()
+    const error = new ToolInputError('Missing required variable "idPedido"')
+
+    logFailureOnce(log, 'Error in startChat', { publicId: 'p' }, error)
+    logFailureOnce(log, 'Error in startChat API endpoint', {}, error)
+    logFailureOnce(log, 'MCP request failed', {}, error)
+
+    expect(log.error).not.toHaveBeenCalled()
+    expect(log.warn).toHaveBeenCalledTimes(1)
+    expect(log.warn).toHaveBeenCalledWith('Error in startChat', {
+      publicId: 'p',
+      error,
+    })
+  })
+
+  it('logs a server failure as one error across the whole chain', () => {
+    const log = makeLogger()
+    const error = new Error('connect ECONNREFUSED')
+
+    logFailureOnce(log, 'Error in startChat', {}, error)
+    logFailureOnce(log, 'Error in startChat API endpoint', {}, error)
+    logFailureOnce(log, 'MCP request failed', {}, error)
+
+    expect(log.warn).not.toHaveBeenCalled()
+    expect(log.error).toHaveBeenCalledTimes(1)
+  })
+
+  it('still logs an error thrown outside startChat', () => {
+    const log = makeLogger()
+
+    logFailureOnce(log, 'Error in startChat', {}, new Error('first'))
+    logFailureOnce(log, 'MCP request failed', {}, new Error('getWorkflowTools'))
+
+    expect(log.error).toHaveBeenCalledTimes(2)
+  })
+
+  it('stringifies non-Error values', () => {
+    const log = makeLogger()
+
+    logFailureOnce(log, 'MCP request failed', {}, 'boom')
+
+    expect(log.error).toHaveBeenCalledWith('MCP request failed', {
+      error: 'boom',
+    })
+  })
+})
+
+describe('jsonRpcCodeFor', () => {
+  it('uses Invalid params for caller errors and Internal error otherwise', () => {
+    expect(jsonRpcCodeFor(new ToolInputError('x'))).toBe(-32602)
+    expect(jsonRpcCodeFor(new Error('x'))).toBe(-32603)
+    expect(jsonRpcCodeFor('x')).toBe(-32603)
   })
 })
