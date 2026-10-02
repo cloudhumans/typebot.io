@@ -43,10 +43,23 @@ export class ToolInputError extends Error {
   }
 }
 
+const TRPC_CLIENT_ERROR_CODES = new Set([
+  'PARSE_ERROR',
+  'BAD_REQUEST',
+  'UNAUTHORIZED',
+  'FORBIDDEN',
+  'NOT_FOUND',
+  'METHOD_NOT_SUPPORTED',
+  'CONFLICT',
+  'PRECONDITION_FAILED',
+  'PAYLOAD_TOO_LARGE',
+  'UNPROCESSABLE_CONTENT',
+])
+
 const isTrpcClientError = (error: unknown) =>
   error instanceof Error &&
   error.name === 'TRPCError' &&
-  (error as { code?: unknown }).code !== 'INTERNAL_SERVER_ERROR'
+  TRPC_CLIENT_ERROR_CODES.has(String((error as { code?: unknown }).code))
 
 export const isCallerError = (error: unknown) =>
   error instanceof ToolInputError || isTrpcClientError(error)

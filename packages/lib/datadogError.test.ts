@@ -170,6 +170,19 @@ describe('logFailureOnce', () => {
     expect(log.warn).toHaveBeenCalledTimes(1)
   })
 
+  it('logs a tRPC timeout as error', () => {
+    const log = makeLogger()
+    const error = Object.assign(new Error('Chat timed out'), {
+      name: 'TRPCError',
+      code: 'TIMEOUT',
+    })
+
+    logFailureOnce(log, 'Error in startChat', {}, error)
+
+    expect(log.warn).not.toHaveBeenCalled()
+    expect(log.error).toHaveBeenCalledTimes(1)
+  })
+
   it('logs a tRPC internal error as error', () => {
     const log = makeLogger()
     const error = Object.assign(new Error('boom'), {
