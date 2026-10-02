@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+    paths-ignore: ['monitoring/**', '.github/workflows/datadog-monitors.yml']
   pull_request:
     branches:
       - main
