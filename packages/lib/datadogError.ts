@@ -43,6 +43,14 @@ export class ToolInputError extends Error {
   }
 }
 
+const isTrpcClientError = (error: unknown) =>
+  error instanceof Error &&
+  error.name === 'TRPCError' &&
+  (error as { code?: unknown }).code !== 'INTERNAL_SERVER_ERROR'
+
+export const isCallerError = (error: unknown) =>
+  error instanceof ToolInputError || isTrpcClientError(error)
+
 const loggedErrors = new WeakSet<object>()
 
 export const markErrorLogged = (error: unknown) => {
@@ -53,7 +61,7 @@ export const wasErrorLogged = (error: unknown) =>
   typeof error === 'object' && error !== null && loggedErrors.has(error)
 
 type FailureLogger = {
-  info: (message: string, meta: Record<string, unknown>) => void
+  debug: (message: string, meta: Record<string, unknown>) => void
   warn: (message: string, meta: Record<string, unknown>) => void
   error: (message: string, meta: Record<string, unknown>) => void
 }
@@ -65,13 +73,13 @@ export const logFailureOnce = (
   error: unknown
 ) => {
   if (wasErrorLogged(error)) {
-    log.info(message, {
+    log.debug(message, {
       ...fields,
       errorMessage: error instanceof Error ? error.message : String(error),
     })
     return
   }
-  const level = error instanceof ToolInputError ? 'warn' : 'error'
+  const level = isCallerError(error) ? 'warn' : 'error'
   log[level](message, {
     ...fields,
     error: error instanceof Error ? error : String(error),

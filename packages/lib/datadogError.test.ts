@@ -97,7 +97,7 @@ describe('markErrorLogged / wasErrorLogged', () => {
 })
 
 describe('logFailureOnce', () => {
-  const makeLogger = () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })
+  const makeLogger = () => ({ debug: vi.fn(), warn: vi.fn(), error: vi.fn() })
 
   it('logs a caller error as one warn and no error across the whole chain', () => {
     const log = makeLogger()
@@ -115,7 +115,7 @@ describe('logFailureOnce', () => {
     })
   })
 
-  it('keeps the outer context at info when the error was already logged', () => {
+  it('keeps the outer context at debug when the error was already logged', () => {
     const log = makeLogger()
     const error = new Error('connect ECONNREFUSED')
 
@@ -128,7 +128,7 @@ describe('logFailureOnce', () => {
     )
 
     expect(log.error).toHaveBeenCalledTimes(1)
-    expect(log.info).toHaveBeenCalledWith('MCP request failed', {
+    expect(log.debug).toHaveBeenCalledWith('MCP request failed', {
       tenant: 't',
       method: 'tools/call',
       requestId: 7,
@@ -155,6 +155,32 @@ describe('logFailureOnce', () => {
     logFailureOnce(log, 'MCP request failed', {}, new Error('getWorkflowTools'))
 
     expect(log.error).toHaveBeenCalledTimes(2)
+  })
+
+  it('logs a tRPC client error as warn', () => {
+    const log = makeLogger()
+    const error = Object.assign(new Error('Typebot not found'), {
+      name: 'TRPCError',
+      code: 'NOT_FOUND',
+    })
+
+    logFailureOnce(log, 'Error in startChat', {}, error)
+
+    expect(log.error).not.toHaveBeenCalled()
+    expect(log.warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('logs a tRPC internal error as error', () => {
+    const log = makeLogger()
+    const error = Object.assign(new Error('boom'), {
+      name: 'TRPCError',
+      code: 'INTERNAL_SERVER_ERROR',
+    })
+
+    logFailureOnce(log, 'Error in startChat', {}, error)
+
+    expect(log.warn).not.toHaveBeenCalled()
+    expect(log.error).toHaveBeenCalledTimes(1)
   })
 
   it('stringifies non-Error values', () => {
