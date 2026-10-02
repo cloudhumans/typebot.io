@@ -5,6 +5,7 @@ import cors from 'nextjs-cors'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createContext } from '@/helpers/server/context'
 import logger from '@/helpers/logger'
+import { logFailureOnce } from '@typebot.io/lib/datadogError'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   await cors(req, res)
@@ -15,7 +16,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     onError({ error }) {
       if (error.code === 'INTERNAL_SERVER_ERROR') {
         Sentry.captureException(error)
-        logger.error('Something went wrong', { error })
+        logFailureOnce(
+          logger,
+          'Something went wrong',
+          { trpcCode: error.code },
+          error.cause instanceof Error ? error.cause : error
+        )
       }
     },
   })(req, res)

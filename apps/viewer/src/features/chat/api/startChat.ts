@@ -5,6 +5,8 @@ import {
 } from '@typebot.io/schemas/features/chat/schema'
 import { startChat as startChatFn } from '@typebot.io/bot-engine/apiHandlers/startChat'
 import logger from '@/helpers/logger'
+import { ToolInputError, logFailureOnce } from '@typebot.io/lib/datadogError'
+import { TRPCError } from '@trpc/server'
 
 export const startChat = authenticatedProcedure
   .meta({
@@ -47,12 +49,18 @@ export const startChat = authenticatedProcedure
       if (corsOrigin) res.setHeader('Access-Control-Allow-Origin', corsOrigin)
       return response
     } catch (error) {
-      logger.error('Error in startChat API endpoint', {
-        publicId: input.publicId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        origin,
-      })
+      logFailureOnce(
+        logger,
+        'Error in startChat API endpoint',
+        { publicId: input.publicId, origin },
+        error
+      )
+      if (error instanceof ToolInputError)
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: error.message,
+          cause: error,
+        })
       throw error
     }
   })

@@ -2,6 +2,7 @@ import { DeclareVariablesBlock, SessionState } from '@typebot.io/schemas'
 import { ExecuteLogicResponse } from '../../../types'
 import { BubbleBlockType } from '@typebot.io/schemas/features/blocks/bubbles/constants'
 import { InputBlockType } from '@typebot.io/schemas/features/blocks/inputs/constants'
+import { ToolInputError } from '@typebot.io/lib/datadogError'
 
 export const executeDeclareVariables = async (
   state: SessionState,
@@ -47,7 +48,7 @@ export const executeDeclareVariables = async (
       // Fail loudly so the agent gets a real error (surfaced as a JSON-RPC error
       // by the /api/mcp tools/call handler) instead of garbage. This is NOT a
       // pause/wait-for-input.
-      throw new Error(
+      throw new ToolInputError(
         `Missing required variable "${variable.name}" for TOOL workflow`
       )
     }
