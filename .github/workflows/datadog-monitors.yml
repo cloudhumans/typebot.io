@@ -1,0 +1,24 @@
+name: datadog-monitors
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+    paths:
+      - 'monitoring/**'
+      - '.github/workflows/datadog-monitors.yml'
+  schedule:
+    - cron: '57 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  datadog-monitors:
+    uses: cloudhumans/ci-workflows/.github/workflows/datadog-monitors.yml@v3
+    with:
+      monitors_dir: monitoring
